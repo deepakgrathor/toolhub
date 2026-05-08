@@ -6,6 +6,8 @@ import { SessionProvider } from "@/components/providers/session-provider";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { CommandSearch } from "@/components/search/CommandSearch";
+import { getKitList } from "@/lib/tool-registry";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,9 +27,17 @@ export const metadata: Metadata = {
     "India's multi-tool AI platform. PDF tools, image tools, writing tools and more — all in one place.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Fetch kit list server-side so Sidebar can show counts without client fetch on initial render
+  let kits: { kit: string; toolCount: number }[] = [];
+  try {
+    kits = await getKitList();
+  } catch {
+    // DB not connected in dev — sidebar will show 0 counts
+  }
+
   return (
     <html
       lang="en"
@@ -43,13 +53,14 @@ export default function RootLayout({
         >
           <SessionProvider>
             <div className="flex h-screen overflow-hidden bg-background">
-              <Sidebar />
-              <div className="flex flex-1 flex-col overflow-hidden">
+              <Sidebar kits={kits} />
+              <div className="flex flex-1 flex-col overflow-hidden min-w-0">
                 <Navbar />
                 <main className="flex-1 overflow-auto">{children}</main>
               </div>
             </div>
             <AuthModal />
+            <CommandSearch />
           </SessionProvider>
         </ThemeProvider>
       </body>

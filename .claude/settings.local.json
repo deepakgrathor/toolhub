@@ -12,7 +12,12 @@
       "mcp__Claude_in_Chrome__tabs_context_mcp",
       "mcp__Claude_in_Chrome__browser_batch",
       "Bash(npx tsc *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('framer-motion:', p.dependencies['framer-motion'], 'cmdk:', p.dependencies['cmdk']\\)\")",
+      "Bash(node_modules/.bin/turbo --version)",
+      "Read(//f/2026/AI_Project/toolhub/apps/**)",
+      "Read(//f/2026/AI_Project/toolhub/**)",
+      "Bash(node -e \"const c = require\\('crypto'\\); console.log\\(c.randomBytes\\(32\\).toString\\('base64'\\)\\)\")"
     ]
   }
 }

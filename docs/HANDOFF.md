@@ -1,53 +1,98 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #3 (A3 complete)
+Updated: 2026-05-09 | Account: A | Session: #4 (A4 complete)
 
 ## Where We Are
-Session A3 done. Database schemas, seed script, tool registry, and API routes are all built.
+Session A4 done. Full homepage, sidebar, tool grid, Cmd+K search, tools listing page, and tool page shell are all built.
 
 ### What Was Built
 
-**packages/db — New Models**
-- `src/models/Tool.ts` — Tool registry (slug, name, description, category, kits[], isAI, isFree, icon, timestamps)
-- `src/models/ToolConfig.ts` — Dynamic admin config (creditCost, isActive, aiModel, aiProvider, fallbackModel, fallbackProvider)
-- `src/models/CreditPack.ts` — Pricing plans (name, credits, priceInr, isActive, isFeatured, razorpayPlanId, sortOrder, timestamps)
-- `src/models/SiteConfig.ts` — Key/value global settings (theme_default, maintenance_mode, banner)
-- `src/models/AuditLog.ts` — Admin action history (adminId, action, target, before, after, createdAt)
-- `src/index.ts` updated — exports all 5 new models + User
+**New Packages (apps/web)**
+- `framer-motion@^12.38.0` — hover animations on ToolCard
+- `cmdk@^1.1.1` — Cmd+K command palette
 
-**packages/db — Seed Script**
-- `src/seed.ts` — Idempotent seed (upsert) for all data
-  - 30 tools across 5 kits (creator, sme, hr, ca-legal, marketing)
-  - 30 ToolConfigs with correct credit costs + AI model assignments
-  - 5 CreditPacks (Try Pack Rs39 → Enterprise Rs999)
-  - 4 SiteConfig keys (theme_default, maintenance_mode, banner text/visible)
-- `package.json` — `seed` script added (`tsx src/seed.ts`)
-- `tsx@^4.21.0` added as devDependency
+**New Zustand Stores**
+- `src/store/sidebar-store.ts` — `isCollapsed`, `isMobileOpen`, `toggle()`, `toggleMobile()`, `closeMobile()`
+- `src/store/search-store.ts` — `isOpen`, `tools[]`, `setOpen()`, `setTools()` — caches tool list for command search
 
-**apps/web — Tool Registry**
-- `src/lib/tool-registry.ts` — Server-side registry with in-memory cache (5 min TTL)
-  - `getAllTools()` — all active tools with configs
-  - `getToolBySlug(slug)` — single tool + config
-  - `getToolsByKit(kit)` — filter by kit
-  - `getKitList()` — unique kits with tool counts
-  - `clearToolCache()` — for admin use after edits
-  - Exported `ToolWithConfig` and `KitInfo` TypeScript interfaces
+**Sidebar (`src/components/layout/sidebar.tsx` — full rewrite)**
+- Desktop: 240px collapsible to 56px, toggle button at top-right edge
+- Collapse state persisted to localStorage
+- Kit navigation: All Tools 🧰 / Creator 🎨 / SME 🏪 / HR 👥 / CA-Legal ⚖️ / Marketing 📣
+- Active kit highlighted purple; tool counts shown per kit
+- Bottom: credits badge (authenticated), Buy Credits link, theme toggle
+- Mobile: overlay drawer triggered by hamburger in Navbar
+- `useSearchParams` wrapped in `<Suspense>` internally to avoid Next.js warning
+- Accepts `kits` prop (pre-fetched server-side in layout for instant SSR counts)
 
-**apps/web — API Routes**
-- `src/app/api/tools/route.ts` — `GET /api/tools` → `{ tools: ToolWithConfig[] }`
-- `src/app/api/tools/[slug]/route.ts` — `GET /api/tools/[slug]` → `{ tool: ToolWithConfig }` (404 if missing)
-- `src/app/api/kits/route.ts` — `GET /api/kits` → `{ kits: KitInfo[] }`
+**ToolCard (`src/components/tools/ToolCard.tsx`)**
+- Framer Motion `whileHover` lift (y: -3, scale: 1.01)
+- Shows: emoji icon, name, 2-line truncated description
+- FREE badge (green) or credit cost badge (purple)
+- Kit tags (up to 2)
+- Navigates to `/tools/[slug]` on click
+
+**CommandSearch (`src/components/search/CommandSearch.tsx`)**
+- Global Cmd+K / Ctrl+K keyboard listener
+- Uses `cmdk` Command + Radix Dialog
+- Fetches all tools once, cached in Zustand search-store
+- Filters by name as user types
+- Shows: icon, name, kit label, FREE/credit badge
+- Enter or click → navigate to `/tools/[slug]`
+
+**LoginBanner (`src/components/tools/LoginBanner.tsx`)**
+- Client component; renders only for unauthenticated users
+- Shows "Login to use this tool" banner inside tool page left panel
+- Opens auth modal on click
+
+**ToolsClient (`src/components/tools/ToolsClient.tsx`)**
+- Fetches `/api/tools` on mount
+- Kit filter pill tabs (URL param: `?kit=`)
+- Client-side search input filters by name/description
+- Responsive grid: 1 / 2 / 3 / 4 columns
+- Shows count: "Showing X of Y tools"
+- Loading skeleton + empty state
+
+**Homepage (`src/app/page.tsx` — full rewrite)**
+Server component:
+- Hero: headline, subtext, Explore + Pricing buttons, trust line
+- Stats bar: 30+ Tools / 5 Kits / ₹1.33/use / Free Forever
+- Kit showcase: 5 kit cards with emoji, name, count, 3 example tool names
+- Popular tools: 6 tool cards (blog-generator, yt-script, gst-invoice, resume-screener, legal-notice, thumbnail-ai)
+
+**Tools Listing (`src/app/tools/page.tsx`)**
+- Thin shell wrapping `<ToolsClient>` inside `<Suspense>`
+- Metadata: title + description
+
+**Tool Page Shell (`src/app/tools/[slug]/page.tsx`)**
+- SSR with `generateMetadata` for SEO
+- 404 via `notFound()` if slug not found
+- Breadcrumb: Home > Tools > [Tool Name]
+- 2-column layout: 45% input panel | 55% output panel
+- Left: icon, name, credit badge, description, LoginBanner, placeholder form
+- Right: placeholder output area
+- Full `lg:` breakpoint responsive (stacks on mobile)
+
+**Navbar (`src/components/layout/Navbar.tsx` — updated)**
+- Mobile hamburger (md:hidden) → opens sidebar drawer via `useSidebarStore`
+- Search trigger button → opens CommandSearch via `useSearchStore`
+- Keyboard shortcut hint (⌘K) shown in search trigger
+
+**Root Layout (`src/app/layout.tsx` — updated)**
+- Sidebar now receives `kits` prop (fetched via `getKitList()` server-side)
+- `<CommandSearch />` rendered globally (outside main content, always mounted)
+- `min-w-0` on main content area prevents overflow issues
 
 ### Verified
-- TypeScript: clean (0 errors in db + web)
-- npm install: completed successfully
+- TypeScript: clean (0 errors)
+- All 11 files created or modified
 
 ## Next Task
-Session A4: Homepage + Tool Grid UI
-- Homepage (`/`) with hero section + kit filter tabs
-- Tool card grid (loaded from `/api/tools`)
-- Sidebar with kit navigation
-- Tool preview page shell (`/tools/[slug]`)
-- Mobile-responsive layout
+Session A5: Authentication Flow Polish + Credits System
+- Auth modal improvements (forgot password, better validation)
+- Post-login redirect handling
+- Credits display in sidebar + navbar
+- `/pricing` page with Razorpay credit packs
+- Credit deduction UI flow (confirm modal before tool use)
 
 ## How to Seed
 ```bash
@@ -77,7 +122,6 @@ MONGODB_URI=mongodb+srv://... npm run seed
 - `NEXTAUTH_SECRET` — generate with `openssl rand -base64 32`
 - `NEXTAUTH_URL` — `http://localhost:3000` for local dev
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — from Google Cloud Console
-  - OAuth callback URL to add: `http://localhost:3000/api/auth/callback/google`
 
 **Optional for now:**
 - Upstash Redis, Cloudflare R2, Razorpay, Resend, PostHog, LiteLLM
