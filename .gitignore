@@ -9,10 +9,15 @@ dist
 build
 .turbo
 
-# Env files
+# Env files — NEVER commit any .env file
 .env
+.env.*
 .env.local
 .env.*.local
+.env.example
+**/.env.example
+*.env
+
 
 # Debug
 npm-debug.log*
