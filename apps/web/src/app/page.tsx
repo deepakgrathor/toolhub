@@ -1,13 +1,15 @@
 import Link from "next/link";
+import { Zap, Wrench, Package, IndianRupee, BadgeCheck } from "lucide-react";
 import { getAllTools, getKitList } from "@/lib/tool-registry";
 import { ToolCard } from "@/components/tools/ToolCard";
+import { getKitIcon, getToolIcon } from "@/lib/tool-icons";
 
-const KIT_CONFIG: Record<string, { emoji: string; label: string }> = {
-  creator: { emoji: "🎨", label: "Creator Kit" },
-  sme: { emoji: "🏪", label: "SME Kit" },
-  hr: { emoji: "👥", label: "HR Kit" },
-  "ca-legal": { emoji: "⚖️", label: "CA / Legal Kit" },
-  marketing: { emoji: "📣", label: "Marketing Kit" },
+const KIT_CONFIG: Record<string, { label: string }> = {
+  creator:   { label: "Creator Kit" },
+  sme:       { label: "SME Kit" },
+  hr:        { label: "HR Kit" },
+  "ca-legal":{ label: "CA / Legal Kit" },
+  marketing: { label: "Marketing Kit" },
 };
 
 const POPULAR_SLUGS = [
@@ -20,10 +22,10 @@ const POPULAR_SLUGS = [
 ];
 
 const STATS = [
-  { value: "30+", label: "Tools" },
-  { value: "5", label: "Kits" },
-  { value: "₹1.33", label: "Starting / use" },
-  { value: "Free", label: "Forever Plan" },
+  { value: "30+",   label: "Tools",           Icon: Wrench },
+  { value: "5",     label: "Kits",            Icon: Package },
+  { value: "₹1.33", label: "Starting / use",  Icon: IndianRupee },
+  { value: "Free",  label: "Forever Plan",    Icon: BadgeCheck },
 ];
 
 export default async function HomePage() {
@@ -32,7 +34,7 @@ export default async function HomePage() {
   try {
     [allTools, kitList] = await Promise.all([getAllTools(), getKitList()]);
   } catch {
-    // DB not available — show static shell
+    // DB not available — render static shell
   }
 
   const popularTools = POPULAR_SLUGS.flatMap((slug) => {
@@ -40,10 +42,10 @@ export default async function HomePage() {
     return t ? [t] : [];
   });
 
-  const kitCards = Object.entries(KIT_CONFIG).map(([kit, { emoji, label }]) => {
+  const kitCards = Object.entries(KIT_CONFIG).map(([kit, { label }]) => {
     const count = kitList.find((k) => k.kit === kit)?.toolCount ?? 0;
     const examples = allTools.filter((t) => t.kits.includes(kit)).slice(0, 3);
-    return { kit, emoji, label, count, examples };
+    return { kit, label, count, examples };
   });
 
   return (
@@ -51,7 +53,7 @@ export default async function HomePage() {
       {/* Hero */}
       <section className="px-6 py-16 md:py-24 text-center max-w-3xl mx-auto">
         <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent mb-6">
-          <span>⚡</span> Made for India
+          <Zap className="h-3.5 w-3.5" /> Made for India
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight tracking-tight mb-4">
           One Platform.{" "}
@@ -83,10 +85,11 @@ export default async function HomePage() {
       {/* Stats bar */}
       <section className="border-y border-border bg-surface">
         <div className="mx-auto max-w-4xl px-6 py-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          {STATS.map(({ value, label }) => (
-            <div key={label}>
+          {STATS.map(({ value, label, Icon }) => (
+            <div key={label} className="flex flex-col items-center gap-1">
+              <Icon className="h-4 w-4 text-accent mb-0.5" />
               <div className="text-2xl font-bold text-foreground">{value}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
+              <div className="text-xs text-muted-foreground">{label}</div>
             </div>
           ))}
         </div>
@@ -103,22 +106,31 @@ export default async function HomePage() {
           </p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
-          {kitCards.map(({ kit, emoji, label, count, examples }) => (
-            <Link key={kit} href={`/tools?kit=${kit}`}>
-              <div className="rounded-xl border border-border bg-surface p-4 hover:border-accent/40 hover:bg-accent/5 transition-all duration-200 h-full">
-                <div className="text-3xl mb-3">{emoji}</div>
-                <div className="font-semibold text-sm text-foreground mb-1">{label}</div>
-                <div className="text-xs text-muted-foreground mb-3">{count} tools</div>
-                <ul className="space-y-0.5">
-                  {examples.map((t) => (
-                    <li key={t.slug} className="text-xs text-muted-foreground truncate">
-                      • {t.name}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </Link>
-          ))}
+          {kitCards.map(({ kit, label, count, examples }) => {
+            const KitIcon = getKitIcon(kit);
+            return (
+              <Link key={kit} href={`/tools?kit=${kit}`}>
+                <div className="rounded-xl border border-border bg-surface p-4 hover:border-accent/40 hover:bg-accent/5 transition-all duration-200 h-full">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 mb-3">
+                    <KitIcon className="h-5 w-5 text-accent" />
+                  </div>
+                  <div className="font-semibold text-sm text-foreground mb-1">{label}</div>
+                  <div className="text-xs text-muted-foreground mb-3">{count} tools</div>
+                  <ul className="space-y-0.5">
+                    {examples.map((t) => {
+                      const TIcon = getToolIcon(t.slug);
+                      return (
+                        <li key={t.slug} className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
+                          <TIcon className="h-3 w-3 shrink-0" />
+                          {t.name}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -126,10 +138,7 @@ export default async function HomePage() {
       <section className="px-6 py-10 pb-16 max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold text-foreground">Most Used Tools</h2>
-          <Link
-            href="/tools"
-            className="text-sm text-accent hover:underline font-medium"
-          >
+          <Link href="/tools" className="text-sm text-accent hover:underline font-medium">
             View all →
           </Link>
         </div>

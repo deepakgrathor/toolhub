@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { getToolIcon } from "@/lib/tool-icons";
 
 export interface ToolCardData {
   slug: string;
@@ -23,6 +24,8 @@ const KIT_LABELS: Record<string, string> = {
 };
 
 export function ToolCard({ tool }: { tool: ToolCardData }) {
+  const Icon = getToolIcon(tool.slug);
+
   return (
     <motion.div
       whileHover={{ y: -3, scale: 1.01 }}
@@ -38,7 +41,9 @@ export function ToolCard({ tool }: { tool: ToolCardData }) {
         >
           {/* Icon + badge row */}
           <div className="flex items-start justify-between gap-2">
-            <span className="text-2xl">{tool.icon}</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10">
+              <Icon className="h-5 w-5 text-accent" />
+            </div>
             {tool.isFree ? (
               <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">
                 FREE

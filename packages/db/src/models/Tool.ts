@@ -22,7 +22,7 @@ const ToolSchema = new Schema<ITool>(
     kits: [{ type: String, required: true }],
     isAI: { type: Boolean, default: false },
     isFree: { type: Boolean, default: false },
-    icon: { type: String, default: "🔧" },
+    icon: { type: String, default: "Wrench" },
   },
   { timestamps: true }
 );

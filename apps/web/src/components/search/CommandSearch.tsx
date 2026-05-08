@@ -7,6 +7,7 @@ import { Command } from "cmdk";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSearchStore } from "@/store/search-store";
+import { getToolIcon } from "@/lib/tool-icons";
 
 const KIT_LABELS: Record<string, string> = {
   creator: "Creator",
@@ -20,7 +21,6 @@ export function CommandSearch() {
   const router = useRouter();
   const { isOpen, tools, setOpen, setTools } = useSearchStore();
 
-  // Fetch tools once and cache in store
   useEffect(() => {
     if (tools.length > 0) return;
     fetch("/api/tools")
@@ -29,7 +29,6 @@ export function CommandSearch() {
       .catch(() => {});
   }, [tools.length, setTools]);
 
-  // Global Cmd+K / Ctrl+K listener
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -87,35 +86,38 @@ export function CommandSearch() {
                 heading="Tools"
                 className="[&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:py-1.5 [&>[cmdk-group-heading]]:text-xs [&>[cmdk-group-heading]]:font-medium [&>[cmdk-group-heading]]:text-muted-foreground"
               >
-                {tools.map((tool) => (
-                  <Command.Item
-                    key={tool.slug}
-                    value={tool.name}
-                    onSelect={() => navigate(tool.slug)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm cursor-pointer",
-                      "text-foreground transition-colors",
-                      "aria-selected:bg-accent/10 aria-selected:text-accent"
-                    )}
-                  >
-                    <span className="text-base shrink-0">{tool.icon}</span>
-                    <span className="flex-1 font-medium">{tool.name}</span>
-                    <div className="flex items-center gap-2">
-                      {tool.kits[0] && (
-                        <span className="text-xs text-muted-foreground">
-                          {KIT_LABELS[tool.kits[0]] ?? tool.kits[0]}
-                        </span>
+                {tools.map((tool) => {
+                  const Icon = getToolIcon(tool.slug);
+                  return (
+                    <Command.Item
+                      key={tool.slug}
+                      value={tool.name}
+                      onSelect={() => navigate(tool.slug)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm cursor-pointer",
+                        "text-foreground transition-colors",
+                        "aria-selected:bg-accent/10 aria-selected:text-accent"
                       )}
-                      {tool.isFree ? (
-                        <span className="text-xs font-semibold text-success">FREE</span>
-                      ) : (
-                        <span className="text-xs font-semibold text-accent">
-                          {tool.config.creditCost}cr
-                        </span>
-                      )}
-                    </div>
-                  </Command.Item>
-                ))}
+                    >
+                      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="flex-1 font-medium">{tool.name}</span>
+                      <div className="flex items-center gap-2">
+                        {tool.kits[0] && (
+                          <span className="text-xs text-muted-foreground">
+                            {KIT_LABELS[tool.kits[0]] ?? tool.kits[0]}
+                          </span>
+                        )}
+                        {tool.isFree ? (
+                          <span className="text-xs font-semibold text-success">FREE</span>
+                        ) : (
+                          <span className="text-xs font-semibold text-accent">
+                            {tool.config.creditCost}cr
+                          </span>
+                        )}
+                      </div>
+                    </Command.Item>
+                  );
+                })}
               </Command.Group>
             </Command.List>
           </Command>

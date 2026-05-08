@@ -17,7 +17,9 @@
       "Bash(node_modules/.bin/turbo --version)",
       "Read(//f/2026/AI_Project/toolhub/apps/**)",
       "Read(//f/2026/AI_Project/toolhub/**)",
-      "Bash(node -e \"const c = require\\('crypto'\\); console.log\\(c.randomBytes\\(32\\).toString\\('base64'\\)\\)\")"
+      "Bash(node -e \"const c = require\\('crypto'\\); console.log\\(c.randomBytes\\(32\\).toString\\('base64'\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(git add *)"
     ]
   }
 }

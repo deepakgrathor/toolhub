@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Wrench, Sparkles } from "lucide-react";
 import { getToolBySlug } from "@/lib/tool-registry";
 import { LoginBanner } from "@/components/tools/LoginBanner";
+import { getToolIcon } from "@/lib/tool-icons";
 
 interface Props {
   params: { slug: string };
@@ -22,6 +23,8 @@ export default async function ToolPage({ params }: Props) {
   const tool = await getToolBySlug(params.slug);
   if (!tool) notFound();
 
+  const Icon = getToolIcon(tool.slug);
+
   return (
     <div className="h-full flex flex-col">
       {/* Breadcrumb */}
@@ -39,7 +42,9 @@ export default async function ToolPage({ params }: Props) {
         <div className="lg:w-[45%] lg:border-r border-border p-6 space-y-5">
           {/* Tool header */}
           <div className="flex items-start gap-4">
-            <span className="text-4xl">{tool.icon}</span>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 shrink-0">
+              <Icon className="h-6 w-6 text-accent" />
+            </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-bold text-foreground">{tool.name}</h1>
@@ -59,12 +64,12 @@ export default async function ToolPage({ params }: Props) {
             </div>
           </div>
 
-          {/* Login banner (client component checks auth) */}
+          {/* Login banner */}
           <LoginBanner />
 
           {/* Tool form placeholder */}
           <div className="rounded-xl border border-border bg-surface p-8 text-center">
-            <p className="text-2xl mb-2">🛠️</p>
+            <Wrench className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">Tool UI coming soon</p>
             <p className="text-xs text-muted-foreground mt-1">
               This tool is under active development
@@ -75,7 +80,7 @@ export default async function ToolPage({ params }: Props) {
         {/* Right panel — 55% */}
         <div className="lg:w-[55%] p-6">
           <div className="rounded-xl border border-dashed border-border bg-surface/50 h-full min-h-[300px] flex flex-col items-center justify-center text-center p-8">
-            <p className="text-3xl mb-3">✨</p>
+            <Sparkles className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">Output will appear here</p>
             <p className="text-xs text-muted-foreground mt-1">
               Run the tool to see your results

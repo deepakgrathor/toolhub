@@ -5,23 +5,25 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { ChevronLeft, ChevronRight, Coins, ShoppingBag, Sun, Moon, X } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, Coins, ShoppingBag, Sun, Moon, X, Zap,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { useAuthStore } from "@/store/auth-store";
+import { getKitIcon } from "@/lib/tool-icons";
 
 const KITS = [
-  { kit: "all", emoji: "🧰", label: "All Tools" },
-  { kit: "creator", emoji: "🎨", label: "Creator Kit" },
-  { kit: "sme", emoji: "🏪", label: "SME Kit" },
-  { kit: "hr", emoji: "👥", label: "HR Kit" },
-  { kit: "ca-legal", emoji: "⚖️", label: "CA / Legal Kit" },
-  { kit: "marketing", emoji: "📣", label: "Marketing Kit" },
+  { kit: "all",       label: "All Tools" },
+  { kit: "creator",   label: "Creator Kit" },
+  { kit: "sme",       label: "SME Kit" },
+  { kit: "hr",        label: "HR Kit" },
+  { kit: "ca-legal",  label: "CA / Legal Kit" },
+  { kit: "marketing", label: "Marketing Kit" },
 ];
 
 type KitCount = { kit: string; toolCount: number };
 
-// Split out the part using useSearchParams so it can be wrapped in Suspense
 function KitNav({ isCollapsed, kits }: { isCollapsed: boolean; kits: KitCount[] }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -35,10 +37,11 @@ function KitNav({ isCollapsed, kits }: { isCollapsed: boolean; kits: KitCount[] 
 
   return (
     <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
-      {KITS.map(({ kit, emoji, label }) => {
+      {KITS.map(({ kit, label }) => {
         const href = kit === "all" ? "/tools" : `/tools?kit=${kit}`;
         const isActive = activeKit === kit;
         const count = getCount(kit);
+        const KitIcon = getKitIcon(kit);
         return (
           <Link key={kit} href={href} title={isCollapsed ? label : undefined}>
             <div
@@ -49,7 +52,7 @@ function KitNav({ isCollapsed, kits }: { isCollapsed: boolean; kits: KitCount[] 
                   : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
               )}
             >
-              <span className="text-base shrink-0">{emoji}</span>
+              <KitIcon className="h-5 w-5 shrink-0" />
               {!isCollapsed && (
                 <>
                   <span className="flex-1 truncate">{label}</span>
@@ -94,13 +97,13 @@ function SidebarContent({
       <div className="flex h-14 items-center border-b border-border px-3 shrink-0">
         {!isCollapsed && (
           <Link href="/" className="flex items-center gap-2 flex-1">
-            <span className="text-lg">⚡</span>
+            <Zap className="h-5 w-5 text-accent shrink-0" />
             <span className="font-bold text-foreground tracking-tight">
               Tool<span className="text-accent">spire</span>
             </span>
           </Link>
         )}
-        {isCollapsed && <span className="mx-auto text-xl">⚡</span>}
+        {isCollapsed && <Zap className="mx-auto h-5 w-5 text-accent" />}
         {onClose && (
           <button
             onClick={onClose}

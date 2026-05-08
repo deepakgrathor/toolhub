@@ -2,17 +2,18 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, SearchX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ToolCard, type ToolCardData } from "./ToolCard";
+import { getKitIcon } from "@/lib/tool-icons";
 
 const KITS = [
-  { kit: "all", emoji: "🧰", label: "All" },
-  { kit: "creator", emoji: "🎨", label: "Creator" },
-  { kit: "sme", emoji: "🏪", label: "SME" },
-  { kit: "hr", emoji: "👥", label: "HR" },
-  { kit: "ca-legal", emoji: "⚖️", label: "CA/Legal" },
-  { kit: "marketing", emoji: "📣", label: "Marketing" },
+  { kit: "all",       label: "All" },
+  { kit: "creator",   label: "Creator" },
+  { kit: "sme",       label: "SME" },
+  { kit: "hr",        label: "HR" },
+  { kit: "ca-legal",  label: "CA/Legal" },
+  { kit: "marketing", label: "Marketing" },
 ];
 
 export function ToolsClient() {
@@ -67,21 +68,24 @@ export function ToolsClient() {
 
       {/* Kit filter tabs */}
       <div className="flex items-center gap-2 flex-wrap">
-        {KITS.map(({ kit, emoji, label }) => (
-          <button
-            key={kit}
-            onClick={() => setKit(kit)}
-            className={cn(
-              "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-              activeKit === kit
-                ? "bg-accent text-white"
-                : "bg-surface border border-border text-muted-foreground hover:text-foreground hover:border-accent/40"
-            )}
-          >
-            <span>{emoji}</span>
-            <span>{label}</span>
-          </button>
-        ))}
+        {KITS.map(({ kit, label }) => {
+          const KitIcon = getKitIcon(kit);
+          return (
+            <button
+              key={kit}
+              onClick={() => setKit(kit)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+                activeKit === kit
+                  ? "bg-accent text-white"
+                  : "bg-surface border border-border text-muted-foreground hover:text-foreground hover:border-accent/40"
+              )}
+            >
+              <KitIcon className="h-4 w-4" />
+              <span>{label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Search bar */}
@@ -112,7 +116,7 @@ export function ToolsClient() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-20 text-center">
-          <p className="text-4xl mb-3">🔍</p>
+          <SearchX className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
           <p className="text-foreground font-medium">No tools found</p>
           <p className="text-muted-foreground text-sm mt-1">Try a different search or kit filter</p>
         </div>

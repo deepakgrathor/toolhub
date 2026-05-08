@@ -27,7 +27,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["creator"],
     isAI: true,
     isFree: false,
-    icon: "🎬",
+    icon: "Video",
   },
   {
     slug: "blog-generator",
@@ -37,7 +37,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["creator", "marketing"],
     isAI: true,
     isFree: false,
-    icon: "✍️",
+    icon: "FileText",
   },
   {
     slug: "thumbnail-ai",
@@ -47,7 +47,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["creator"],
     isAI: true,
     isFree: false,
-    icon: "🖼️",
+    icon: "Image",
   },
   {
     slug: "title-generator",
@@ -57,7 +57,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["creator"],
     isAI: true,
     isFree: false,
-    icon: "💡",
+    icon: "Heading",
   },
   {
     slug: "hook-writer",
@@ -67,7 +67,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["creator"],
     isAI: false,
     isFree: true,
-    icon: "🪝",
+    icon: "Zap",
   },
   {
     slug: "caption-generator",
@@ -77,7 +77,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["creator"],
     isAI: false,
     isFree: true,
-    icon: "📝",
+    icon: "MessageSquare",
   },
 
   // SME KIT
@@ -89,7 +89,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["sme"],
     isAI: false,
     isFree: true,
-    icon: "🧾",
+    icon: "Receipt",
   },
   {
     slug: "expense-tracker",
@@ -99,7 +99,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["sme"],
     isAI: false,
     isFree: true,
-    icon: "💰",
+    icon: "Wallet",
   },
   {
     slug: "quotation-generator",
@@ -109,7 +109,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["sme"],
     isAI: false,
     isFree: true,
-    icon: "📋",
+    icon: "ClipboardList",
   },
   {
     slug: "website-generator",
@@ -119,7 +119,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["sme"],
     isAI: true,
     isFree: false,
-    icon: "🌐",
+    icon: "Globe",
   },
   {
     slug: "qr-generator",
@@ -129,7 +129,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["sme"],
     isAI: false,
     isFree: true,
-    icon: "📱",
+    icon: "QrCode",
   },
   {
     slug: "whatsapp-bulk",
@@ -139,7 +139,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["sme", "marketing"],
     isAI: true,
     isFree: false,
-    icon: "💬",
+    icon: "MessageCircle",
   },
   {
     slug: "salary-slip",
@@ -149,7 +149,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["sme"],
     isAI: false,
     isFree: true,
-    icon: "💵",
+    icon: "Banknote",
   },
 
   // HR KIT
@@ -161,7 +161,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["hr"],
     isAI: true,
     isFree: false,
-    icon: "📄",
+    icon: "FileSearch",
   },
   {
     slug: "jd-generator",
@@ -171,7 +171,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["hr"],
     isAI: true,
     isFree: false,
-    icon: "📌",
+    icon: "Briefcase",
   },
   {
     slug: "offer-letter",
@@ -181,7 +181,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["hr"],
     isAI: false,
     isFree: true,
-    icon: "📩",
+    icon: "Mail",
   },
   {
     slug: "appraisal-draft",
@@ -191,7 +191,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["hr"],
     isAI: true,
     isFree: false,
-    icon: "⭐",
+    icon: "TrendingUp",
   },
   {
     slug: "policy-generator",
@@ -201,7 +201,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["hr"],
     isAI: true,
     isFree: false,
-    icon: "📖",
+    icon: "Shield",
   },
 
   // CA / LEGAL KIT
@@ -213,7 +213,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["ca-legal"],
     isAI: false,
     isFree: true,
-    icon: "🧮",
+    icon: "Calculator",
   },
   {
     slug: "tds-sheet",
@@ -223,7 +223,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["ca-legal"],
     isAI: false,
     isFree: true,
-    icon: "📊",
+    icon: "Table2",
   },
   {
     slug: "legal-notice",
@@ -233,7 +233,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["ca-legal"],
     isAI: true,
     isFree: false,
-    icon: "⚖️",
+    icon: "Gavel",
   },
   {
     slug: "nda-generator",
@@ -243,7 +243,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["ca-legal"],
     isAI: true,
     isFree: false,
-    icon: "🔒",
+    icon: "Lock",
   },
   {
     slug: "legal-disclaimer",
@@ -253,7 +253,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["ca-legal"],
     isAI: true,
     isFree: false,
-    icon: "📜",
+    icon: "AlertCircle",
   },
 
   // MARKETING KIT
@@ -265,7 +265,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["marketing"],
     isAI: true,
     isFree: false,
-    icon: "📧",
+    icon: "AtSign",
   },
   {
     slug: "linkedin-bio",
@@ -275,7 +275,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["marketing"],
     isAI: true,
     isFree: false,
-    icon: "👤",
+    icon: "Linkedin",
   },
   {
     slug: "seo-auditor",
@@ -285,7 +285,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["marketing"],
     isAI: true,
     isFree: false,
-    icon: "🔍",
+    icon: "BarChart2",
   },
   {
     slug: "ad-copy",
@@ -295,7 +295,7 @@ const TOOLS: ToolSeed[] = [
     kits: ["marketing"],
     isAI: true,
     isFree: false,
-    icon: "📢",
+    icon: "BadgeDollarSign",
   },
 ];
 

@@ -1,5 +1,5 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #4 (A4 complete)
+Updated: 2026-05-09 | Account: A | Session: #4 + icon migration (complete)
 
 ## Where We Are
 Session A4 done. Full homepage, sidebar, tool grid, Cmd+K search, tools listing page, and tool page shell are all built.
@@ -82,9 +82,21 @@ Server component:
 - `<CommandSearch />` rendered globally (outside main content, always mounted)
 - `min-w-0` on main content area prevents overflow issues
 
+**Icon System Migration (post-A4)**
+- `apps/web/src/lib/tool-icons.ts` — created: `getToolIcon(slug)`, `getKitIcon(kit)`, `kitIcons` record; all 27 tool slugs mapped; Wrench fallback
+- `packages/db/src/seed.ts` — all 27 tool icon values changed from emoji to lucide icon name strings (e.g. "FileText", "Video", "Receipt")
+- `packages/db/src/models/Tool.ts` — default icon changed from "🔧" to "Wrench"
+- `apps/web/src/components/layout/sidebar.tsx` — kit icons use `getKitIcon()`, logo uses `<Zap>`
+- `apps/web/src/components/tools/ToolCard.tsx` — icon rendered via `getToolIcon(tool.slug)` in accent pill box
+- `apps/web/src/components/tools/ToolsClient.tsx` — kit filter tabs use `getKitIcon()`, empty state uses `<SearchX>`
+- `apps/web/src/app/page.tsx` — kit cards and example tool lists use lucide icons; stats bar has icon per stat; hero badge uses `<Zap>`
+- `apps/web/src/components/search/CommandSearch.tsx` — tool results use `getToolIcon(tool.slug)`
+- `apps/web/src/app/tools/[slug]/page.tsx` — tool header uses `getToolIcon()`, placeholders use `<Wrench>` and `<Sparkles>`
+- Zero emojis remain in any UI source file (console.log terminal strings are not UI and untouched)
+
 ### Verified
-- TypeScript: clean (0 errors)
-- All 11 files created or modified
+- TypeScript: clean (0 errors) — web + db packages
+- All 11 files created or modified (A4) + 9 files modified (icon migration)
 
 ## Next Task
 Session A5: Authentication Flow Polish + Credits System
