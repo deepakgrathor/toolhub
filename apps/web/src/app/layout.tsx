@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { SessionProvider } from "@/components/providers/session-provider";
 import { Sidebar } from "@/components/layout/sidebar";
+import { Navbar } from "@/components/layout/Navbar";
+import { AuthModal } from "@/components/auth/AuthModal";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,10 +41,16 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <div className="flex h-screen overflow-hidden bg-background">
-            <Sidebar />
-            <main className="flex-1 overflow-auto">{children}</main>
-          </div>
+          <SessionProvider>
+            <div className="flex h-screen overflow-hidden bg-background">
+              <Sidebar />
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <Navbar />
+                <main className="flex-1 overflow-auto">{children}</main>
+              </div>
+            </div>
+            <AuthModal />
+          </SessionProvider>
         </ThemeProvider>
       </body>
     </html>

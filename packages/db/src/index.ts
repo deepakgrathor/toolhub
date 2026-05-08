@@ -1,11 +1,11 @@
 export * from "./connection";
+export * from "./models/User";
 
-// Models will be exported here as they are created in later sessions:
-// export * from "./models/user";
-// export * from "./models/tool";
-// export * from "./models/tool-config";
-// export * from "./models/credit-pack";
-// export * from "./models/tool-output";
-// export * from "./models/credit-transaction";
-// export * from "./models/site-config";
-// export * from "./models/audit-log";
+// Models added as sessions progress:
+// export * from "./models/Tool";
+// export * from "./models/ToolConfig";
+// export * from "./models/CreditPack";
+// export * from "./models/ToolOutput";
+// export * from "./models/CreditTransaction";
+// export * from "./models/SiteConfig";
+// export * from "./models/AuditLog";
