@@ -65,6 +65,52 @@ Both Modes:
   Border radius: cards=12px, buttons=8px
   Layout: Left sidebar (collapsible) + 2-col tool page (45/55)
 
+## Icon System — STRICT RULES
+- NEVER use emojis as icons anywhere in the UI
+- ALWAYS use lucide-react icons
+- lucide-react is already installed (comes with shadcn/ui)
+- Import: import { IconName } from 'lucide-react'
+- Icon size: sidebar=20px, cards=18px, buttons=16px
+- Icon color: inherit from text color (currentColor)
+- Icon + text gap: always gap-2
+
+## Kit Icons (lucide-react)
+- All Tools   → LayoutGrid
+- Creator     → Sparkles  
+- SME         → Building2
+- HR          → Users
+- CA/Legal    → Scale
+- Marketing   → Megaphone
+
+## Tool Icons (lucide-react)
+- blog-generator    → FileText
+- yt-script         → Video
+- thumbnail-ai      → Image
+- title-generator   → Heading
+- hook-writer       → Zap
+- caption-generator → MessageSquare
+- gst-invoice       → Receipt
+- expense-tracker   → Wallet
+- quotation-generator → ClipboardList
+- website-generator → Globe
+- qr-generator      → QrCode
+- whatsapp-bulk     → MessageCircle
+- salary-slip       → Banknote
+- resume-screener   → FileSearch
+- jd-generator      → Briefcase
+- offer-letter      → Mail
+- appraisal-draft   → TrendingUp
+- policy-generator  → Shield
+- gst-calculator    → Calculator
+- tds-sheet         → Table2
+- legal-notice      → Gavel
+- nda-generator     → Lock
+- legal-disclaimer  → AlertCircle
+- email-subject     → AtSign
+- linkedin-bio      → Linkedin
+- seo-auditor       → BarChart2
+- ad-copy           → BadgeDollarSign
+
 ## Theme Rules
 - Default theme: dark
 - User can toggle dark/light from navbar
