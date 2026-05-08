@@ -7,7 +7,8 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
-    "type-check": "turbo type-check"
+    "type-check": "turbo type-check",
+    "seed": "npm run seed --workspace=packages/db"
   },
   "devDependencies": {
     "turbo": "^2.3.3",

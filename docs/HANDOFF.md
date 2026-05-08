@@ -1,60 +1,75 @@
 # Handoff Note
-Updated: 2026-05-08 | Account: A | Session: #2 (A2 complete)
+Updated: 2026-05-09 | Account: A | Session: #3 (A3 complete)
 
 ## Where We Are
-Session A2 done. Authentication foundation is fully set up.
+Session A3 done. Database schemas, seed script, tool registry, and API routes are all built.
 
 ### What Was Built
 
-**packages/db**
-- `src/models/User.ts` — Mongoose User model with full fields (name, email, password,
-  image, role, credits, plan, kitPreference, authProvider, lastSeen, timestamps)
-- `src/index.ts` updated — exports `User` and `IUser`
+**packages/db — New Models**
+- `src/models/Tool.ts` — Tool registry (slug, name, description, category, kits[], isAI, isFree, icon, timestamps)
+- `src/models/ToolConfig.ts` — Dynamic admin config (creditCost, isActive, aiModel, aiProvider, fallbackModel, fallbackProvider)
+- `src/models/CreditPack.ts` — Pricing plans (name, credits, priceInr, isActive, isFeatured, razorpayPlanId, sortOrder, timestamps)
+- `src/models/SiteConfig.ts` — Key/value global settings (theme_default, maintenance_mode, banner)
+- `src/models/AuditLog.ts` — Admin action history (adminId, action, target, before, after, createdAt)
+- `src/index.ts` updated — exports all 5 new models + User
 
-**apps/web — Auth Core**
-- `src/auth.ts` — NextAuth v5 config (JWT strategy, no DB adapter)
-  - Google OAuth: auto-creates user in MongoDB on first sign-in (10 free credits)
-  - Credentials: bcrypt password verify, updates `lastSeen`
-  - JWT/session callbacks expose `id`, `role`, `credits`
-- `src/middleware.ts` — Route protection
-  - `/dashboard/*` → redirect to `/` if not logged in
-  - `/admin/*` → redirect to `/` if `role !== 'admin'`
-- `src/types/next-auth.d.ts` — Session + JWT type extensions
+**packages/db — Seed Script**
+- `src/seed.ts` — Idempotent seed (upsert) for all data
+  - 30 tools across 5 kits (creator, sme, hr, ca-legal, marketing)
+  - 30 ToolConfigs with correct credit costs + AI model assignments
+  - 5 CreditPacks (Try Pack Rs39 → Enterprise Rs999)
+  - 4 SiteConfig keys (theme_default, maintenance_mode, banner text/visible)
+- `package.json` — `seed` script added (`tsx src/seed.ts`)
+- `tsx@^4.21.0` added as devDependency
+
+**apps/web — Tool Registry**
+- `src/lib/tool-registry.ts` — Server-side registry with in-memory cache (5 min TTL)
+  - `getAllTools()` — all active tools with configs
+  - `getToolBySlug(slug)` — single tool + config
+  - `getToolsByKit(kit)` — filter by kit
+  - `getKitList()` — unique kits with tool counts
+  - `clearToolCache()` — for admin use after edits
+  - Exported `ToolWithConfig` and `KitInfo` TypeScript interfaces
 
 **apps/web — API Routes**
-- `src/app/api/auth/[...nextauth]/route.ts` — NextAuth handler
-- `src/app/api/auth/signup/route.ts` — POST endpoint: validates, hashes password,
-  creates user with `FREE_CREDITS_ON_SIGNUP` (10) credits
-
-**apps/web — Frontend**
-- `src/store/auth-store.ts` — Zustand store (`isAuthModalOpen`, `authMode`, actions)
-- `src/components/auth/AuthModal.tsx` — Full modal (login + signup tabs)
-  - Same-page, no redirect for credentials
-  - Google OAuth button (redirects to Google, returns to same page)
-  - react-hook-form + zod validation, error display
-  - Dark/light theme via Tailwind
-- `src/components/layout/Navbar.tsx` — Top bar
-  - Logged out: "Login" button → opens AuthModal
-  - Loading: skeleton placeholder
-  - Logged in: credits badge (purple) + avatar + name
-- `src/components/providers/session-provider.tsx` — NextAuth SessionProvider wrapper
-- `src/app/layout.tsx` updated — Navbar + SessionProvider + AuthModal added
-
-**Config**
-- `apps/web/.env.example` — All env vars documented
-- `apps/web/package.json` — Added: next-auth@beta, bcryptjs, zustand, @radix-ui/react-dialog,
-  react-hook-form, @hookform/resolvers, zod, @toolhub/db, @toolhub/shared
+- `src/app/api/tools/route.ts` — `GET /api/tools` → `{ tools: ToolWithConfig[] }`
+- `src/app/api/tools/[slug]/route.ts` — `GET /api/tools/[slug]` → `{ tool: ToolWithConfig }` (404 if missing)
+- `src/app/api/kits/route.ts` — `GET /api/kits` → `{ kits: KitInfo[] }`
 
 ### Verified
-- TypeScript: clean (0 errors in web + db)
-- npm install: 423 packages installed successfully
+- TypeScript: clean (0 errors in db + web)
+- npm install: completed successfully
 
 ## Next Task
-Session A3: Dashboard + Tool Registry
-- Homepage with tool grid (loaded from DB)
-- Tool categories / kits
-- Sidebar navigation (real links)
-- Dashboard page (user history, credits overview)
+Session A4: Homepage + Tool Grid UI
+- Homepage (`/`) with hero section + kit filter tabs
+- Tool card grid (loaded from `/api/tools`)
+- Sidebar with kit navigation
+- Tool preview page shell (`/tools/[slug]`)
+- Mobile-responsive layout
+
+## How to Seed
+```bash
+# From repo root (requires MONGODB_URI in env):
+npm run seed
+
+# Or directly from db package:
+cd packages/db
+MONGODB_URI=mongodb+srv://... npm run seed
+```
+
+## Credit Cost Reference
+| Credits | Tools |
+|---------|-------|
+| 0       | hook-writer, caption-generator, gst-invoice, expense-tracker, quotation-generator, qr-generator, salary-slip, offer-letter, gst-calculator, tds-sheet |
+| 1       | title-generator, email-subject, whatsapp-bulk |
+| 3       | blog-generator, resume-screener, jd-generator, appraisal-draft, policy-generator, linkedin-bio, ad-copy, legal-disclaimer |
+| 4       | yt-script |
+| 7       | thumbnail-ai |
+| 8       | seo-auditor |
+| 10      | website-generator |
+| 12      | legal-notice, nda-generator |
 
 ## Env Vars Status (all in apps/web/.env.example)
 **Must fill before testing:**
