@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import Link from "next/link";
 import { connectDB, CreditPack, ICreditPack } from "@toolhub/db";
 import { cn } from "@/lib/utils";
 import {
@@ -17,6 +16,7 @@ import {
   Calculator,
   ChevronDown,
 } from "lucide-react";
+import { BuyCreditsButton } from "@/components/credits/BuyCreditsButton";
 
 export const metadata: Metadata = {
   title: "Pricing — Toolspire",
@@ -206,17 +206,15 @@ export default async function PricingPage() {
                   ))}
                 </ul>
 
-                <Link
-                  href="/dashboard"
-                  className={cn(
-                    "mt-auto rounded-lg py-2 text-sm font-medium text-center transition-opacity hover:opacity-90",
-                    pack.isFeatured
-                      ? "bg-[#7c3aed] text-white"
-                      : "border border-border text-foreground hover:bg-white/5"
-                  )}
-                >
-                  Get Started
-                </Link>
+                <BuyCreditsButton
+                  pack={{
+                    _id: pack._id.toString(),
+                    name: pack.name,
+                    credits: pack.credits,
+                    priceInr: pack.priceInr,
+                    isFeatured: pack.isFeatured,
+                  }}
+                />
               </div>
             );
           })}

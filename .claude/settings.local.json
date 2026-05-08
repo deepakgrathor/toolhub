@@ -20,7 +20,9 @@
       "Bash(node -e \"const c = require\\('crypto'\\); console.log\\(c.randomBytes\\(32\\).toString\\('base64'\\)\\)\")",
       "Bash(node -e ' *)",
       "Bash(git add *)",
-      "Bash(node_modules/.bin/tsc --noEmit)"
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(mkdir -p \"F:/2026/AI_Project/toolhub/.claude/worktrees/intelligent-solomon-936673/apps/web/src/app/api/admin/tools/[slug]\")",
+      "Bash(mkdir -p \"F:/2026/AI_Project/toolhub/.claude/worktrees/intelligent-solomon-936673/apps/web/src/app/api/admin/users/[userId]/credits\")"
     ]
   }
 }
