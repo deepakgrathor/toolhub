@@ -8,7 +8,9 @@ import { Navbar } from "@/components/layout/Navbar";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { CommandSearch } from "@/components/search/CommandSearch";
 import { PaywallModal } from "@/components/credits/PaywallModal";
+import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { getKitList } from "@/lib/tool-registry";
+import { connectDB, SiteConfig } from "@toolhub/db";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -31,12 +33,22 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Fetch kit list server-side so Sidebar can show counts without client fetch on initial render
   let kits: { kit: string; toolCount: number }[] = [];
+  let announcementText = "";
+  let announcementVisible = false;
+
   try {
-    kits = await getKitList();
+    await connectDB();
+    const [kitsResult, bannerRecord, visibleRecord] = await Promise.all([
+      getKitList(),
+      SiteConfig.findOne({ key: "announcement_banner" }).lean(),
+      SiteConfig.findOne({ key: "announcement_visible" }).lean(),
+    ]);
+    kits = kitsResult;
+    announcementText = (bannerRecord?.value as string) ?? "";
+    announcementVisible = (visibleRecord?.value as boolean) ?? false;
   } catch {
-    // DB not connected in dev — sidebar will show 0 counts
+    // DB not connected in dev — silent fallback
   }
 
   return (
@@ -53,6 +65,9 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <SessionProvider>
+            {announcementVisible && announcementText && (
+              <AnnouncementBanner text={announcementText} />
+            )}
             <div className="flex h-screen overflow-hidden bg-background">
               <Sidebar kits={kits} />
               <div className="flex flex-1 flex-col overflow-hidden min-w-0">

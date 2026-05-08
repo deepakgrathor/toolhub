@@ -1,8 +1,33 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #7 | Admin Panel — Tools + Users (complete)
+Updated: 2026-05-09 | Account: A | Session: #8 | Admin Pricing + Settings + Announcement Banner (complete)
 
 ## Where We Are
-Session A7 done. Admin panel with layout, overview stats, tools inline editing, users management + add credits modal, and all admin API routes.
+Session A8 done. Admin panel is now fully complete: Pricing CRUD with drag-to-reorder, Site Settings (theme, announcement banner, maintenance mode), and a global announcement banner that renders SSR and dismisses per session.
+
+### What Was Built (Session A8 — Admin Pricing + Settings)
+
+**Pricing Management**
+- `apps/web/src/app/admin/pricing/page.tsx` — server component; fetches all CreditPacks (sorted by sortOrder); passes `PackRow[]` to client component
+- `apps/web/src/components/admin/PricingTable.tsx` — full client CRUD; table with Name/Credits/Price/₹per Credit/Featured/Active/Order/Actions columns; "Add New Pack" button; shared modal form for add+edit (pre-filled on edit); delete confirm dialog; HTML5 drag-to-reorder (dragstart/dragenter/dragend updates sortOrder + fires PATCH for each affected row)
+- `apps/web/src/app/api/admin/pricing/route.ts` — POST; admin auth; Zod validation; creates CreditPack; AuditLog entry
+- `apps/web/src/app/api/admin/pricing/[id]/route.ts` — PATCH (update fields); DELETE (remove pack); both with admin auth + AuditLog before/after snapshot
+
+**Site Settings**
+- `apps/web/src/app/admin/settings/page.tsx` — server component; fetches 4 SiteConfig keys with defaults fallback; passes `SiteSettings` to client component
+- `apps/web/src/components/admin/SettingsForm.tsx` — client form; 3 sections: Default Theme (radio cards), Announcement Banner (textarea + char count + toggle + live preview), Maintenance Mode (toggle + red warning); single Save button → PATCH `/api/admin/settings`; success/error feedback with 3s auto-clear
+- `apps/web/src/app/api/admin/settings/route.ts` — PATCH; admin auth; Zod validation of 4 keys; upserts each key in SiteConfig collection; AuditLog with before/after per-key diff
+
+**Announcement Banner**
+- `apps/web/src/components/layout/AnnouncementBanner.tsx` — client component; shows purple full-width banner with text + X dismiss button; dismissal stored in `sessionStorage` (reappears on new tab/session); mounts conditionally (no DOM node when hidden)
+- `apps/web/src/app/layout.tsx` — updated; fetches `announcement_banner` + `announcement_visible` from SiteConfig in the same `connectDB()` call as kit list; renders `<AnnouncementBanner>` above the main layout div (SSR rendered, no flash)
+
+### SiteConfig Keys Used
+| Key | Type | Default |
+|-----|------|---------|
+| `default_theme` | `"dark" \| "light"` | `"dark"` |
+| `announcement_banner` | `string` | `""` |
+| `announcement_visible` | `boolean` | `false` |
+| `maintenance_mode` | `boolean` | `false` |
 
 ### What Was Built (Session A7 — Admin Panel)
 
@@ -138,7 +163,7 @@ Session A7 done. Admin panel with layout, overview stats, tools inline editing, 
 - Dashboard requires auth — middleware `/apps/web/src/middleware.ts` should protect `/dashboard`
 
 ## Next Task
-Session A8: Tool Engine + First Functional Tool (Blog Generator)
+Session A9: Tool Engine + First Functional Tool (Blog Generator)
 - Wire up `/tools/blog-generator` with real form + AI call
 - Tool engine pattern: form → /api/tools/blog-generator → AI → deductCredits → return output
 - Store tool output in ToolOutput collection
