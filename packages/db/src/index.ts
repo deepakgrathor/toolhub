@@ -6,6 +6,9 @@ export * from "./models/CreditPack";
 export * from "./models/SiteConfig";
 export * from "./models/AuditLog";
 
+export * from "./models/CreditTransaction";
+export * from "./models/OtpToken";
+export * from "./credit-service";
+
 // Models added as sessions progress:
 // export * from "./models/ToolOutput";
-// export * from "./models/CreditTransaction";

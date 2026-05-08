@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { CommandSearch } from "@/components/search/CommandSearch";
+import { PaywallModal } from "@/components/credits/PaywallModal";
 import { getKitList } from "@/lib/tool-registry";
 
 const inter = Inter({
@@ -60,6 +61,7 @@ export default async function RootLayout({
               </div>
             </div>
             <AuthModal />
+            <PaywallModal />
             <CommandSearch />
           </SessionProvider>
         </ThemeProvider>
