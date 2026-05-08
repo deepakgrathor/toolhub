@@ -1,6 +1,7 @@
 {
   "name": "toolhub",
   "private": true,
+  "packageManager": "npm@10.9.4",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "turbo dev",
