@@ -6,12 +6,14 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { useSearchStore } from "@/store/search-store";
+import { useCreditStore } from "@/store/credits-store";
 
 export function Navbar() {
   const { data: session, status } = useSession();
   const openAuthModal = useAuthStore((s) => s.openAuthModal);
   const toggleMobile = useSidebarStore((s) => s.toggleMobile);
   const openSearch = useSearchStore((s) => s.setOpen);
+  const balance = useCreditStore((s) => s.balance);
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4 gap-3">
@@ -62,7 +64,7 @@ export function Navbar() {
             <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1">
               <Coins className="h-3.5 w-3.5 text-accent" />
               <span className="text-xs font-semibold text-accent">
-                {session.user.credits ?? 0} credits
+                {balance} credits
               </span>
             </div>
 

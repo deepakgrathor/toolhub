@@ -6,6 +6,7 @@ import { connectDB, User } from "@toolhub/db";
 import type { NextAuthConfig } from "next-auth";
 
 const config: NextAuthConfig = {
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,

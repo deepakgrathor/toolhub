@@ -11,6 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { useAuthStore } from "@/store/auth-store";
+import { useCreditStore } from "@/store/credits-store";
 import { getKitIcon } from "@/lib/tool-icons";
 
 const KITS = [
@@ -90,6 +91,7 @@ function SidebarContent({
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
   const openAuthModal = useAuthStore((s) => s.openAuthModal);
+  const balance = useCreditStore((s) => s.balance);
 
   return (
     <>
@@ -129,7 +131,7 @@ function SidebarContent({
             )}
           >
             <Coins className="h-4 w-4 shrink-0" />
-            {!isCollapsed && <span>{session.user.credits ?? 0} credits</span>}
+            {!isCollapsed && <span>{balance} credits</span>}
           </div>
         ) : (
           !isCollapsed && (

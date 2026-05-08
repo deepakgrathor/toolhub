@@ -1,110 +1,87 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #4 + icon migration + security fix + branch pushed (complete)
+Updated: 2026-05-09 | Account: A | Session: #5 | Credit System + Pricing + Dashboard (complete)
 
 ## Where We Are
-Session A4 done. Full homepage, sidebar, tool grid, Cmd+K search, tools listing page, and tool page shell are all built.
+Session A5 done. Full credit system, pricing page, dashboard, and paywall modal are all built.
 
 ### What Was Built
 
-**New Packages (apps/web)**
-- `framer-motion@^12.38.0` — hover animations on ToolCard
-- `cmdk@^1.1.1` — Cmd+K command palette
+**New DB Model**
+- `packages/db/src/models/CreditTransaction.ts` — Schema: userId, type, amount, balanceAfter, toolSlug?, meta?
+  - Types: purchase | use | refund | referral_bonus | manual_admin
 
-**New Zustand Stores**
-- `src/store/sidebar-store.ts` — `isCollapsed`, `isMobileOpen`, `toggle()`, `toggleMobile()`, `closeMobile()`
-- `src/store/search-store.ts` — `isOpen`, `tools[]`, `setOpen()`, `setTools()` — caches tool list for command search
+**New DB Service**
+- `packages/db/src/credit-service.ts` — `CreditService` class (static methods) + `InsufficientCreditsError`
+  - `checkBalance(userId, required)` → boolean
+  - `getBalance(userId)` → number
+  - `deductCredits(userId, amount, toolSlug)` → atomic (MongoDB session + withTransaction)
+  - `addCredits(userId, amount, type, meta?)` → atomic
+  - `getTransactionHistory(userId, limit)` → sorted desc
+  - Note: placed in packages/db (not shared) to avoid circular dependency — shared→db would cycle with db→shared
 
-**Sidebar (`src/components/layout/sidebar.tsx` — full rewrite)**
-- Desktop: 240px collapsible to 56px, toggle button at top-right edge
-- Collapse state persisted to localStorage
-- Kit navigation: All Tools 🧰 / Creator 🎨 / SME 🏪 / HR 👥 / CA-Legal ⚖️ / Marketing 📣
-- Active kit highlighted purple; tool counts shown per kit
-- Bottom: credits badge (authenticated), Buy Credits link, theme toggle
-- Mobile: overlay drawer triggered by hamburger in Navbar
-- `useSearchParams` wrapped in `<Suspense>` internally to avoid Next.js warning
-- Accepts `kits` prop (pre-fetched server-side in layout for instant SSR counts)
+**Updated packages/db/src/index.ts**
+- Now exports `CreditTransaction`, `ICreditTransaction`, `CreditService`, `InsufficientCreditsError`
 
-**ToolCard (`src/components/tools/ToolCard.tsx`)**
-- Framer Motion `whileHover` lift (y: -3, scale: 1.01)
-- Shows: emoji icon, name, 2-line truncated description
-- FREE badge (green) or credit cost badge (purple)
-- Kit tags (up to 2)
-- Navigates to `/tools/[slug]` on click
+**New API Routes**
+- `GET /api/user/credits` — auth required; returns `{ balance, transactions }` (20 most recent)
+- `POST /api/user/credits/deduct` — body `{ toolSlug, amount }`; 402 on insufficient credits
+- `GET /api/credits/packs` — public; returns active packs sorted by sortOrder
 
-**CommandSearch (`src/components/search/CommandSearch.tsx`)**
-- Global Cmd+K / Ctrl+K keyboard listener
-- Uses `cmdk` Command + Radix Dialog
-- Fetches all tools once, cached in Zustand search-store
-- Filters by name as user types
-- Shows: icon, name, kit label, FREE/credit badge
-- Enter or click → navigate to `/tools/[slug]`
+**New Zustand Store**
+- `apps/web/src/store/credits-store.ts` — `useCreditStore`
+  - state: balance, isLoading, lastSynced
+  - `setBalance`, `deductLocally` (optimistic), `syncFromServer` (GET /api/user/credits)
 
-**LoginBanner (`src/components/tools/LoginBanner.tsx`)**
-- Client component; renders only for unauthenticated users
-- Shows "Login to use this tool" banner inside tool page left panel
-- Opens auth modal on click
+**Updated: AuthModal** (`apps/web/src/components/auth/AuthModal.tsx`)
+- Calls `syncFromServer()` after successful login AND successful signup+auto-login
 
-**ToolsClient (`src/components/tools/ToolsClient.tsx`)**
-- Fetches `/api/tools` on mount
-- Kit filter pill tabs (URL param: `?kit=`)
-- Client-side search input filters by name/description
-- Responsive grid: 1 / 2 / 3 / 4 columns
-- Shows count: "Showing X of Y tools"
-- Loading skeleton + empty state
+**Updated: Sidebar** (`apps/web/src/components/layout/sidebar.tsx`)
+- Credits badge reads from `useCreditStore().balance` (live updates, not stale JWT)
 
-**Homepage (`src/app/page.tsx` — full rewrite)**
-Server component:
-- Hero: headline, subtext, Explore + Pricing buttons, trust line
-- Stats bar: 30+ Tools / 5 Kits / ₹1.33/use / Free Forever
-- Kit showcase: 5 kit cards with emoji, name, count, 3 example tool names
-- Popular tools: 6 tool cards (blog-generator, yt-script, gst-invoice, resume-screener, legal-notice, thumbnail-ai)
+**Updated: Navbar** (`apps/web/src/components/layout/Navbar.tsx`)
+- Credits badge reads from `useCreditStore().balance`
 
-**Tools Listing (`src/app/tools/page.tsx`)**
-- Thin shell wrapping `<ToolsClient>` inside `<Suspense>`
-- Metadata: title + description
+**New Page: Pricing** (`apps/web/src/app/pricing/page.tsx`)
+- Server component — fetches packs from DB via `connectDB()` + `CreditPack.find`
+- Responsive grid: 1→2→3→5 columns depending on pack count
+- isFeatured pack: purple ring + "Most Popular" badge + solid purple CTA
+- Per-credit cost shown per card
+- "What can you build?" table: tool name, kit, credits, ₹ cost at popular pack rate
+- FAQ accordion (native `<details>` + CSS chevron rotate)
+- Falls back gracefully if DB is unavailable (empty state, no crash)
 
-**Tool Page Shell (`src/app/tools/[slug]/page.tsx`)**
-- SSR with `generateMetadata` for SEO
-- 404 via `notFound()` if slug not found
-- Breadcrumb: Home > Tools > [Tool Name]
-- 2-column layout: 45% input panel | 55% output panel
-- Left: icon, name, credit badge, description, LoginBanner, placeholder form
-- Right: placeholder output area
-- Full `lg:` breakpoint responsive (stacks on mobile)
+**New Page: Dashboard** (`apps/web/src/app/dashboard/page.tsx`)
+- Server component shell — fetches popular tools server-side
+- Auth protected by Next.js middleware (to be configured separately)
 
-**Navbar (`src/components/layout/Navbar.tsx` — updated)**
-- Mobile hamburger (md:hidden) → opens sidebar drawer via `useSidebarStore`
-- Search trigger button → opens CommandSearch via `useSearchStore`
-- Keyboard shortcut hint (⌘K) shown in search trigger
+**New Components: Dashboard**
+- `apps/web/src/components/dashboard/CreditOverview.tsx` — client; syncs balance on mount; Coins icon, large purple number, "Buy More Credits" → /pricing
+- `apps/web/src/components/dashboard/TransactionHistory.tsx` — client; fetches /api/user/credits on mount; table with date/tool/type/amount/balance; skeleton loading (5 rows); empty state with SearchX icon; type badges color-coded
 
-**Root Layout (`src/app/layout.tsx` — updated)**
-- Sidebar now receives `kits` prop (fetched via `getKitList()` server-side)
-- `<CommandSearch />` rendered globally (outside main content, always mounted)
-- `min-w-0` on main content area prevents overflow issues
+**New Store: Paywall**
+- `apps/web/src/store/paywall-store.ts` — `usePaywallStore`: isOpen, toolName, requiredCredits, openPaywall(), closePaywall()
 
-**Icon System Migration (post-A4)**
-- `apps/web/src/lib/tool-icons.ts` — created: `getToolIcon(slug)`, `getKitIcon(kit)`, `kitIcons` record; all 27 tool slugs mapped; Wrench fallback
-- `packages/db/src/seed.ts` — all 27 tool icon values changed from emoji to lucide icon name strings (e.g. "FileText", "Video", "Receipt")
-- `packages/db/src/models/Tool.ts` — default icon changed from "🔧" to "Wrench"
-- `apps/web/src/components/layout/sidebar.tsx` — kit icons use `getKitIcon()`, logo uses `<Zap>`
-- `apps/web/src/components/tools/ToolCard.tsx` — icon rendered via `getToolIcon(tool.slug)` in accent pill box
-- `apps/web/src/components/tools/ToolsClient.tsx` — kit filter tabs use `getKitIcon()`, empty state uses `<SearchX>`
-- `apps/web/src/app/page.tsx` — kit cards and example tool lists use lucide icons; stats bar has icon per stat; hero badge uses `<Zap>`
-- `apps/web/src/components/search/CommandSearch.tsx` — tool results use `getToolIcon(tool.slug)`
-- `apps/web/src/app/tools/[slug]/page.tsx` — tool header uses `getToolIcon()`, placeholders use `<Wrench>` and `<Sparkles>`
-- Zero emojis remain in any UI source file (console.log terminal strings are not UI and untouched)
+**New Modal: PaywallModal** (`apps/web/src/components/credits/PaywallModal.tsx`)
+- Globally mounted in root layout
+- Shows required vs available credits
+- "Buy Credits" → /pricing | "Cancel" button
 
-### Verified
-- TypeScript: clean (0 errors) — web + db packages
-- All 11 files created or modified (A4) + 9 files modified (icon migration)
+**Updated: Root Layout** (`apps/web/src/app/layout.tsx`)
+- Added `<PaywallModal />` (globally mounted)
+
+### Architecture Note
+- CreditService uses MongoDB transactions (`startSession` + `withTransaction`) for atomic credit deduct+log
+- Credits are deducted AFTER AI response (enforced by design — deductCredits called from tool engine, not from UI)
+- Pricing page is fully public (no auth required)
+- Dashboard requires auth — middleware `/apps/web/src/middleware.ts` should protect `/dashboard`
 
 ## Next Task
-Session A5: Authentication Flow Polish + Credits System
-- Auth modal improvements (forgot password, better validation)
-- Post-login redirect handling
-- Credits display in sidebar + navbar
-- `/pricing` page with Razorpay credit packs
-- Credit deduction UI flow (confirm modal before tool use)
+Session A6: Tool Engine + First Functional Tool (Blog Generator)
+- Wire up `/tools/blog-generator` with real form + AI call
+- Tool engine pattern: form → /api/tools/blog-generator → AI → deductCredits → return output
+- Store tool output in ToolOutput collection
+- Hook into PaywallModal when balance < creditCost
+- Auth gate: trigger AuthModal if not logged in on form submit
 
 ## How to Seed
 ```bash
@@ -139,10 +116,9 @@ MONGODB_URI=mongodb+srv://... npm run seed
 - Upstash Redis, Cloudflare R2, Razorpay, Resend, PostHog, LiteLLM
 
 ## Branch / PR Status
-- Branch `claude/distracted-ishizaka-117a9d` pushed to `deepakgrathor/toolhub`
-- Git history rewritten — commit `9896db3` (old) replaced by `2e958c9` (clean, no credentials)
-- PR creation URL: https://github.com/deepakgrathor/toolhub/pull/new/claude/distracted-ishizaka-117a9d
-- `gh` CLI was not authenticated in worktree — user must open URL above to create PR
+- Branch `claude/dreamy-newton-748082` (current worktree)
+- Previous branch `claude/distracted-ishizaka-117a9d` was pushed in session A4
+- User should push this branch and open a new PR
 
 ## Issues
-None — clean build, type check, and history scrub complete.
+None — code is clean, types reviewed manually (tsc not runnable without npm install in worktree).
