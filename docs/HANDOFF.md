@@ -1,5 +1,5 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #4 + icon migration (complete)
+Updated: 2026-05-09 | Account: A | Session: #4 + icon migration + security fix + branch pushed (complete)
 
 ## Where We Are
 Session A4 done. Full homepage, sidebar, tool grid, Cmd+K search, tools listing page, and tool page shell are all built.
@@ -138,5 +138,11 @@ MONGODB_URI=mongodb+srv://... npm run seed
 **Optional for now:**
 - Upstash Redis, Cloudflare R2, Razorpay, Resend, PostHog, LiteLLM
 
+## Branch / PR Status
+- Branch `claude/distracted-ishizaka-117a9d` pushed to `deepakgrathor/toolhub`
+- Git history rewritten — commit `9896db3` (old) replaced by `2e958c9` (clean, no credentials)
+- PR creation URL: https://github.com/deepakgrathor/toolhub/pull/new/claude/distracted-ishizaka-117a9d
+- `gh` CLI was not authenticated in worktree — user must open URL above to create PR
+
 ## Issues
-None — clean build and type check.
+None — clean build, type check, and history scrub complete.
