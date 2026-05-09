@@ -6,7 +6,8 @@ import { ChevronRight, Wrench, Sparkles } from "lucide-react";
 import { getToolBySlug } from "@/lib/tool-registry";
 import { LoginBanner } from "@/components/tools/LoginBanner";
 import { getToolIcon } from "@/lib/tool-icons";
-import { ToolLoadingSkeleton } from "@/components/tools/ToolLoadingSkeleton";
+import { ToolPageSkeleton } from "@/components/ui/skeletons";
+import { ToolErrorBoundary } from "@/components/tools/ToolErrorBoundary";
 
 // ── Dynamic tool component map ────────────────────────────────────────────────
 // Add new tools here as they are built. Each entry is code-split automatically.
@@ -14,114 +15,114 @@ import { ToolLoadingSkeleton } from "@/components/tools/ToolLoadingSkeleton";
 const toolComponents: Record<string, React.ComponentType<{ creditCost?: number }>> = {
   "blog-generator": dynamic(
     () => import("@/tools/blog-generator/BlogGeneratorTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "qr-generator": dynamic(
     () => import("@/tools/qr-generator/QrGeneratorTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "gst-calculator": dynamic(
     () => import("@/tools/gst-calculator/GstCalculatorTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "hook-writer": dynamic(
     () => import("@/tools/hook-writer/HookWriterTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "caption-generator": dynamic(
     () => import("@/tools/caption-generator/CaptionGeneratorTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "yt-script": dynamic(
     () => import("@/tools/yt-script/YtScriptTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "jd-generator": dynamic(
     () => import("@/tools/jd-generator/JdGeneratorTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "linkedin-bio": dynamic(
     () => import("@/tools/linkedin-bio/LinkedinBioTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   // A15 tools
   "title-generator": dynamic(
     () => import("@/tools/title-generator/TitleGeneratorTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "email-subject": dynamic(
     () => import("@/tools/email-subject/EmailSubjectTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "whatsapp-bulk": dynamic(
     () => import("@/tools/whatsapp-bulk/WhatsappBulkTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "legal-notice": dynamic(
     () => import("@/tools/legal-notice/LegalNoticeTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "nda-generator": dynamic(
     () => import("@/tools/nda-generator/NdaGeneratorTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "legal-disclaimer": dynamic(
     () => import("@/tools/legal-disclaimer/LegalDisclaimerTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "ad-copy": dynamic(
     () => import("@/tools/ad-copy/AdCopyTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "resume-screener": dynamic(
     () => import("@/tools/resume-screener/ResumeScreenerTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   // A16 SME free tools
   "gst-invoice": dynamic(
     () => import("@/tools/gst-invoice/GstInvoiceTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "expense-tracker": dynamic(
     () => import("@/tools/expense-tracker/ExpenseTrackerTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "quotation-generator": dynamic(
     () => import("@/tools/quotation-generator/QuotationGeneratorTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "salary-slip": dynamic(
     () => import("@/tools/salary-slip/SalarySlipTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "offer-letter": dynamic(
     () => import("@/tools/offer-letter/OfferLetterTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "tds-sheet": dynamic(
     () => import("@/tools/tds-sheet/TdsSheetTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   // A17 AI tools
   "appraisal-draft": dynamic(
     () => import("@/tools/appraisal-draft/AppraisalDraftTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "policy-generator": dynamic(
     () => import("@/tools/policy-generator/PolicyGeneratorTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "website-generator": dynamic(
     () => import("@/tools/website-generator/WebsiteGeneratorTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "seo-auditor": dynamic(
     () => import("@/tools/seo-auditor/SeoAuditorTool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
   "thumbnail-ai": dynamic(
     () => import("@/tools/thumbnail-ai/ThumbnailAITool"),
-    { loading: () => <ToolLoadingSkeleton /> }
+    { loading: () => <ToolPageSkeleton /> }
   ),
 };
 
@@ -164,7 +165,9 @@ export default async function ToolPage({ params }: Props) {
 
       {/* Render functional tool component if available, else placeholder */}
       {ToolComponent ? (
-        <ToolComponent creditCost={tool.config.creditCost} />
+        <ToolErrorBoundary toolName={tool.name}>
+          <ToolComponent creditCost={tool.config.creditCost} />
+        </ToolErrorBoundary>
       ) : (
         <div className="flex flex-1 overflow-auto flex-col lg:flex-row">
           {/* Left panel — 45% */}

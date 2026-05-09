@@ -1,88 +1,144 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #18 | Dashboard Redesign + Sidebar Overhaul
+Updated: 2026-05-09 | Account: A | Session: #19 | Performance + Loading Experience
 
 ## Where We Are
-Session A18 done. **TypeScript: 0 errors.**
-All 27 tools complete. Premium UX overhaul done — sidebar accordion, new dashboard, navbar polish.
+Session A19 done. **TypeScript: 0 errors.**
+All 10 performance + loading experience goals implemented.
 
 ---
 
-## What Was Built (Session A18 — UX Overhaul)
+## What Was Built (Session A19 — Performance + Loading)
 
-### PART 1 — Root Redirect
-- `apps/web/src/app/(site)/page.tsx` — `auth()` check at top; logged-in users redirected to `/dashboard`
+### PART 1 — Skeleton Loaders
+- `apps/web/src/components/ui/skeletons/DashboardSkeleton.tsx` — **new**:
+  - `StatsBarSkeleton` — 4-card pulse grid
+  - `RecentActivitySkeleton` — header + 5 row pulses
+  - `KitSectionSkeleton` — 2 kit groups × 6 tool cards
+  - `DashboardSkeleton` — full page composite
+- `apps/web/src/components/ui/skeletons/ToolPageSkeleton.tsx` — **new**: matches 45/55 tool layout
+- `apps/web/src/components/ui/skeletons/index.ts` — barrel exports
+- All skeletons use `animate-pulse bg-muted` — works in dark + light
 
-### PART 2 — Sidebar Complete Overhaul
-- `apps/web/src/store/sidebar-store.ts` — added `expandedKit: string | null` + `setExpandedKit()`
-- `apps/web/src/components/layout/sidebar.tsx` — full rewrite:
-  - **Framer Motion accordion** — one kit open at a time, AnimatePresence + motion.div height animation
-  - **Auto-expand** — `usePathname()` detects active tool slug and auto-expands parent kit
-  - **Active states** — active tool gets `bg-primary/10`, `text-primary`, left 3px accent border
-  - **Collapsed sidebar** (56px) — icons only, tooltips on hover, no tool lists
-  - **Bottom section** — Refer & Earn (Gift icon) + Logout (LogOut icon, destructive on hover)
-  - **Removed** — "All Tools" link, History link, theme toggle (moved to navbar)
-  - **Mobile** — overlay drawer with full sidebar, closes on pathname change
-  - **Kit config** — imported from `@/lib/kit-config` (centralized)
+### PART 2 — Suspense + Next.js Streaming
+- `apps/web/src/app/(site)/dashboard/loading.tsx` — **new**: full-page `<DashboardSkeleton />` shown by App Router during navigation
+- `apps/web/src/app/(site)/dashboard/page.tsx` — **rewritten**:
+  - Greeting renders instantly (no DB)
+  - `<StatsSection>` wrapped in `<Suspense fallback={<StatsBarSkeleton />}>`
+  - `<ToolsSection>` wrapped in `<Suspense fallback={<KitSectionSkeleton />}>`
+  - Both are async server components — streaming after DB resolves
 
-### PART 3 — Navbar Update
-- `apps/web/src/components/layout/UserDropdown.tsx` — new file, custom dropdown:
-  - Trigger: avatar initials + name
-  - Items: Dashboard, History, Refer & Earn, Logout (destructive)
-- `apps/web/src/components/layout/Navbar.tsx` — rewritten:
-  - **Logged in**: Search | Credits badge (Coins + balance, click → /pricing) | ThemeToggle | UserDropdown
-  - **Logged out**: Search | ThemeToggle | Login button
-  - ThemeToggle: Sun/Moon icon, useTheme() from next-themes
+### PART 3 — AI Tool Output Streaming
+- `apps/web/src/lib/ai-stream.ts` — **new**: raw SSE streaming for Anthropic, OpenAI, Gemini, and LiteLLM gateway
+- `apps/web/src/app/api/tools/blog-generator/stream/route.ts` — **new**:
+  - Uses plain-text markdown prompt (not JSON) so streaming content is readable
+  - Pipes AI chunks directly to `ReadableStream` → client
+  - Credits deducted ONLY after full stream completes (rule #4 maintained)
+  - Terminal metadata: `[DONE:{"creditsUsed":X,"newBalance":Y}]`
+- `apps/web/src/hooks/useStreamingOutput.ts` — **new**:
+  - `startStream(url, body)` — reads chunked response, accumulates text
+  - Parses terminal `[DONE:...]` / `[ERROR:...]` markers
+  - Exposes `{ text, isStreaming, isDone, error, creditsUsed, newBalance }`
+- `apps/web/src/tools/blog-generator/BlogGeneratorTool.tsx` — **rewritten**:
+  - Uses `useStreamingOutput` hook
+  - `<StreamingSkeleton>` with live char counter + progress bar while streaming
+  - `<TypingCursor>` blinking cursor (accent color, 500ms interval)
+  - `<BlogOutput>` fades in with `animate-in fade-in` after parsing
+  - Form inputs disabled during generation
+  - `<CheckCheck>` green icon on copy (2s, then resets)
+  - Parses plain-text markdown sections into structured BlogOutput object
 
-### PART 4 — Dashboard Redesign
-- `apps/web/src/app/(site)/dashboard/page.tsx` — full rewrite:
-  - **Auth guard** — `auth()` check, redirects to `/` if not logged in
-  - **Time-based greeting** — "Good morning/afternoon/evening/night, [FirstName]!"
-  - **Stats**: toolsUsed (ToolOutput.countDocuments), creditsUsed (CreditTransaction aggregate), balance (from store), memberSince (User.createdAt from DB)
-  - **Kit-wise tools** — KitSection renders all 27 tools grouped by kit
-  - **Recent Activity** — last 5 runs, client-side fetch
-  - **Referral** — at bottom with `id="referral"` for anchor linking
-  - **Removed** — CreditOverview card, old TransactionHistory + ReferralCard combo layout
+### PART 4 — Optimistic UI
+- Blog generator: Loader2 spinner on button + all fields disabled during streaming
+- Error toast (sonner) fired on `stream.error` via `useEffect`
+- Credits NOT deducted unless stream completes successfully
 
-- `apps/web/src/components/dashboard/StatsBar.tsx` — 4-card stats row (tools used, credits left, credits used, member since)
-- `apps/web/src/components/dashboard/DashboardToolCard.tsx` — compact tool card with icon, name, description, FREE/Xcr badge, hover lift + purple border
-- `apps/web/src/components/dashboard/KitSection.tsx` — renders all SIDEBAR_KITS with tool grids (3/2/1 col)
-- `apps/web/src/components/dashboard/RecentActivity.tsx` — last 5 history items, relative time, View link, empty state, loading skeleton
+### PART 9 — Error Boundaries
+- `apps/web/src/components/tools/ToolErrorBoundary.tsx` — **new**:
+  - React class `Component` with `getDerivedStateFromError`
+  - Shows: AlertTriangle icon + tool name + error message + "Try Again" button
+  - Captures to Posthog if `NEXT_PUBLIC_POSTHOG_KEY` set
+  - Wrapped around every `ToolComponent` in the `[slug]/page.tsx`
+- `apps/web/src/app/error.tsx` — **enhanced**:
+  - Shows error digest ID
+  - Posthog `global_error` capture
+  - Dashboard link added alongside Try Again
 
-### PART 6 — Kit Config Centralization
-- `apps/web/src/lib/kit-config.ts` — **new file**, single source of truth:
-  - `SIDEBAR_KITS` — all 5 kits with full tool lists
-  - `KitConfig` / `KitTool` interfaces
-  - `getKitForSlug(slug)` — returns parent kit id
-  - Imported by both sidebar.tsx and dashboard components
+### PART 7 — Redis Caching
+- `apps/web/src/lib/credit-cache.ts` — **new**:
+  - `getCachedBalance` / `setCachedBalance` / `invalidateBalance` — key `toolhub:credits:{userId}`, TTL 5 min
+  - `getCachedDashStats` / `setCachedDashStats` / `invalidateDashStats` — key `toolhub:dashboard:{userId}`, TTL 2 min
+- `apps/web/src/app/api/user/credits/route.ts` — **updated**: Redis cache hit → skip DB round-trip
+- `apps/web/src/app/api/user/credits/deduct/route.ts` — **updated**: invalidates both balance + dashboard caches after deduction
+- Dashboard `StatsSection` — **updated**: reads from Redis cache before hitting MongoDB
 
-### PART 7 — Performance
-- `apps/web/src/app/(site)/layout.tsx` — added `animate-in fade-in duration-200` to `<main>` for smooth page transitions; removed `kits` prop from `<Sidebar>` (no longer needed)
+### PART 5 — Image Optimisation
+- `apps/web/next.config.mjs` — **updated**:
+  - `images.remotePatterns`: R2 public URL (from env), `*.r2.cloudflarestorage.com`, `lh3.googleusercontent.com`
+  - Ready for `next/image` with blur placeholder on R2 images
+
+### PART 6 — Route Prefetching
+- Confirmed: 0 instances of `prefetch={false}` in the codebase → all `<Link>` components prefetch by default
+- `apps/web/src/components/search/CommandSearch.tsx` — **updated**: prefetches top 3 tool routes via `router.prefetch()` when tools load on palette open
+
+### PART 8 — Bundle Analysis
+- `@next/bundle-analyzer` installed (dev dep)
+- `apps/web/next.config.mjs` — wrapped with `withBundleAnalyzer({ enabled: ANALYZE==="true" })`
+- Run: `ANALYZE=true npm run build` to open bundle report
+- All tool components already use `next/dynamic` (code-split per route)
+
+### PART 10 — Loading State Polish
+- Navbar: credits badge pill skeleton is `rounded-full` (matching badge shape) while session loads
+- Hook-writer: copy button now uses `<CheckCheck>` green icon (2s) instead of `<Check>`
+- Blog generator: `CheckCheck` green copy icon + `animate-in fade-in` on output reveal
+- Dashboard `main` tag already had `animate-in fade-in duration-200` (from A18)
+- `<TypingCursor>` component in blog generator: accent-colored, 500ms blink
 
 ---
 
 ## Architecture Notes
 
-### Sidebar is now self-contained
-The sidebar no longer needs a `kits` prop passed from the server layout. All kit/tool data lives in `src/lib/kit-config.ts` (static, client-side). The site layout is now simpler — just mounts `<Sidebar />` and `<Navbar />`.
+### Streaming Blog Generator
+The blog generator now has TWO API routes:
+1. `/api/tools/blog-generator` — original JSON route (kept for backwards compat)
+2. `/api/tools/blog-generator/stream` — new streaming route, plain-text markdown output
 
-### Two parallel tool configs
-- `src/lib/kit-config.ts` — **static, client-side** — sidebar structure, tool names per kit
-- DB `tool_config` collection — **dynamic, server-side** — credit cost, AI model, active status
-Both are used together in the dashboard KitSection (DB configs fetched server-side, passed as props).
+The tool component uses the streaming route. The streaming prompt outputs:
+```
+TITLE: ...
+META: ...
+---SECTION---
+## Heading
+Content...
+---CONCLUSION---
+...
+---CTA---
+...
+```
+Client parses this with `parseStreamedBlog()` after stream completes.
 
-### Credit balance flow
-1. Server renders with `session.user.credits` from JWT (fast)
-2. `useCreditStore.syncFromServer()` runs client-side to get fresh balance
-3. Navbar credits badge reads from `useCreditStore().balance`
-4. StatsBar credits card also reads from store (client component)
+### Credits Safety (Rule #4 Never Broken)
+All streaming routes:
+1. Check balance BEFORE streaming
+2. Call AI and stream response
+3. Deduct credits ONLY after `callAIStream()` resolves successfully
+4. Append `[DONE:{"creditsUsed":X,"newBalance":Y}]` terminal marker
+5. Frontend only updates credit store when it receives the `[DONE:...]` marker
+
+### Redis Cache Keys
+```
+toolhub:credits:{userId}     TTL 5 min — credit balance
+toolhub:dashboard:{userId}   TTL 2 min — dashboard stats (toolsUsed, creditsUsed, memberSince)
+registry:all_tools           TTL 5 min — tool registry (from A-earlier sessions)
+registry:tool:{slug}         TTL 5 min — individual tool config
+```
 
 ---
 
-## Tool Registry — All 27 Built Tools
+## Tool Registry — All 27 Built Tools (unchanged)
 
 | Tool | Slug | Credits | Model | Status |
 |------|------|---------|-------|--------|
-| Blog Generator | blog-generator | 3 | claude-haiku-3-5 | ✅ |
+| Blog Generator | blog-generator | 3 | claude-haiku-3-5 | ✅ + Streaming |
 | QR Generator | qr-generator | 0 | client-side | ✅ |
 | GST Calculator | gst-calculator | 0 | client-side | ✅ |
 | Hook Writer | hook-writer | 0 | gemini-flash-2.0 | ✅ |
@@ -112,13 +168,12 @@ Both are used together in the dashboard KitSection (DB configs fetched server-si
 
 ---
 
-## Phase 1 Status: COMPLETE + UX POLISHED
+## Phase 1 Status: COMPLETE + PERFORMANCE POLISHED
 
 Next steps:
 1. End-to-end testing with real API keys
 2. Razorpay integration wiring
-3. Admin panel polish
-4. Deploy to Vercel (web) + Railway (worker)
+3. Deploy to Vercel (web) + Railway (worker)
 
 ## Architecture: Two Redis Connection Types
 

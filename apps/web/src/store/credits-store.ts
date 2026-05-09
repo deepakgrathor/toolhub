@@ -26,6 +26,7 @@ export const useCreditStore = create<CreditsStore>((set) => ({
       const res = await fetch("/api/user/credits");
       if (res.ok) {
         const data = await res.json();
+        console.log(data, "data")
         set({ balance: data.balance, lastSynced: new Date() });
       }
     } finally {

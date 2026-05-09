@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectDB, CreditService } from "@toolhub/db";
+import { getCachedBalance, setCachedBalance } from "@/lib/credit-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +11,23 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userId = session.user.id;
+
+  // Try Redis cache first (avoids DB round-trip on every navbar/store sync)
+  const cached = await getCachedBalance(userId);
+  if (cached !== null) {
+    return NextResponse.json({ balance: cached });
+  }
+
   await connectDB();
 
   const [balance, transactions] = await Promise.all([
-    CreditService.getBalance(session.user.id),
-    CreditService.getTransactionHistory(session.user.id, 20),
+    CreditService.getBalance(userId),
+    CreditService.getTransactionHistory(userId, 20),
   ]);
+
+  // Cache the balance for 5 min
+  await setCachedBalance(userId, balance);
 
   return NextResponse.json({ balance, transactions });
 }

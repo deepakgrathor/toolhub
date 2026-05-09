@@ -66,7 +66,7 @@ export function Navbar() {
       {/* Right side */}
       <div className="flex items-center gap-2 ml-auto">
         {status === "loading" && (
-          <div className="h-8 w-20 animate-pulse rounded-lg bg-muted/50" />
+          <div className="h-7 w-20 animate-pulse rounded-full bg-muted/50" />
         )}
 
         {status === "unauthenticated" && (

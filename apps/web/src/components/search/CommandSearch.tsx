@@ -25,9 +25,15 @@ export function CommandSearch() {
     if (tools.length > 0) return;
     fetch("/api/tools")
       .then((r) => r.json())
-      .then(({ tools: t }) => setTools(t ?? []))
+      .then(({ tools: t }) => {
+        setTools(t ?? []);
+        // Prefetch top 3 tool routes as soon as the search palette opens
+        (t as { slug: string }[]).slice(0, 3).forEach((tool) => {
+          router.prefetch(`/tools/${tool.slug}`);
+        });
+      })
       .catch(() => {});
-  }, [tools.length, setTools]);
+  }, [tools.length, setTools, router]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
