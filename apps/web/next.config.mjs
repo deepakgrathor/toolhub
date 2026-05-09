@@ -29,7 +29,7 @@ const nextConfig = {
         ? [
             {
               protocol: "https",
-              hostname: new URL(process.env.CLOUDFLARE_R2_PUBLIC_URL).hostname,
+              hostname: new URL(process.env.CLOUDFLARE_R2_PUBLIC_URL.replace(/^﻿/, "")).hostname,
             },
           ]
         : []),
