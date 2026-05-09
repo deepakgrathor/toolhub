@@ -71,7 +71,7 @@ export function BuyCreditsButton({ pack }: Props) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        console.error("[BuyCreditsButton] Purchase failed:", data.error);
+        // console.error("[BuyCreditsButton] Purchase failed:", data.error);
         toast.error("Payment failed. Please try again.");
         setLoading(false);
         return;
@@ -81,7 +81,7 @@ export function BuyCreditsButton({ pack }: Props) {
 
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
-        console.error("[BuyCreditsButton] Failed to load Razorpay script");
+        // console.error("[BuyCreditsButton] Failed to load Razorpay script");
         setLoading(false);
         return;
       }
@@ -108,7 +108,7 @@ export function BuyCreditsButton({ pack }: Props) {
 
       rzp.open();
     } catch (err) {
-      console.error("[BuyCreditsButton] Unexpected error:", err);
+      // console.error("[BuyCreditsButton] Unexpected error:", err);
       toast.error("Payment failed. Please try again.");
       setLoading(false);
     }

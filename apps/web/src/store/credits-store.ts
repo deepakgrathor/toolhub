@@ -29,7 +29,7 @@ export const useCreditStore = create<CreditsStore>((set) => ({
         if (typeof data.balance === "number") {
           set({ balance: data.balance, lastSynced: new Date() });
         } else {
-          console.error("[credits-store] Unexpected response:", data);
+          // console.error("[credits-store] Unexpected response:", data);
         }
       }
     } finally {
