@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "../lib/mongoose-shim";
+import { Schema, Document, Model, getOrCreateModel } from "../lib/mongoose-shim";
 
 export interface IToolConfig extends Document {
   toolSlug: string;
@@ -24,6 +24,7 @@ const ToolConfigSchema = new Schema<IToolConfig>(
   { timestamps: true }
 );
 
-export const ToolConfig: Model<IToolConfig> =
-  (mongoose.models["ToolConfig"] as Model<IToolConfig>) ??
-  mongoose.model<IToolConfig>("ToolConfig", ToolConfigSchema);
+export const ToolConfig: Model<IToolConfig> = getOrCreateModel<IToolConfig>(
+  "ToolConfig",
+  ToolConfigSchema
+);

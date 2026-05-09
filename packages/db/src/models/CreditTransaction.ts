@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "../lib/mongoose-shim";
+import { Schema, Document, Model, getOrCreateModel } from "../lib/mongoose-shim";
 import type { Types } from "mongoose";
 
 export interface ICreditTransaction extends Document {
@@ -28,5 +28,4 @@ const CreditTransactionSchema = new Schema<ICreditTransaction>(
 );
 
 export const CreditTransaction: Model<ICreditTransaction> =
-  (mongoose.models["CreditTransaction"] as Model<ICreditTransaction>) ??
-  mongoose.model<ICreditTransaction>("CreditTransaction", CreditTransactionSchema);
+  getOrCreateModel<ICreditTransaction>("CreditTransaction", CreditTransactionSchema);

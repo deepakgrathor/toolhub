@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "../lib/mongoose-shim";
+import { Schema, Document, Model, getOrCreateModel } from "../lib/mongoose-shim";
 
 export interface ITool extends Document {
   slug: string;
@@ -27,6 +27,4 @@ const ToolSchema = new Schema<ITool>(
   { timestamps: true }
 );
 
-export const Tool: Model<ITool> =
-  (mongoose.models["Tool"] as Model<ITool>) ??
-  mongoose.model<ITool>("Tool", ToolSchema);
+export const Tool: Model<ITool> = getOrCreateModel<ITool>("Tool", ToolSchema);
