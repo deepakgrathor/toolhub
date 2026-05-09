@@ -20,6 +20,11 @@ const NAV_ITEMS = [
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },
 ];
 
+/**
+ * Admin layout — full-screen isolated shell.
+ * Does NOT inherit the site sidebar or navbar from (site)/layout.tsx
+ * because admin lives outside that route group.
+ */
 export default function AdminLayout({
   children,
 }: {
@@ -28,9 +33,10 @@ export default function AdminLayout({
   const pathname = usePathname();
 
   return (
-    <div className="flex h-full">
-      {/* Admin sidebar */}
+    <div className="flex h-screen overflow-hidden bg-[#0a0a0a]">
+      {/* ── Admin sidebar ───────────────────────────────────────────── */}
       <aside className="w-52 shrink-0 border-r border-border flex flex-col bg-[#0d0d0d]">
+        {/* Logo + back link */}
         <div className="px-4 py-4 border-b border-border">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
             Admin Panel
@@ -44,6 +50,7 @@ export default function AdminLayout({
           </Link>
         </div>
 
+        {/* Nav */}
         <nav className="flex flex-col gap-0.5 p-3 flex-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon, exact }) => {
             const isActive = exact
@@ -68,7 +75,7 @@ export default function AdminLayout({
         </nav>
       </aside>
 
-      {/* Content area */}
+      {/* ── Content area ────────────────────────────────────────────── */}
       <div className="flex-1 overflow-auto">{children}</div>
     </div>
   );
