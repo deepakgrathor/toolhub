@@ -9,6 +9,7 @@ import {
   Linkedin, BarChart2, BadgeDollarSign, Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { AdminToolRow } from "@/app/admin/tools/page";
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -91,6 +92,7 @@ export function ToolsTable({ initialTools }: { initialTools: AdminToolRow[] }) {
           }
           return m;
         });
+        toast.success("Tool updated");
       }
     } finally {
       setRows((prev) => {
@@ -139,7 +141,8 @@ export function ToolsTable({ initialTools }: { initialTools: AdminToolRow[] }) {
   }
 
   return (
-    <div className="rounded-xl border border-border overflow-hidden">
+    <div className="overflow-x-auto rounded-xl border border-border">
+    <div className="min-w-[800px]">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-[#111111]">
@@ -263,6 +266,7 @@ export function ToolsTable({ initialTools }: { initialTools: AdminToolRow[] }) {
           )}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }

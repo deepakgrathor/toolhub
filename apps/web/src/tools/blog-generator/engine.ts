@@ -31,9 +31,55 @@ Return ONLY this JSON, no markdown, no explanation:
 
 const MAX_TOKENS = 4096;
 
-async function callAI(prompt: string): Promise<string> {
-  // ── Anthropic ─────────────────────────────────────────────────────────────
-  if (process.env.ANTHROPIC_API_KEY) {
+// ── Model → provider mapping ──────────────────────────────────────────────────
+const MODEL_PROVIDER: Record<string, string> = {
+  "gpt-4o-mini": "openai",
+  "gpt-4o": "openai",
+  "claude-haiku-3-5": "anthropic",
+  "claude-haiku-4-5-20251001": "anthropic",
+  "claude-sonnet-4-5": "anthropic",
+  "gemini-flash-2.0": "google",
+  "gemini-pro": "google",
+};
+
+// ── Anthropic model name → API model ID ──────────────────────────────────────
+const ANTHROPIC_MODEL_IDS: Record<string, string> = {
+  "claude-haiku-3-5": "claude-haiku-4-5-20251001",
+  "claude-sonnet-4-5": "claude-sonnet-4-5",
+};
+
+async function callAI(prompt: string, model: string, provider: string): Promise<string> {
+  // ── LiteLLM gateway (if configured) ─────────────────────────────────────
+  const gatewayUrl = process.env.LITELLM_GATEWAY_URL;
+  const masterKey = process.env.LITELLM_MASTER_KEY;
+  if (gatewayUrl) {
+    const res = await fetch(`${gatewayUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(masterKey ? { Authorization: `Bearer ${masterKey}` } : {}),
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: MAX_TOKENS,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`LiteLLM error ${res.status}: ${err}`);
+    }
+    const data = await res.json();
+    const text: string = data?.choices?.[0]?.message?.content ?? "";
+    if (!text) throw new Error("Empty LiteLLM response");
+    return text;
+  }
+
+  // ── Direct API fallback (dev without LiteLLM) ────────────────────────────
+  const resolvedProvider = provider || MODEL_PROVIDER[model] || "openai";
+
+  if (resolvedProvider === "anthropic" && process.env.ANTHROPIC_API_KEY) {
+    const apiModel = ANTHROPIC_MODEL_IDS[model] ?? model;
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -42,53 +88,21 @@ async function callAI(prompt: string): Promise<string> {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: apiModel,
         max_tokens: MAX_TOKENS,
         messages: [{ role: "user", content: prompt }],
       }),
     });
-
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Anthropic error ${res.status}: ${err}`);
-    }
-
+    if (!res.ok) throw new Error(`Anthropic error ${res.status}: ${await res.text()}`);
     const data = await res.json();
     const text: string = data?.content?.[0]?.text ?? "";
     if (!text) throw new Error("Empty Anthropic response");
     return text;
   }
 
-  // ── OpenAI ────────────────────────────────────────────────────────────────
-  if (process.env.OPENAI_API_KEY) {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: MAX_TOKENS,
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`OpenAI error ${res.status}: ${err}`);
-    }
-
-    const data = await res.json();
-    const text: string = data?.choices?.[0]?.message?.content ?? "";
-    if (!text) throw new Error("Empty OpenAI response");
-    return text;
-  }
-
-  // ── Google Gemini ─────────────────────────────────────────────────────────
-  if (process.env.GOOGLE_AI_API_KEY) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`;
+  if (resolvedProvider === "google" && process.env.GOOGLE_AI_API_KEY) {
+    const geminiModel = model === "gemini-flash-2.0" ? "gemini-2.0-flash" : model;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -97,20 +111,37 @@ async function callAI(prompt: string): Promise<string> {
         generationConfig: { maxOutputTokens: MAX_TOKENS },
       }),
     });
-
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Gemini error ${res.status}: ${err}`);
-    }
-
+    if (!res.ok) throw new Error(`Gemini error ${res.status}: ${await res.text()}`);
     const data = await res.json();
     const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
     if (!text) throw new Error("Empty Gemini response");
     return text;
   }
 
+  // Default: OpenAI
+  if (process.env.OPENAI_API_KEY) {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: resolvedProvider === "openai" ? model : "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: MAX_TOKENS,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!res.ok) throw new Error(`OpenAI error ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    const text: string = data?.choices?.[0]?.message?.content ?? "";
+    if (!text) throw new Error("Empty OpenAI response");
+    return text;
+  }
+
   throw new Error(
-    "No AI provider configured. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_AI_API_KEY in your .env"
+    "No AI provider configured. Set LITELLM_GATEWAY_URL, ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_AI_API_KEY."
   );
 }
 
@@ -164,11 +195,13 @@ export async function execute(
 ): Promise<ToolEngineResult> {
   await connectDB();
 
-  // Load credit cost from DB — never hardcode
+  // Load credit cost + model from DB — never hardcode
   const toolConfigDoc = await ToolConfig.findOne({ toolSlug: context.toolSlug })
-    .select("creditCost")
+    .select("creditCost aiModel aiProvider")
     .lean();
   const creditCost = toolConfigDoc?.creditCost ?? 3;
+  const aiModel = toolConfigDoc?.aiModel ?? "gpt-4o-mini";
+  const aiProvider = toolConfigDoc?.aiProvider ?? "openai";
 
   const hasBalance = await CreditService.checkBalance(context.userId, creditCost);
   if (!hasBalance) {
@@ -177,7 +210,7 @@ export async function execute(
   }
 
   const prompt = buildPrompt(input);
-  const raw = await callAI(prompt);
+  const raw = await callAI(prompt, aiModel, aiProvider);
 
   const parsed = extractJson(raw);
 

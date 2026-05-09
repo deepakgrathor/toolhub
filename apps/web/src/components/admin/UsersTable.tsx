@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, Coins, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { AdminUserRow } from "@/app/admin/users/page";
 
 interface ModalState {
@@ -78,6 +79,7 @@ export function UsersTable({ initialUsers, initialQuery }: Props) {
         setSuccessId(modal.userId);
         setTimeout(() => setSuccessId(null), 2500);
         setModal(MODAL_CLOSED);
+        toast.success("Credits added to user");
       }
     } finally {
       setModal((m) => ({ ...m, loading: false }));

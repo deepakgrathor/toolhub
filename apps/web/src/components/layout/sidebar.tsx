@@ -222,6 +222,12 @@ function DesktopSidebar({ kits }: { kits: KitCount[] }) {
 
 function MobileDrawer({ kits }: { kits: KitCount[] }) {
   const { isMobileOpen, closeMobile } = useSidebarStore();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    closeMobile();
+  }, [pathname]); // eslint-disable-line
+
   if (!isMobileOpen) return null;
 
   return (

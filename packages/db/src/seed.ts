@@ -380,7 +380,7 @@ const CREDIT_PACKS = [
 // ── SiteConfig seed ─────────────────────────────────────────────────────────
 
 const SITE_CONFIGS = [
-  { key: "theme_default", value: "dark" },
+  { key: "default_theme", value: "dark" },
   { key: "maintenance_mode", value: false },
   { key: "announcement_banner", value: "" },
   { key: "announcement_visible", value: false },

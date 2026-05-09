@@ -9,7 +9,8 @@
   },
   "scripts": {
     "type-check": "tsc --noEmit",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "make-admin": "tsx src/make-admin.ts"
   },
   "dependencies": {
     "@toolhub/shared": "*",

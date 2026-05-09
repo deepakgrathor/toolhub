@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Coins, Loader2, CheckCircle } from "lucide-react";
 import { useCreditStore } from "@/store/credits-store";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export interface PackData {
   _id: string;
@@ -71,6 +72,7 @@ export function BuyCreditsButton({ pack }: Props) {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         console.error("[BuyCreditsButton] Purchase failed:", data.error);
+        toast.error("Payment failed. Please try again.");
         setLoading(false);
         return;
       }
@@ -96,6 +98,7 @@ export function BuyCreditsButton({ pack }: Props) {
           setLoading(false);
           await syncFromServer();
           setSuccess(true);
+          toast.success("Credits added successfully!");
           setTimeout(() => setSuccess(false), 3000);
         },
         modal: {
@@ -106,6 +109,7 @@ export function BuyCreditsButton({ pack }: Props) {
       rzp.open();
     } catch (err) {
       console.error("[BuyCreditsButton] Unexpected error:", err);
+      toast.error("Payment failed. Please try again.");
       setLoading(false);
     }
   }

@@ -11,8 +11,7 @@ import { ToolLoadingSkeleton } from "@/components/tools/ToolLoadingSkeleton";
 // ── Dynamic tool component map ────────────────────────────────────────────────
 // Add new tools here as they are built. Each entry is code-split automatically.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const toolComponents: Record<string, React.ComponentType<any>> = {
+const toolComponents: Record<string, React.ComponentType<{ creditCost?: number }>> = {
   "blog-generator": dynamic(
     () => import("@/tools/blog-generator/BlogGeneratorTool"),
     { loading: () => <ToolLoadingSkeleton /> }
@@ -39,9 +38,7 @@ export default async function ToolPage({ params }: Props) {
   if (!tool) notFound();
 
   const Icon = getToolIcon(tool.slug);
-  const ToolComponent = toolComponents[params.slug] as
-    | React.ComponentType
-    | undefined;
+  const ToolComponent = toolComponents[params.slug];
 
   return (
     <div className="h-full flex flex-col">
@@ -60,11 +57,11 @@ export default async function ToolPage({ params }: Props) {
 
       {/* Render functional tool component if available, else placeholder */}
       {ToolComponent ? (
-        <ToolComponent />
+        <ToolComponent creditCost={tool.config.creditCost} />
       ) : (
         <div className="flex flex-1 overflow-auto flex-col lg:flex-row">
           {/* Left panel — 45% */}
-          <div className="lg:w-[45%] lg:border-r border-border p-6 space-y-5">
+          <div className="lg:w-[45%] lg:border-r border-border p-4 md:p-6 space-y-5">
             {/* Tool header */}
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 shrink-0">
@@ -107,7 +104,7 @@ export default async function ToolPage({ params }: Props) {
           </div>
 
           {/* Right panel — 55% */}
-          <div className="lg:w-[55%] p-6">
+          <div className="lg:w-[55%] p-4 md:p-6">
             <div className="rounded-xl border border-dashed border-border bg-surface/50 h-full min-h-[300px] flex flex-col items-center justify-center text-center p-8">
               <Sparkles className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
               <p className="text-sm font-medium text-foreground">

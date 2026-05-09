@@ -5,6 +5,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { blogGeneratorSchema, type BlogGeneratorInput } from "./schema";
 import { blogGeneratorConfig } from "./config";
+
+interface BlogGeneratorToolProps {
+  creditCost?: number;
+}
 import {
   FileText,
   Coins,
@@ -12,6 +16,7 @@ import {
   Copy,
   Download,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { useAuthStore } from "@/store/auth-store";
 import { usePaywallStore } from "@/store/paywall-store";
@@ -78,7 +83,8 @@ function buildFullText(output: BlogOutput): string {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export default function BlogGeneratorTool() {
+export default function BlogGeneratorTool({ creditCost: creditCostProp }: BlogGeneratorToolProps) {
+  const creditCost = creditCostProp ?? blogGeneratorConfig.creditCost;
   const { data: session, status } = useSession();
   const { balance, deductLocally } = useCreditStore();
   const openAuthModal = useAuthStore((s) => s.openAuthModal);
@@ -109,8 +115,8 @@ export default function BlogGeneratorTool() {
       openAuthModal("login");
       return;
     }
-    if (balance < blogGeneratorConfig.creditCost) {
-      openPaywall(blogGeneratorConfig.name, blogGeneratorConfig.creditCost);
+    if (balance < creditCost) {
+      openPaywall(blogGeneratorConfig.name, creditCost);
       return;
     }
 
@@ -125,7 +131,7 @@ export default function BlogGeneratorTool() {
       });
 
       if (res.status === 402) {
-        openPaywall(blogGeneratorConfig.name, blogGeneratorConfig.creditCost);
+        openPaywall(blogGeneratorConfig.name, creditCost);
         return;
       }
 
@@ -135,7 +141,7 @@ export default function BlogGeneratorTool() {
 
       const json = await res.json();
       setOutput(json.output as BlogOutput);
-      deductLocally(blogGeneratorConfig.creditCost);
+      deductLocally(creditCost);
     } catch {
       // Silent — user can try again; no alert spam
     } finally {
@@ -159,12 +165,12 @@ export default function BlogGeneratorTool() {
       );
     }
 
-    if (balance < blogGeneratorConfig.creditCost) {
+    if (balance < creditCost) {
       return (
         <button
           type="button"
           onClick={() =>
-            openPaywall(blogGeneratorConfig.name, blogGeneratorConfig.creditCost)
+            openPaywall(blogGeneratorConfig.name, creditCost)
           }
           className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent/90 transition-colors"
         >
@@ -188,7 +194,7 @@ export default function BlogGeneratorTool() {
         ) : (
           <>
             <Coins className="h-4 w-4" />
-            Generate Blog — {blogGeneratorConfig.creditCost} credits
+            Generate Blog — {creditCost} credits
           </>
         )}
       </button>
@@ -201,6 +207,7 @@ export default function BlogGeneratorTool() {
     if (!output) return;
     await navigator.clipboard.writeText(buildFullText(output));
     setCopied(true);
+    toast.success("Copied to clipboard");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -241,7 +248,7 @@ export default function BlogGeneratorTool() {
                 {blogGeneratorConfig.name}
               </h1>
               <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">
-                {blogGeneratorConfig.creditCost} credits
+                {creditCost} credits
               </span>
             </div>
             <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
@@ -448,7 +455,7 @@ export default function BlogGeneratorTool() {
             </div>
 
             <p className="text-xs text-muted-foreground text-right">
-              {blogGeneratorConfig.creditCost} credits used
+              {creditCost} credits used
             </p>
           </div>
         )}

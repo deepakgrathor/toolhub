@@ -36,10 +36,10 @@ export interface Tool {
 }
 
 export interface ToolConfig {
-  toolId: string;
-  slug: string;
+  toolSlug: string;
   creditCost: number;
   aiModel: AIModel;
+  aiProvider: string;
   isActive: boolean;
   updatedAt: Date;
 }
@@ -53,7 +53,8 @@ export interface CreditPack {
   priceInr: number;
   razorpayPlanId: string;
   isFeatured: boolean;
-  isVisible: boolean;
+  isActive: boolean;
+  sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,7 +73,7 @@ export interface ToolOutput {
 
 // ── Credit Transaction ────────────────────────────────────────────────────────
 
-export type TransactionType = "purchase" | "usage" | "refund" | "manual";
+export type TransactionType = "purchase" | "use" | "refund" | "manual_admin" | "referral_bonus";
 
 export interface CreditTransaction {
   id: string;
@@ -86,12 +87,20 @@ export interface CreditTransaction {
 
 // ── Site Config ───────────────────────────────────────────────────────────────
 
-export interface SiteConfig {
-  defaultTheme: "dark" | "light";
-  maintenanceMode: boolean;
-  announcementText?: string;
-  showAnnouncement: boolean;
-}
+export type SiteConfigKey =
+  | "default_theme"
+  | "announcement_banner"
+  | "announcement_visible"
+  | "maintenance_mode";
+
+// ── Auth / Roles ──────────────────────────────────────────────────────────────
+
+export type AdminRole = "user" | "admin";
+
+// ── Jobs ─────────────────────────────────────────────────────────────────────
+
+export type JobStatus = "queued" | "processing" | "done" | "failed";
+export type JobType = "text-generation" | "image-generation";
 
 // ── API Responses ─────────────────────────────────────────────────────────────
 

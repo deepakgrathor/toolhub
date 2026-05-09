@@ -3,6 +3,9 @@ import { auth } from "@/auth";
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
 import { z } from "zod";
+import { createRateLimit } from "@/lib/rate-limit";
+
+const jobLimiter = createRateLimit({ windowMs: 3_600_000, max: 50 });
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +35,14 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const limit = jobLimiter(session.user.id);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded. Try again later." },
+      { status: 429 }
+    );
   }
 
   let body: unknown;

@@ -4,6 +4,9 @@ import { connectDB, User, OtpToken, applyReferral } from "@toolhub/db";
 import { generateReferralCode } from "@toolhub/shared";
 import { z } from "zod";
 import { FREE_CREDITS_ON_SIGNUP } from "@toolhub/shared";
+import { createRateLimit } from "@/lib/rate-limit";
+
+const signupLimiter = createRateLimit({ windowMs: 3_600_000, max: 5 });
 
 const signupSchema = z.object({
   name: z.string().min(2).max(60).trim(),
@@ -21,6 +24,18 @@ const signupSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      req.headers.get("x-real-ip") ??
+      "unknown";
+    const limit = signupLimiter(ip);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many signup attempts. Try again later." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const parsed = signupSchema.safeParse(body);
 

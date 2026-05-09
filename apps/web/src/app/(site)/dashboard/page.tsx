@@ -41,7 +41,7 @@ export default async function DashboardPage() {
       <h1 className="text-2xl font-bold text-foreground mb-6">Dashboard</h1>
 
       {/* Credit overview + Referral card */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
+      <div className="flex flex-col gap-6 md:grid md:grid-cols-3 mb-8">
         <div className="lg:col-span-1">
           <CreditOverview />
         </div>

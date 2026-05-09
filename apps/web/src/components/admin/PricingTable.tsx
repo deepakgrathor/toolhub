@@ -12,6 +12,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export interface PackRow {
   id: string;
@@ -146,6 +147,7 @@ export function PricingTable({ initialPacks }: { initialPacks: PackRow[] }) {
         setPacks((prev) => [...prev, newPack]);
       }
       closeModal();
+      toast.success("Pack saved");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {

@@ -19,6 +19,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -244,10 +245,13 @@ export function AuthModal() {
     });
     setLoading(false);
     if (result?.error) {
-      setServerError("Invalid email or password");
+      const msg = "Invalid email or password";
+      setServerError(msg);
+      toast.error(msg);
     } else {
       closeAuthModal();
       syncCredits();
+      toast.success(`Welcome back!`);
     }
   };
 
@@ -311,6 +315,7 @@ export function AuthModal() {
       } else {
         closeAuthModal();
         syncCredits();
+        toast.success("Account created! 10 free credits added.");
       }
     } catch {
       setServerError("Something went wrong. Please try again.");

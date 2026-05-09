@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Gift, Copy, Check, MessageCircle } from "lucide-react";
+import { toast } from "sonner";
 
 interface ReferralInfo {
   referralCode: string;
@@ -30,6 +31,7 @@ export function ReferralCard() {
     if (!info?.referralLink) return;
     navigator.clipboard.writeText(info.referralLink).then(() => {
       setCopied(true);
+      toast.success("Copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     });
   }

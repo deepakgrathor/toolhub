@@ -22,7 +22,13 @@
       "Bash(git add *)",
       "Bash(node_modules/.bin/tsc --noEmit)",
       "Bash(mkdir -p \"F:/2026/AI_Project/toolhub/.claude/worktrees/intelligent-solomon-936673/apps/web/src/app/api/admin/tools/[slug]\")",
-      "Bash(mkdir -p \"F:/2026/AI_Project/toolhub/.claude/worktrees/intelligent-solomon-936673/apps/web/src/app/api/admin/users/[userId]/credits\")"
+      "Bash(mkdir -p \"F:/2026/AI_Project/toolhub/.claude/worktrees/intelligent-solomon-936673/apps/web/src/app/api/admin/users/[userId]/credits\")",
+      "Bash(git commit -m ' *)",
+      "Bash(python3 -c \"import sys,json; p=json.load\\(sys.stdin\\); print\\('version:', p.get\\('version'\\)\\); print\\('optDeps:', list\\(p.get\\('optionalDependencies',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(node -e \"const p=require\\('./node_modules/lightningcss/package.json'\\); console.log\\('v:', p.version\\); console.log\\('optDeps:', Object.keys\\(p.optionalDependencies||{}\\)\\)\")",
+      "Bash(node -e \"require\\('lightningcss'\\)\")",
+      "Bash(node -e \"require\\('bullmq'\\); require\\('ioredis'\\); require\\('@upstash/redis'\\); require\\('@aws-sdk/client-s3'\\); console.log\\('all packages resolve ok'\\)\")",
+      "Bash(git push *)"
     ]
   }
 }

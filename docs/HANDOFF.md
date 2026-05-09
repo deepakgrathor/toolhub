@@ -1,8 +1,70 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #12 | Project Analysis + Critical Bug Fix
+Updated: 2026-05-09 | Account: A | Session: #13 | Bug Fixes + Polish
 
 ## Where We Are
-Session A12 done. Full project analysis completed — see `docs/ANALYSIS_REPORT.md`. One critical bug fixed: blog generator engine now reads credit cost from DB instead of hardcoding `3`.
+Session A13 done. All HIGH + MEDIUM bugs from analysis report fixed. Polish items added. TypeScript: 0 errors.
+
+### What Was Built (Session A13 — Bug Fixes + Polish)
+
+**FIX 1 — Admin Settings Key Mismatch [HIGH]**
+- `packages/db/src/seed.ts`: `theme_default` → `default_theme`
+- `apps/web/src/app/layout.tsx`: Now async, fetches `default_theme` from SiteConfig on every render, passes to ThemeProvider
+- Admin can now change default theme and it applies to new visitors
+
+**FIX 2 — Blog Generator Model From DB [HIGH]**
+- `apps/web/src/tools/blog-generator/engine.ts`: `callAI()` now accepts `model` + `provider` params
+- Routes through `LITELLM_GATEWAY_URL` first (if configured), then falls back to direct API calls per provider
+- Admin switching model in `/admin/tools` now actually works
+
+**FIX 3 — Client Credit Cost Hardcoded [MEDIUM]**
+- `apps/web/src/app/(site)/tools/[slug]/page.tsx`: Passes `creditCost={tool.config.creditCost}` to tool component
+- `BlogGeneratorTool.tsx`: Accepts `creditCost` prop, uses it everywhere; fallback to config.creditCost
+
+**FIX 4 — Shared Types Out of Sync [MEDIUM]**
+- `packages/shared/src/types/index.ts`: `TransactionType` now matches model (`use`, `manual_admin`), `CreditPack.isActive`, `ToolConfig.toolSlug`
+- Added: `SiteConfigKey`, `AdminRole`, `JobStatus`, `JobType`
+
+**FIX 5 — KITS Constant Stale [LOW]**
+- `packages/shared/src/constants/index.ts`: KITS now has correct values (creator/sme/hr/ca-legal/marketing) + `KitKey` type
+
+**FIX 6 — Referral Code Edge Case [LOW]**
+- `packages/shared/src/referral.ts`: Now uses `crypto.randomBytes(6)` — always exactly 6 chars, cryptographically random
+
+**POLISH 1 — Error Pages**
+- `apps/web/src/app/not-found.tsx`: SearchX icon, "Page Not Found", Go Home button
+- `apps/web/src/app/error.tsx`: AlertTriangle icon, Try Again + Go Home buttons
+- `apps/web/src/app/loading.tsx`: Loader2 spinner, "Loading..." text
+
+**POLISH 2 — Toast Notifications (sonner)**
+- Installed `sonner`, added `<Toaster>` to root layout
+- Toasts added: AuthModal (login/signup success+error), BuyCreditsButton (success/fail), admin components (tool/credits/pack/settings saved), copy actions
+
+**POLISH 3 — Maintenance Mode**
+- `apps/web/src/app/maintenance/page.tsx`: Standalone maintenance page
+- `apps/web/src/middleware.ts`: Checks `site:maintenance_mode` key in Upstash Redis (60s module-level cache), redirects non-admins
+- `apps/web/src/app/api/admin/settings/route.ts`: Now also writes `site:maintenance_mode` to Redis on change
+
+**POLISH 4 — Mobile Responsiveness**
+- Sidebar: closes on route change (`useEffect` on `pathname`)
+- Tool page: `p-4 md:p-6` on both panels
+- Pricing page: pack cards have `min-w-0`
+- Dashboard: `flex-col` on mobile, grid on desktop
+- TransactionHistory: table has `min-w-[600px]`
+- Admin ToolsTable: wrapped in `overflow-x-auto` + `min-w-[800px]`
+
+**POLISH 5 — Rate Limiting**
+- `apps/web/src/lib/rate-limit.ts`: In-memory rate limiter utility
+- Applied: signup (5/hr by IP), purchase (10/hr by userId), jobs create (50/hr by userId)
+
+**POLISH 6 — make-admin Script**
+- `packages/db/src/make-admin.ts`: CLI script to grant admin role
+- `packages/db/package.json`: Added `"make-admin"` script
+
+**PART 3 — Deployment Checklist**
+- `docs/DEPLOY_CHECKLIST.md`: Full checklist for Vercel + Railway deploy
+
+**TypeScript Fixes (pre-existing)**
+- `pricing/page.tsx` + `credit-service.ts`: Fixed `FlattenMaps` lean() type errors with double-cast
 
 ### What Was Built (Session A12 — Analysis + Bug Fix)
 
@@ -127,13 +189,10 @@ Session A12 done. Full project analysis completed — see `docs/ANALYSIS_REPORT.
 - `apps/web/src/tools/blog-generator/BlogGeneratorTool.tsx` — Client component, 2-col layout
 - `apps/web/src/app/(site)/tools/[slug]/page.tsx` — dynamic tool shell
 
-## Next Task (Session A13)
-Priority order from analysis report:
-1. Fix admin settings key: rename `theme_default` → `default_theme` in seed (or rename API schema key to match)
-2. Fix `BlogGeneratorTool.tsx` UI to read credit cost from tool config (SSR prop) instead of hardcoded `blogGeneratorConfig.creditCost`
-3. Wire Blog Generator to Bull MQ (async generation via LiteLLM gateway)
-4. Build 3–4 zero-credit tools: QR Generator, GST Calculator, Hook Writer, Caption Generator
-5. Then build AI tools via Bull MQ pattern: YT Script (4cr), JD Generator (3cr)
+## Next Task (Session A14)
+1. Build zero-credit tools: QR Generator (client-side), GST Calculator (client-side), Hook Writer, Caption Generator
+2. Build AI tools via Bull MQ pattern: YT Script (4cr), JD Generator (3cr), LinkedIn Bio (3cr)
+3. Upgrade tool-registry cache to Upstash Redis (critical for production serverless)
 
 ## How to Seed
 ```bash
