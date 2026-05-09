@@ -91,7 +91,7 @@ export function BuyCreditsButton({ pack }: Props) {
         amount,
         currency,
         order_id: orderId,
-        name: "Toolspire",
+        name: "SetuLix",
         description: `${pack.name} — ${pack.credits} credits`,
         theme: { color: "#7c3aed" },
         handler: async () => {

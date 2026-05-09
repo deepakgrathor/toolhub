@@ -8,8 +8,21 @@ const withBundleAnalyzer = bundleAnalyzer({
 const nextConfig = {
   transpilePackages: ["@toolhub/shared", "@toolhub/db"],
 
+  compress: true,
+
+  // Block search engines from indexing admin routes
+  async headers() {
+    return [
+      {
+        source: "/admin/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+    ];
+  },
+
   // Image optimisation — allow next/image to serve from R2 + common domains
   images: {
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       // Cloudflare R2 public bucket (set CLOUDFLARE_R2_PUBLIC_URL in env)
       ...(process.env.CLOUDFLARE_R2_PUBLIC_URL

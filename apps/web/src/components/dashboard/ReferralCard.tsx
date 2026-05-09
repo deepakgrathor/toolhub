@@ -37,7 +37,7 @@ export function ReferralCard() {
   }
 
   const waText = info?.referralLink
-    ? encodeURIComponent(`Join Toolspire and get 15 free credits! ${info.referralLink}`)
+    ? encodeURIComponent(`Join SetuLix and get 15 free credits! ${info.referralLink}`)
     : "";
 
   return (

@@ -384,7 +384,7 @@ export function AuthModal() {
             </Dialog.Title>
             <Dialog.Description className="mt-1 text-sm text-muted-foreground">
               {authMode === "login"
-                ? "Sign in to your Toolspire account"
+                ? "Sign in to your SetuLix account"
                 : signupStep === "otp"
                 ? `OTP sent to ${signupData?.email}`
                 : "Get 10 free credits on signup"}

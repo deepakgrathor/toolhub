@@ -9,7 +9,7 @@ import { getRedis } from "@toolhub/shared";
 const BALANCE_TTL = 5 * 60; // 5 min
 
 function key(userId: string) {
-  return `toolhub:credits:${userId}`;
+  return `SetuLix:credits:${userId}`;
 }
 
 // ── Read ──────────────────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ export async function invalidateBalance(userId: string): Promise<void> {
 const DASH_TTL = 2 * 60; // 2 min
 
 function dashKey(userId: string) {
-  return `toolhub:dashboard:${userId}`;
+  return `SetuLix:dashboard:${userId}`;
 }
 
 export interface DashboardStats {

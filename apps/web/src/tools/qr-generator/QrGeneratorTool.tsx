@@ -118,7 +118,7 @@ export default function QrGeneratorTool({ creditCost: _creditCost }: { creditCos
             <textarea
               {...register("text")}
               rows={3}
-              placeholder="https://toolspire.io or any text"
+              placeholder="https://SetuLix.io or any text"
               className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition resize-none"
             />
             {errors.text && (

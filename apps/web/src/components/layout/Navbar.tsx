@@ -44,7 +44,7 @@ export function Navbar() {
   }, [status, syncFromServer]);
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4 gap-3">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-md px-4 gap-3 transition-colors duration-200 sticky top-0 z-30">
       {/* Mobile hamburger */}
       <button
         onClick={toggleMobile}

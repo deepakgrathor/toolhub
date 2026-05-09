@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AuditLogTable } from "@/components/admin/AuditLogTable";
 
-export const metadata: Metadata = { title: "Audit Log — Toolspire Admin" };
+export const metadata: Metadata = { title: "Audit Log — SetuLix Admin" };
 
 export default function AuditLogPage() {
   return (

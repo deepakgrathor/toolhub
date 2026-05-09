@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { HistoryTable } from "@/components/dashboard/HistoryTable";
 
 export const metadata: Metadata = {
-  title: "Generation History — Toolspire",
+  title: "Generation History — SetuLix",
   description: "View all your past AI-generated outputs.",
 };
 

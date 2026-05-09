@@ -12,6 +12,14 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { AdminToolRow } from "@/app/admin/tools/page";
 
+const KIT_OPTIONS = [
+  { value: "creator",   label: "Creator Kit" },
+  { value: "sme",       label: "SME Kit" },
+  { value: "hr",        label: "HR Kit" },
+  { value: "ca-legal",  label: "CA / Legal" },
+  { value: "marketing", label: "Marketing Kit" },
+] as const;
+
 const ICON_MAP: Record<string, React.ElementType> = {
   FileText, Video, Image, Heading, Zap, MessageSquare,
   Receipt, Wallet, ClipboardList, Globe, QrCode, MessageCircle,
@@ -36,6 +44,7 @@ type RowState = {
   aiProvider: string;
   isActive: boolean;
   isVisible: boolean;
+  kits: string[];
   saving: boolean;
 };
 
@@ -70,6 +79,7 @@ export function ToolsTable({ initialTools }: { initialTools: AdminToolRow[] }) {
         aiProvider: t.aiProvider,
         isActive: t.isActive,
         isVisible: t.isVisible,
+        kits: t.kits,
         saving: false,
       });
     }
@@ -110,6 +120,7 @@ export function ToolsTable({ initialTools }: { initialTools: AdminToolRow[] }) {
               aiProvider: data.config?.aiProvider ?? row.aiProvider,
               isActive: data.config?.isActive ?? row.isActive,
               isVisible: data.config?.isVisible ?? row.isVisible,
+              kits: data.kits ?? row.kits,
               saving: false,
             });
           }
@@ -178,12 +189,22 @@ export function ToolsTable({ initialTools }: { initialTools: AdminToolRow[] }) {
     patch(slug, { isVisible: next });
   }
 
+  function handleKitChange(slug: string, kit: string) {
+    setRows((prev) => {
+      const m = new Map(prev);
+      const row = m.get(slug);
+      if (row) m.set(slug, { ...row, kits: [kit] });
+      return m;
+    });
+    patch(slug, { kit });
+  }
+
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <div className="min-w-[900px]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border bg-[#111111]">
+            <tr className="border-b border-border bg-muted/50">
               <th className="px-4 py-3 w-8" />
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tool</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Kit</th>
@@ -210,7 +231,7 @@ export function ToolsTable({ initialTools }: { initialTools: AdminToolRow[] }) {
                   key={tool.slug}
                   className={cn(
                     "border-b border-border last:border-0 transition-opacity",
-                    i % 2 === 0 ? "bg-transparent" : "bg-[#111111]/40",
+                    i % 2 === 0 ? "bg-transparent" : "bg-muted/50/40",
                     state.saving && "opacity-50",
                     !state.isVisible && "opacity-60"
                   )}
@@ -224,8 +245,16 @@ export function ToolsTable({ initialTools }: { initialTools: AdminToolRow[] }) {
                     <p className="text-[11px] text-muted-foreground font-mono">{tool.slug}</p>
                   </td>
 
-                  <td className="px-4 py-3 text-muted-foreground text-xs">
-                    {tool.kits.join(", ")}
+                  <td className="px-4 py-3">
+                    <select
+                      value={state.kits[0] ?? ""}
+                      onChange={(e) => handleKitChange(tool.slug, e.target.value)}
+                      className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                    >
+                      {KIT_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
                   </td>
 
                   <td className="px-4 py-3">
@@ -241,7 +270,7 @@ export function ToolsTable({ initialTools }: { initialTools: AdminToolRow[] }) {
                         })
                       }
                       onBlur={() => handleCreditsBlur(tool.slug)}
-                      className="w-20 rounded-md border border-border bg-[#1a1a1a] px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                      className="w-20 rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
                     />
                   </td>
 
@@ -249,7 +278,7 @@ export function ToolsTable({ initialTools }: { initialTools: AdminToolRow[] }) {
                     <select
                       value={state.aiModel}
                       onChange={(e) => handleModelChange(tool.slug, e.target.value)}
-                      className="w-full rounded-md border border-border bg-[#1a1a1a] px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                      className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
                     >
                       {MODEL_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>{o.label}</option>

@@ -1,19 +1,46 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, ChevronDown,
-  LayoutDashboard, Gift, LogOut, Sparkles, X, Coins,
+  LayoutDashboard, Gift, LogOut, X, Coins, ExternalLink,
 } from "lucide-react";
+import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { useCreditStore } from "@/store/credits-store";
-import { SIDEBAR_KITS, getKitForSlug } from "@/lib/kit-config";
+import { SIDEBAR_KITS, getKitForSlug, type KitConfig } from "@/lib/kit-config";
 import { getToolIcon } from "@/lib/tool-icons";
+
+// Singleton promise so multiple sidebar instances share one fetch
+let activeSlugsCache: Set<string> | null = null;
+let activeSlugsExpiry = 0;
+
+async function fetchActiveSlugs(): Promise<Set<string>> {
+  if (activeSlugsCache && Date.now() < activeSlugsExpiry) return activeSlugsCache;
+  try {
+    const res = await fetch("/api/tools/active-slugs", { cache: "no-store" });
+    const data = (await res.json()) as { slugs: string[] };
+    activeSlugsCache = new Set(data.slugs);
+    activeSlugsExpiry = Date.now() + 30_000; // 30 s
+    return activeSlugsCache;
+  } catch {
+    return new Set(SIDEBAR_KITS.flatMap((k) => k.tools.map((t) => t.slug)));
+  }
+}
+
+function filterKits(kits: KitConfig[], activeSlugs: Set<string>): KitConfig[] {
+  return kits
+    .map((kit) => ({
+      ...kit,
+      tools: kit.tools.filter((t) => activeSlugs.has(t.slug)),
+    }))
+    .filter((kit) => kit.tools.length > 0);
+}
 
 // ── Kit accordion item ────────────────────────────────────────────────────────
 
@@ -35,33 +62,45 @@ function KitItem({
 
   return (
     <div>
-      <button
-        onClick={onToggle}
-        title={isCollapsed ? kit.name : undefined}
-        className={cn(
-          "kit-header w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors duration-150",
-          isKitActive
-            ? "text-primary font-medium border-l-2 border-primary bg-primary/5"
-            : "text-muted-foreground hover:bg-accent/10 hover:text-foreground",
-          isCollapsed && "justify-center border-l-0"
-        )}
-      >
-        <KitIcon className="h-[18px] w-[18px] shrink-0" />
+      <div className="group/kit relative flex items-center">
+        <button
+          onClick={onToggle}
+          title={isCollapsed ? kit.name : undefined}
+          className={cn(
+            "kit-header flex-1 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors duration-150",
+            isKitActive
+              ? "text-primary font-medium border-l-2 border-primary bg-primary/5"
+              : "text-muted-foreground hover:bg-accent/10 hover:text-foreground",
+            isCollapsed && "justify-center border-l-0"
+          )}
+        >
+          <KitIcon className="h-[18px] w-[18px] shrink-0" />
+          {!isCollapsed && (
+            <>
+              <span className="flex-1 truncate text-left">{kit.name}</span>
+              <span className="text-[10px] text-muted-foreground/60 font-normal mr-1">
+                {kit.tools.length}
+              </span>
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                  isExpanded && "rotate-180"
+                )}
+              />
+            </>
+          )}
+        </button>
         {!isCollapsed && (
-          <>
-            <span className="flex-1 truncate text-left">{kit.name}</span>
-            <span className="text-[10px] text-muted-foreground/60 font-normal mr-1">
-              {kit.tools.length}
-            </span>
-            <ChevronDown
-              className={cn(
-                "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
-                isExpanded && "rotate-180"
-              )}
-            />
-          </>
+          <Link
+            href={`/kits/${kit.pageSlug}`}
+            title={`${kit.name} page`}
+            onClick={(e) => e.stopPropagation()}
+            className="absolute right-1 opacity-0 group-hover/kit:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-primary"
+          >
+            <ExternalLink className="h-3 w-3" />
+          </Link>
         )}
-      </button>
+      </div>
 
       {!isCollapsed && (
         <AnimatePresence initial={false}>
@@ -155,10 +194,21 @@ function SidebarContent({
   const router = useRouter();
   const { data: session } = useSession();
   const { expandedKit, setExpandedKit } = useSidebarStore();
+  const [visibleKits, setVisibleKits] = useState<KitConfig[]>(SIDEBAR_KITS);
 
   const activeSlug = pathname.startsWith("/tools/")
     ? pathname.split("/tools/")[1]?.split("/")[0] ?? null
     : null;
+
+  // Fetch active slugs once and filter sidebar kits
+  const refreshKits = useCallback(async () => {
+    const slugs = await fetchActiveSlugs();
+    setVisibleKits(filterKits(SIDEBAR_KITS, slugs));
+  }, []);
+
+  useEffect(() => {
+    refreshKits();
+  }, [refreshKits]);
 
   useEffect(() => {
     if (activeSlug) {
@@ -180,16 +230,14 @@ function SidebarContent({
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-14 items-center border-b border-border px-3 shrink-0">
-        {!isCollapsed ? (
-          <Link href="/dashboard" className="flex items-center gap-2 flex-1 min-w-0">
-            <Sparkles className="h-5 w-5 text-primary shrink-0" />
-            <span className="font-bold tracking-tight bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
-              Toolspire
-            </span>
-          </Link>
-        ) : (
+        {!isCollapsed && <Logo size="sm" className="flex-1 min-w-0" />}
+        {isCollapsed && (
           <Link href="/dashboard" className="mx-auto">
-            <Sparkles className="h-5 w-5 text-primary" />
+            <svg width="18" height="18" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+              <rect x="4" y="4" width="18" height="8" rx="3" fill="#7c3aed" />
+              <rect x="10" y="12" width="18" height="8" rx="3" fill="#7c3aed" opacity="0.7" />
+              <rect x="4" y="20" width="18" height="8" rx="3" fill="#7c3aed" />
+            </svg>
           </Link>
         )}
         {onClose && (
@@ -229,7 +277,7 @@ function SidebarContent({
 
       {/* Kit navigation */}
       <nav className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
-        {SIDEBAR_KITS.map((kit) => (
+        {visibleKits.map((kit) => (
           <KitItem
             key={kit.id}
             kit={kit}

@@ -86,10 +86,12 @@ const config: NextAuthConfig = {
           token.id = dbUser._id.toString();
           token.role = dbUser.role;
           token.credits = dbUser.credits;
+          token.image = user.image ?? dbUser.image ?? null;
         } else {
           token.id = user.id;
           token.role = user.role ?? "user";
           token.credits = user.credits ?? 0;
+          token.image = user.image ?? null;
         }
       }
       return token;
@@ -100,6 +102,9 @@ const config: NextAuthConfig = {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.credits = token.credits as number;
+        if (token.image) {
+          session.user.image = token.image as string;
+        }
       }
       return session;
     },

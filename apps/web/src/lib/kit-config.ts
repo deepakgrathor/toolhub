@@ -12,6 +12,7 @@ export interface KitConfig {
   icon: LucideIcon;
   description: string;
   tools: KitTool[];
+  pageSlug: string;
 }
 
 export const SIDEBAR_KITS: KitConfig[] = [
@@ -20,6 +21,7 @@ export const SIDEBAR_KITS: KitConfig[] = [
     name: "Creator Kit",
     icon: Sparkles,
     description: "AI tools for content creators",
+    pageSlug: "creator",
     tools: [
       { slug: "blog-generator",    name: "Blog Generator" },
       { slug: "yt-script",         name: "YT Script Writer" },
@@ -34,6 +36,7 @@ export const SIDEBAR_KITS: KitConfig[] = [
     name: "SME Kit",
     icon: Building2,
     description: "Tools for small & medium businesses",
+    pageSlug: "sme",
     tools: [
       { slug: "gst-invoice",           name: "GST Invoice" },
       { slug: "expense-tracker",       name: "Expense Tracker" },
@@ -49,6 +52,7 @@ export const SIDEBAR_KITS: KitConfig[] = [
     name: "HR Kit",
     icon: Users,
     description: "HR & recruitment automation",
+    pageSlug: "hr",
     tools: [
       { slug: "resume-screener",  name: "Resume Screener" },
       { slug: "jd-generator",     name: "JD Generator" },
@@ -62,6 +66,7 @@ export const SIDEBAR_KITS: KitConfig[] = [
     name: "CA / Legal",
     icon: Scale,
     description: "Finance & legal document tools",
+    pageSlug: "legal",
     tools: [
       { slug: "gst-calculator",   name: "GST Calculator" },
       { slug: "tds-sheet",        name: "TDS Sheet" },
@@ -75,6 +80,7 @@ export const SIDEBAR_KITS: KitConfig[] = [
     name: "Marketing Kit",
     icon: Megaphone,
     description: "Marketing & growth tools",
+    pageSlug: "marketing",
     tools: [
       { slug: "blog-generator",  name: "Blog Generator" },
       { slug: "email-subject",   name: "Email Subject" },

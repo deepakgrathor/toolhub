@@ -14,8 +14,8 @@ import { getCachedDashStats, setCachedDashStats } from "@/lib/credit-cache";
 import mongoose from "mongoose";
 
 export const metadata: Metadata = {
-  title: "Dashboard — Toolspire",
-  description: "Your Toolspire dashboard.",
+  title: "Dashboard — SetuLix",
+  description: "Your SetuLix dashboard.",
 };
 
 export const dynamic = "force-dynamic";

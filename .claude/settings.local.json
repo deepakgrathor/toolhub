@@ -30,7 +30,11 @@
       "Bash(node -e \"require\\('bullmq'\\); require\\('ioredis'\\); require\\('@upstash/redis'\\); require\\('@aws-sdk/client-s3'\\); console.log\\('all packages resolve ok'\\)\")",
       "Bash(git push *)",
       "Bash(cd /mnt/f/2026/AI_Project/toolhub && cat apps/web/package.json | grep -E '\"framer-motion|\"motion')",
-      "Bash(npm list *)"
+      "Bash(npm list *)",
+      "Bash(xargs grep -l \"CreditService\\\\|getBalance\")",
+      "PowerShell(head -20)",
+      "Bash(git pull *)",
+      "Bash(xargs ls -la)"
     ]
   }
 }

@@ -1,85 +1,95 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #20 | Admin Pro + Bug Fixes + UX Upgrades
+Updated: 2026-05-10 | Account: A | Session: #21+22 (Final) | Branding + Critical Fixes + Light Theme + SEO
 
 ## Where We Are
-Session A20 done. **TypeScript: 0 errors.**
-All 12 tasks complete across 4 sections: Bug Fixes, UX Upgrades, Thumbnail History, Admin Panel.
+Sessions A21+A22 done. **TypeScript: 0 errors.**
+Product rebranded from Toolspire → **SetuLix** (by **SetuLabsAI**, Founder: **Deepak Rathor**).
+All 20 implementation items complete across 3 sections: Critical Fixes, Branding, SEO+Kit Pages.
 
 ---
 
-## What Was Built (Session A20)
+## What Was Built (Session A21+A22)
 
-### SECTION 1 — Bug Fixes
+### SECTION 0 — Critical Fixes
 
-#### 1A. Credits Not Refreshing (Critical Fix)
-- `apps/web/src/components/layout/Navbar.tsx` — **fixed**: added `useEffect` that calls `syncFromServer()` when `status === "authenticated"`. Credits now auto-load on every page visit.
-- `apps/web/src/store/credits-store.ts` — **fixed**: removed debug `console.log`, added type guard for `data.balance`.
-- `apps/web/src/app/api/user/credits/route.ts` — **fixed**: wrapped in try/catch with `console.error` logging.
+#### 0A. Tool Hide/Disable — FIXED
+- `apps/web/src/lib/tool-registry.ts` — **fixed**: `getAllTools()` now fetches all ToolConfig docs (not just `isActive:true`) and filters by BOTH `isActive && isVisible`. Added `isVisible` to `ToolWithConfig` interface.
+- `apps/web/src/app/api/tools/active-slugs/route.ts` — **new**: Returns `{ slugs: string[] }` of all active+visible tools. Sidebar uses this to filter.
+- `apps/web/src/components/layout/sidebar.tsx` — **fixed**: Fetches active slugs on mount (30s client cache), filters `SIDEBAR_KITS` dynamically. Hidden tools disappear from sidebar.
+- `apps/web/src/app/(site)/tools/[slug]/page.tsx` — **fixed**: If `isVisible=false` → redirect to dashboard. If `isActive=false` → show `ToolUnavailableCard`.
 
-#### 1B. OTP for Email Signup
-- Already fully implemented from prior sessions. Verified: `/api/auth/send-otp`, `/api/auth/signup`, `AuthModal.tsx` all wired correctly.
+#### 0B. Google Profile Pic — FIXED
+- `apps/web/src/auth.ts` — **fixed**: JWT callback now sets `token.image = user.image` for both Google and credentials providers. Session callback sets `session.user.image = token.image`.
+- `apps/web/src/types/next-auth.d.ts` — **updated**: Added `image?: string | null` to JWT interface.
 
-#### 1C. Recent Activity — Tool Name + Preview
-- `apps/web/src/lib/tool-names.ts` — **new**: `TOOL_NAME_MAP` slug→name lookup (all 27 tools).
-- `apps/web/src/app/api/user/history/route.ts` — **updated**: enriches response with `toolName` + `outputPreview` (60-char truncation; "Image generated" for thumbnail-ai).
-- `apps/web/src/components/dashboard/RecentActivity.tsx` — **rewritten**: shows tool icon + name + preview text + timestamp. Whole row is clickable (navigates to tool page).
+#### 0C. Admin Tool Kit Change — ADDED
+- `apps/web/src/app/api/admin/tools/[slug]/route.ts` — **updated**: PATCH now accepts `kit` field, updates `Tool.kits = [kit]` in DB (alongside ToolConfig changes).
+- `apps/web/src/components/admin/ToolsTable.tsx` — **updated**: Kit column changed from read-only text to editable `<select>` dropdown. `RowState` includes `kits`. Optimistic UI update.
 
-### SECTION 2 — UX Upgrades
+### SECTION 1 — SetuLix Branding
 
-#### 2C. Global Cursor-Pointer CSS
-- `apps/web/src/app/globals.css` — **updated**: added global CSS rule targeting `button, a, [role="button"], [role="link"], [role="tab"], select, .tool-card, .kit-header, .sidebar-link, [data-clickable]`.
+#### 1A. Brand Constants
+- `packages/shared/src/brand.ts` — **new**: `BRAND` object with name, tagline, company, founder, domain, emails.
+- `packages/shared/src/index.ts` — **updated**: Exports `brand`.
 
-#### 2A. Sidebar Premium Redesign + Credits Widget
-- `apps/web/src/components/layout/sidebar.tsx` — **rewritten**:
-  - Logo: Sparkles icon + "Toolspire" with purple gradient text
-  - Kit headers: tool count badge, animated chevron, `bg-accent/10` hover
-  - Active tool: purple left border indicator
-  - **Credits widget** (new): shows live balance from `useCreditStore`, purple pill badge, skeleton loader, links to `/pricing`
-  - Width: upgraded from w-60 to w-[220px]
-  - All links: `.sidebar-link` class for cursor-pointer
+#### 1B. Toolspire → SetuLix Replace
+- Global find+replace across 70+ files in `apps/web/src/**`:
+  - "Toolspire" → "SetuLix", "toolspire.io" → "setulix.com", "Gobeens Technology" → "SetuLabsAI"
+- `@toolhub/db` and `@toolhub/shared` package names **unchanged** (internal monorepo names).
 
-#### 2B. Dashboard UI Improvements
-- `apps/web/src/components/dashboard/StatsBar.tsx` — **rewritten**:
-  - Colored left border per card: blue (Tools Used), purple (Credits Left), orange (Credits Used), green (Member Since)
-  - Numbers: `text-3xl font-bold`
-- `apps/web/src/components/dashboard/GreetingTagline.tsx` — **new**: credit-aware tagline ("You have X credits — ready to create" or "Buy credits →" link when 0)
-- `apps/web/src/app/(site)/dashboard/page.tsx` — **updated**: uses `<GreetingTagline />` client component
-- `apps/web/src/components/dashboard/DashboardToolCard.tsx` — **updated**: `hover:scale-[1.02] hover:shadow-md`, `tool-card` class
+#### 1C. Logo Component
+- `apps/web/src/components/brand/Logo.tsx` — **new**: SetuLix wordmark with geometric S SVG icon. Sizes: sm/md/lg. Optional `showSubtext` for "by SetuLabsAI".
+- Sidebar and admin layout updated to use Logo component.
 
-### SECTION 3 — Thumbnail AI History Gallery
+#### 1D. Footer
+- `apps/web/src/components/brand/Footer.tsx` — **new**: Full footer with Logo+tagline, Pages+Kits links, contact emails, copyright, "Designed by SetuLabsAI" bar.
 
-#### 3A. Thumbnail History Gallery
-- `apps/web/src/app/api/tools/thumbnail-ai/history/route.ts` — **new**: paginates user's thumbnail-ai ToolOutputs, returns `{ id, imageUrl, prompt, createdAt }` (9/page)
-- `apps/web/src/tools/thumbnail-ai/ThumbnailHistory.tsx` — **new**: responsive 2-3 col image grid, hover overlay with Download button, "Load more" pagination, broken image fallback, new-thumbnail prepend
-- `apps/web/src/tools/thumbnail-ai/ThumbnailAITool.tsx` — **rewritten**: adds `newThumbnail` state to notify gallery after generation; fixed `console.log` debug line; gallery section below tool panels (logged-in only)
+#### 1E. /about Page
+- `apps/web/src/app/(site)/about/page.tsx` — **new**: About SetuLix, About SetuLabsAI, Team (Deepak Rathor), Tech Stack, CTA.
 
-### SECTION 4 — Admin Panel Pro
+#### 1F. OTP Email Branding
+- `apps/web/src/app/api/auth/send-otp/route.ts` — **updated**: HTML email template redesigned with SetuLix header, purple branding, monospace OTP display, SetuLabsAI footer.
 
-#### 4A. Tool Enable/Disable + Show/Hide
-- `packages/db/src/models/ToolConfig.ts` — **updated**: added `isVisible: Boolean` field (default `true`)
-- `apps/web/src/app/api/admin/tools/[slug]/route.ts` — **updated**: PATCH schema accepts `isVisible`
-- `apps/web/src/app/admin/tools/page.tsx` — **updated**: `AdminToolRow` includes `isVisible`, query includes it
-- `apps/web/src/components/admin/ToolsTable.tsx` — **rewritten**: added `isVisible` Eye/EyeOff toggle column; extracted `Toggle` component for reuse
+### SECTION 2 — Light Theme Fixes
 
-#### 4B. Admin Analytics Dashboard
-- `apps/web/src/app/api/admin/analytics/route.ts` — **new**: aggregates credit series (30d), new users (14d), top tools (all-time), active users (30d)
-- `apps/web/src/components/admin/AnalyticsCharts.tsx` — **new**: recharts AreaChart (credits in/out), HorizontalBarChart (top tools), BarChart (new users)
-- `apps/web/src/app/admin/page.tsx` — **rewritten**: stat cards with colored left borders, `<AnalyticsCharts />` client component below
-- `recharts` installed as dependency
+#### 2A. Navbar
+- Glassmorphism: `bg-background/80 backdrop-blur-md sticky top-0 z-30`.
 
-#### 4C. User Management Upgrade
-- `packages/db/src/models/User.ts` — **updated**: added `isBanned: Boolean` field (default `false`)
-- `apps/web/src/app/api/admin/users/[userId]/ban/route.ts` — **new**: PATCH toggles `isBanned`, writes audit log
-- `apps/web/src/app/admin/users/page.tsx` — **rewritten**: queries creditsBought, creditsUsed, toolsRun via aggregation
-- `apps/web/src/components/admin/UsersTable.tsx` — **rewritten**: new columns (Bought/Used/Runs/Last Active), Ban/Unban button
+#### 2B-2F. Component Fixes
+- `apps/web/src/components/admin/ToolsTable.tsx` — hardcoded `bg-[#111111]`/`bg-[#1a1a1a]` → semantic tokens.
+- `apps/web/src/app/admin/layout.tsx` — `bg-[#0a0a0a]`/`bg-[#0d0d0d]` → `bg-background`/`bg-card`. `hover:bg-white/5` → `hover:bg-muted/50`.
 
-#### 4D. Audit Log Page
-- `apps/web/src/app/api/admin/audit/route.ts` — **new**: paginates AuditLog (50/page), populates admin name
-- `apps/web/src/app/admin/audit/page.tsx` — **new**: page wrapper
-- `apps/web/src/components/admin/AuditLogTable.tsx` — **new**: table with action badges (color-coded), pagination, CSV export
+#### 2C. Dashboard Count-Up
+- `apps/web/src/hooks/useCountUp.ts` — **new**: `useCountUp(target, duration)` hook. easeOut cubic animation.
+- `apps/web/src/components/dashboard/StatsBar.tsx` — **updated**: `<StatValue>` component animates numbers 0→actual on mount.
 
-#### 4E. Admin Sidebar
-- `apps/web/src/app/admin/layout.tsx` — **rewritten**: Sparkles logo + "Toolspire Admin" badge, purple left-border active state, Audit Log link added, "Back to App" at bottom
+#### 2G. Final Polish
+- `apps/web/src/app/globals.css` — **updated**: Global focus ring (`*:focus-visible`), thin scrollbar (`scrollbar-width: thin`), webkit scrollbar 4px, sidebar custom scrollbar.
+- `apps/web/src/app/not-found.tsx` — **rewritten**: SetuLix logo + icon + "404 Page Not Found" + Dashboard + Home buttons.
+- `apps/web/src/app/maintenance/page.tsx` — **rewritten**: SetuLix logo + Wrench icon + "Back Shortly" message. All semantic tokens.
+
+### SECTION 3 — Kit Landing Pages + SEO
+
+#### 3C. robots.ts + sitemap.ts
+- `apps/web/src/app/robots.ts` — **new**: Allow all, disallow `/admin /api /dashboard`. Sitemap URL: `https://setulix.com/sitemap.xml`.
+- `apps/web/src/app/sitemap.ts` — **new**: Static routes + 27 tool routes. Domain: `https://setulix.com`.
+
+#### 3B. SEO Metadata
+- `apps/web/src/app/layout.tsx` — **updated**: Full metadata object with `metadataBase`, title template, OG tags, Twitter card.
+
+#### 3A. 5 Kit Landing Pages
+- `apps/web/src/components/brand/KitPage.tsx` — **new**: Shared kit page component. Hero, Tools Grid, How It Works (3 steps), Use Cases (4), FAQ (accordion), CTA Banner + Footer.
+- `/kits/creator` — Creator Kit (6 tools, content creator focus)
+- `/kits/sme` — SME Kit (7 free tools, Indian business focus)
+- `/kits/hr` — HR Kit (5 tools, Indian workplace)
+- `/kits/legal` — CA/Legal Kit (5 tools, Indian law)
+- `/kits/marketing` — Marketing Kit (6 tools, Indian brands)
+
+#### 3D. Sidebar + Homepage + next.config
+- `apps/web/src/lib/kit-config.ts` — **updated**: Added `pageSlug` field to `KitConfig`.
+- Sidebar `KitItem` — **updated**: Hover shows ExternalLink icon → navigates to `/kits/[pageSlug]`.
+- `apps/web/src/app/(site)/page.tsx` — **updated**: Kit cards now link to `/kits/[pageSlug]`. Section heading: "Explore Our Kits".
+- `apps/web/next.config.mjs` — **updated**: `compress: true`, `images.formats: ['image/avif','image/webp']`, X-Robots-Tag noindex for `/admin/*`.
 
 ---
 
@@ -87,23 +97,48 @@ All 12 tasks complete across 4 sections: Bug Fixes, UX Upgrades, Thumbnail Histo
 
 | File | Purpose |
 |------|---------|
-| `apps/web/src/lib/tool-names.ts` | Slug → display name lookup |
-| `apps/web/src/components/dashboard/GreetingTagline.tsx` | Credit-aware greeting tagline |
-| `apps/web/src/app/api/tools/thumbnail-ai/history/route.ts` | Thumbnail history API |
-| `apps/web/src/tools/thumbnail-ai/ThumbnailHistory.tsx` | Thumbnail gallery component |
-| `apps/web/src/app/api/admin/analytics/route.ts` | Admin analytics aggregation API |
-| `apps/web/src/components/admin/AnalyticsCharts.tsx` | Recharts analytics dashboard |
-| `apps/web/src/app/api/admin/users/[userId]/ban/route.ts` | Ban/unban user API |
-| `apps/web/src/app/api/admin/audit/route.ts` | Audit log API |
-| `apps/web/src/app/admin/audit/page.tsx` | Audit log page |
-| `apps/web/src/components/admin/AuditLogTable.tsx` | Audit log table + CSV export |
+| `packages/shared/src/brand.ts` | BRAND constants object |
+| `apps/web/src/app/api/tools/active-slugs/route.ts` | Active+visible tool slugs for sidebar |
+| `apps/web/src/components/brand/Logo.tsx` | SetuLix wordmark component |
+| `apps/web/src/components/brand/Footer.tsx` | Site footer with branding |
+| `apps/web/src/components/brand/KitPage.tsx` | Shared kit landing page template |
+| `apps/web/src/app/(site)/about/page.tsx` | About SetuLix + SetuLabsAI page |
+| `apps/web/src/app/(site)/kits/creator/page.tsx` | Creator Kit landing |
+| `apps/web/src/app/(site)/kits/sme/page.tsx` | SME Kit landing |
+| `apps/web/src/app/(site)/kits/hr/page.tsx` | HR Kit landing |
+| `apps/web/src/app/(site)/kits/legal/page.tsx` | CA/Legal Kit landing |
+| `apps/web/src/app/(site)/kits/marketing/page.tsx` | Marketing Kit landing |
+| `apps/web/src/hooks/useCountUp.ts` | Count-up animation hook |
+| `apps/web/src/app/robots.ts` | SEO robots.txt |
+| `apps/web/src/app/sitemap.ts` | SEO sitemap |
 
 ---
 
 ## Architecture Notes
 
-### Credits Bug Root Cause
-The `useCreditStore` initializes `balance: 0`. Previously, `syncFromServer()` was only called after login/signup — never on page load. Fix: `useEffect` in `Navbar` fires `syncFromServer()` once when `status === "authenticated"`.
+### Brand
+- Product: **SetuLix** | Company: **SetuLabsAI** | Founder: **Deepak Rathor**
+- Domain: `setulix.com` | Email: `hello@setulix.com`
+- Logo: Geometric S SVG icon + "Setu" (text-foreground) + "Lix" (text-primary purple)
+- Monorepo package names stay `@toolhub/db` and `@toolhub/shared` (internal only, not user-visible)
+
+### Tool Visibility Flow
+```
+Admin toggles isActive/isVisible in DB
+→ clearToolCache() called
+→ /api/tools/active-slugs re-fetches (30s cache)
+→ Sidebar refreshes visible tools on next hover/load
+→ Tool page: isVisible=false → redirect /dashboard; isActive=false → ToolUnavailableCard
+```
+
+### Kit Landing Page URLs
+```
+/kits/creator   → Creator Kit
+/kits/sme       → SME Kit
+/kits/hr        → HR Kit
+/kits/legal     → CA/Legal Kit (note: kit id is "ca-legal", page slug is "legal")
+/kits/marketing → Marketing Kit
+```
 
 ### Redis Cache Keys (unchanged)
 ```
@@ -113,16 +148,9 @@ registry:all_tools           TTL 5 min
 registry:tool:{slug}         TTL 5 min
 ```
 
-### New DB Fields Added
-- `ToolConfig.isVisible` (Boolean, default `true`) — controls sidebar/dashboard visibility
-- `User.isBanned` (Boolean, default `false`) — blocks login for banned users
-
-### Tool Registry (27 tools — unchanged from A19)
-See previous HANDOFF for full tool table.
-
 ---
 
-## Phase 1 Status: COMPLETE + ADMIN PRO
+## Phase 1 Status: COMPLETE ✓
 
 ## Issues
 None. TypeScript: 0 errors.

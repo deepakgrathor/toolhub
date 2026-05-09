@@ -3,7 +3,7 @@ import { connectDB, User, CreditTransaction, ToolOutput } from "@toolhub/db";
 import { UsersTable } from "@/components/admin/UsersTable";
 import mongoose from "mongoose";
 
-export const metadata: Metadata = { title: "Admin Users — Toolspire" };
+export const metadata: Metadata = { title: "Admin Users — SetuLix" };
 export const dynamic = "force-dynamic";
 
 export interface AdminUserRow {

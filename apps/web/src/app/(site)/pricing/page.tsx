@@ -19,7 +19,7 @@ import {
 import { BuyCreditsButton } from "@/components/credits/BuyCreditsButton";
 
 export const metadata: Metadata = {
-  title: "Pricing — Toolspire",
+  title: "Pricing — SetuLix",
   description:
     "Buy credits once, use anytime. No subscriptions. Credits never expire.",
 };

@@ -22,9 +22,30 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Toolspire — AI Tools for Everyone",
+  metadataBase: new URL("https://setulix.com"),
+  title: {
+    default: "SetuLix — AI Tools for Every Indian Business | SetuLabsAI",
+    template: "%s | SetuLix",
+  },
   description:
-    "India's multi-tool AI platform. PDF tools, image tools, writing tools and more — all in one place.",
+    "SetuLix is an AI-powered multi-tool SaaS platform for Indian businesses. 27 tools across 5 kits — Creator, SME, HR, CA/Legal, Marketing. Free tools + simple credit system.",
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    url: "https://setulix.com",
+    siteName: "SetuLix",
+    title: "SetuLix — AI Tools for Every Indian Business",
+    description: "27 AI tools for Indian businesses. Free tools + simple credits.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SetuLix — AI Tools for Every Indian Business",
+    description: "27 AI tools for Indian businesses. Free tools + simple credits.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 async function getDefaultTheme(): Promise<"dark" | "light"> {

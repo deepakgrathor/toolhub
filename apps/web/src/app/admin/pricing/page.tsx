@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { connectDB, CreditPack } from "@toolhub/db";
 import { PricingTable, type PackRow } from "@/components/admin/PricingTable";
 
-export const metadata: Metadata = { title: "Admin Pricing — Toolspire" };
+export const metadata: Metadata = { title: "Admin Pricing — SetuLix" };
 export const dynamic = "force-dynamic";
 
 async function getPacks(): Promise<PackRow[]> {

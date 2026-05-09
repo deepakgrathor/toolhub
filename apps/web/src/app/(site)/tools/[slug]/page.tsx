@@ -1,8 +1,8 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ChevronRight, Wrench, Sparkles } from "lucide-react";
+import { ChevronRight, Wrench, Sparkles, WifiOff } from "lucide-react";
 import { getToolBySlug } from "@/lib/tool-registry";
 import { LoginBanner } from "@/components/tools/LoginBanner";
 import { getToolIcon } from "@/lib/tool-icons";
@@ -141,9 +141,34 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+function ToolUnavailableCard({ name }: { name: string }) {
+  return (
+    <div className="flex flex-1 items-center justify-center p-8">
+      <div className="text-center max-w-sm">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted mx-auto mb-4">
+          <WifiOff className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <h2 className="text-lg font-semibold text-foreground mb-1">{name} is temporarily unavailable</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          This tool has been paused by the admin. Check back soon.
+        </p>
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+        >
+          Back to Dashboard
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default async function ToolPage({ params }: Props) {
   const tool = await getToolBySlug(params.slug);
   if (!tool) notFound();
+
+  // isVisible=false → hidden by admin, redirect to dashboard
+  if (tool.config.isVisible === false) redirect("/dashboard");
 
   const Icon = getToolIcon(tool.slug);
   const ToolComponent = toolComponents[params.slug];
@@ -163,8 +188,10 @@ export default async function ToolPage({ params }: Props) {
         <span className="text-foreground">{tool.name}</span>
       </div>
 
-      {/* Render functional tool component if available, else placeholder */}
-      {ToolComponent ? (
+      {/* Tool disabled — show unavailable card */}
+      {!tool.config.isActive ? (
+        <ToolUnavailableCard name={tool.name} />
+      ) : ToolComponent ? (
         <ToolErrorBoundary toolName={tool.name}>
           <ToolComponent creditCost={tool.config.creditCost} />
         </ToolErrorBoundary>

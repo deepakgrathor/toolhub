@@ -4,7 +4,7 @@ import { Users, Wrench, Coins, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnalyticsCharts } from "@/components/admin/AnalyticsCharts";
 
-export const metadata: Metadata = { title: "Admin Analytics — Toolspire" };
+export const metadata: Metadata = { title: "Admin Analytics — SetuLix" };
 export const dynamic = "force-dynamic";
 
 async function getStats() {

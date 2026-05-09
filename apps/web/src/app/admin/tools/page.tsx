@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { connectDB, Tool, ToolConfig } from "@toolhub/db";
 import { ToolsTable } from "@/components/admin/ToolsTable";
 
-export const metadata: Metadata = { title: "Admin Tools — Toolspire" };
+export const metadata: Metadata = { title: "Admin Tools — SetuLix" };
 export const dynamic = "force-dynamic";
 
 export interface AdminToolRow {

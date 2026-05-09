@@ -3,11 +3,19 @@
 import Link from "next/link";
 import { Activity, Coins, TrendingDown, CalendarDays } from "lucide-react";
 import { useCreditStore } from "@/store/credits-store";
+import { useCountUp } from "@/hooks/useCountUp";
 
 interface StatsBarProps {
   toolsUsed: number;
   creditsUsed: number;
   memberSince: string;
+}
+
+function StatValue({ value }: { value: number | string }) {
+  const num = typeof value === "number" ? value : NaN;
+  const animated = useCountUp(isNaN(num) ? 0 : num);
+  if (isNaN(num)) return <>{value}</>;
+  return <>{animated}</>;
 }
 
 export function StatsBar({ toolsUsed, creditsUsed, memberSince }: StatsBarProps) {
@@ -64,7 +72,7 @@ export function StatsBar({ toolsUsed, creditsUsed, memberSince }: StatsBarProps)
             </div>
             <div className="min-w-0">
               <p className="text-3xl font-bold text-foreground leading-none mb-1 truncate">
-                {value}
+                <StatValue value={value} />
               </p>
               <p className="text-xs text-muted-foreground">{label}</p>
             </div>

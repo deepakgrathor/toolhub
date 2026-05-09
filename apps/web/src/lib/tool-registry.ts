@@ -17,6 +17,7 @@ export interface ToolWithConfig {
   config: {
     creditCost: number;
     isActive: boolean;
+    isVisible: boolean;
     aiModel: string;
     aiProvider: string;
     fallbackModel: string;
@@ -87,6 +88,7 @@ function mergeToolWithConfig(
     config: {
       creditCost: config?.creditCost ?? 0,
       isActive: config?.isActive ?? true,
+      isVisible: config?.isVisible ?? true,
       aiModel: config?.aiModel ?? "",
       aiProvider: config?.aiProvider ?? "",
       fallbackModel: config?.fallbackModel ?? "",
@@ -106,7 +108,7 @@ export async function getAllTools(): Promise<ToolWithConfig[]> {
 
   const [tools, configs] = await Promise.all([
     Tool.find().lean<ITool[]>(),
-    ToolConfig.find({ isActive: true }).lean<IToolConfig[]>(),
+    ToolConfig.find().lean<IToolConfig[]>(),
   ]);
 
   const configMap = new Map<string, IToolConfig>(
@@ -115,7 +117,7 @@ export async function getAllTools(): Promise<ToolWithConfig[]> {
 
   const result = tools
     .map((t) => mergeToolWithConfig(t, configMap.get(t.slug) ?? null))
-    .filter((t) => t.config.isActive);
+    .filter((t) => t.config.isActive && t.config.isVisible);
 
   await cacheSet("all_tools", result);
   return result;

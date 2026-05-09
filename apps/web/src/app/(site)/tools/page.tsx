@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { ToolsClient } from "@/components/tools/ToolsClient";
 
 export const metadata = {
-  title: "All Tools — Toolspire",
+  title: "All Tools — SetuLix",
   description: "Browse 30+ AI-powered tools for creators, businesses, and professionals.",
 };
 
