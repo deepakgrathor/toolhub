@@ -40,7 +40,7 @@ export async function PATCH(
   ).lean();
 
   // Invalidate in-process tool registry cache so next request sees fresh data
-  clearToolCache();
+  await clearToolCache();
 
   await AuditLog.create({
     adminId: session.user.id,

@@ -1,6 +1,7 @@
 import { connectDB } from "@toolhub/db";
 import { Tool, ITool } from "@toolhub/db";
 import { ToolConfig, IToolConfig } from "@toolhub/db";
+import { getRedis } from "@toolhub/shared";
 
 export interface ToolWithConfig {
   slug: string;
@@ -28,29 +29,42 @@ export interface KitInfo {
   toolCount: number;
 }
 
-// ── Simple in-memory cache (TTL: 5 min) ────────────────────────────────────
+// ── Redis-first cache with in-memory fallback ───────────────────────────────
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_S = 5 * 60; // 5 minutes (Redis)
+const MEM_TTL_MS = 5 * 60 * 1000; // 5 minutes (fallback)
 
-interface CacheEntry<T> {
-  data: T;
-  expiresAt: number;
+interface MemEntry<T> { data: T; expiresAt: number; }
+const memCache = new Map<string, MemEntry<unknown>>();
+
+function memGet<T>(key: string): T | null {
+  const e = memCache.get(key) as MemEntry<T> | undefined;
+  if (!e) return null;
+  if (Date.now() > e.expiresAt) { memCache.delete(key); return null; }
+  return e.data;
 }
 
-const cache = new Map<string, CacheEntry<unknown>>();
+function memSet<T>(key: string, data: T): void {
+  memCache.set(key, { data, expiresAt: Date.now() + MEM_TTL_MS });
+}
 
-function cacheGet<T>(key: string): T | null {
-  const entry = cache.get(key) as CacheEntry<T> | undefined;
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) {
-    cache.delete(key);
-    return null;
+async function cacheGet<T>(key: string): Promise<T | null> {
+  try {
+    const redis = getRedis();
+    const data = await redis.get<T>(`registry:${key}`);
+    return data ?? null;
+  } catch {
+    return memGet<T>(key);
   }
-  return entry.data;
 }
 
-function cacheSet<T>(key: string, data: T): void {
-  cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+async function cacheSet<T>(key: string, data: T): Promise<void> {
+  try {
+    const redis = getRedis();
+    await redis.set(`registry:${key}`, data, { ex: CACHE_TTL_S });
+  } catch {
+    memSet(key, data);
+  }
 }
 
 // ── DB helpers ──────────────────────────────────────────────────────────────
@@ -83,9 +97,9 @@ function mergeToolWithConfig(
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
-/** Returns all active tools with their configs. Results cached 5 min. */
+/** Returns all active tools with their configs. Results cached 5 min in Redis (mem fallback). */
 export async function getAllTools(): Promise<ToolWithConfig[]> {
-  const cached = cacheGet<ToolWithConfig[]>("all_tools");
+  const cached = await cacheGet<ToolWithConfig[]>("all_tools");
   if (cached) return cached;
 
   await connectDB();
@@ -103,14 +117,14 @@ export async function getAllTools(): Promise<ToolWithConfig[]> {
     .map((t) => mergeToolWithConfig(t, configMap.get(t.slug) ?? null))
     .filter((t) => t.config.isActive);
 
-  cacheSet("all_tools", result);
+  await cacheSet("all_tools", result);
   return result;
 }
 
 /** Returns a single tool with its config by slug. */
 export async function getToolBySlug(slug: string): Promise<ToolWithConfig | null> {
   const cacheKey = `tool:${slug}`;
-  const cached = cacheGet<ToolWithConfig>(cacheKey);
+  const cached = await cacheGet<ToolWithConfig>(cacheKey);
   if (cached) return cached;
 
   await connectDB();
@@ -123,25 +137,25 @@ export async function getToolBySlug(slug: string): Promise<ToolWithConfig | null
   if (!tool) return null;
 
   const result = mergeToolWithConfig(tool, config);
-  cacheSet(cacheKey, result);
+  await cacheSet(cacheKey, result);
   return result;
 }
 
 /** Returns all active tools belonging to a specific kit. */
 export async function getToolsByKit(kit: string): Promise<ToolWithConfig[]> {
   const cacheKey = `kit:${kit}`;
-  const cached = cacheGet<ToolWithConfig[]>(cacheKey);
+  const cached = await cacheGet<ToolWithConfig[]>(cacheKey);
   if (cached) return cached;
 
   const all = await getAllTools();
   const result = all.filter((t) => t.kits.includes(kit));
-  cacheSet(cacheKey, result);
+  await cacheSet(cacheKey, result);
   return result;
 }
 
 /** Returns all unique kits with their active tool counts. */
 export async function getKitList(): Promise<KitInfo[]> {
-  const cached = cacheGet<KitInfo[]>("kit_list");
+  const cached = await cacheGet<KitInfo[]>("kit_list");
   if (cached) return cached;
 
   const all = await getAllTools();
@@ -158,11 +172,20 @@ export async function getKitList(): Promise<KitInfo[]> {
     toolCount,
   }));
 
-  cacheSet("kit_list", result);
+  await cacheSet("kit_list", result);
   return result;
 }
 
-/** Clears the in-memory cache (useful after admin edits). */
-export function clearToolCache(): void {
-  cache.clear();
+/** Clears the cache (Redis + in-memory fallback). Called after admin edits. */
+export async function clearToolCache(): Promise<void> {
+  memCache.clear();
+  try {
+    const redis = getRedis();
+    const keys = await redis.keys("registry:*");
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+  } catch {
+    // Redis not configured — in-memory already cleared above
+  }
 }

@@ -16,6 +16,34 @@ const toolComponents: Record<string, React.ComponentType<{ creditCost?: number }
     () => import("@/tools/blog-generator/BlogGeneratorTool"),
     { loading: () => <ToolLoadingSkeleton /> }
   ),
+  "qr-generator": dynamic(
+    () => import("@/tools/qr-generator/QrGeneratorTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "gst-calculator": dynamic(
+    () => import("@/tools/gst-calculator/GstCalculatorTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "hook-writer": dynamic(
+    () => import("@/tools/hook-writer/HookWriterTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "caption-generator": dynamic(
+    () => import("@/tools/caption-generator/CaptionGeneratorTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "yt-script": dynamic(
+    () => import("@/tools/yt-script/YtScriptTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "jd-generator": dynamic(
+    () => import("@/tools/jd-generator/JdGeneratorTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "linkedin-bio": dynamic(
+    () => import("@/tools/linkedin-bio/LinkedinBioTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
 };
 
 // ── Page ──────────────────────────────────────────────────────────────────────
