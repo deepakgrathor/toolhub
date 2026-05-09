@@ -1,4 +1,9 @@
-import mongoose from "mongoose";
+import _mongoose from "mongoose";
+
+// Handle ESM/CJS interop: webpack may wrap the CJS mongoose module in a
+// namespace object { default: <instance> }. Normalise to the real instance.
+const mongoose =
+  (_mongoose as unknown as { default: typeof _mongoose }).default ?? _mongoose;
 
 interface MongooseCache {
   conn: typeof mongoose | null;

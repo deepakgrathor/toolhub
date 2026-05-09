@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import { Schema, Document, Model, getOrCreateModel } from "../lib/mongoose-shim";
 
 export interface ICreditPack extends Document {
   name: string;
@@ -25,6 +25,7 @@ const CreditPackSchema = new Schema<ICreditPack>(
   { timestamps: true }
 );
 
-export const CreditPack: Model<ICreditPack> =
-  mongoose.models.CreditPack ??
-  mongoose.model<ICreditPack>("CreditPack", CreditPackSchema);
+export const CreditPack: Model<ICreditPack> = getOrCreateModel<ICreditPack>(
+  "CreditPack",
+  CreditPackSchema
+);

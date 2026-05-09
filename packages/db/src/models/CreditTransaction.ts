@@ -1,7 +1,8 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import { Schema, Document, Model, getOrCreateModel } from "../lib/mongoose-shim";
+import type { Types } from "mongoose";
 
 export interface ICreditTransaction extends Document {
-  userId: mongoose.Types.ObjectId;
+  userId: Types.ObjectId;
   type: "purchase" | "use" | "refund" | "referral_bonus" | "manual_admin";
   amount: number;
   balanceAfter: number;
@@ -27,5 +28,4 @@ const CreditTransactionSchema = new Schema<ICreditTransaction>(
 );
 
 export const CreditTransaction: Model<ICreditTransaction> =
-  mongoose.models.CreditTransaction ??
-  mongoose.model<ICreditTransaction>("CreditTransaction", CreditTransactionSchema);
+  getOrCreateModel<ICreditTransaction>("CreditTransaction", CreditTransactionSchema);

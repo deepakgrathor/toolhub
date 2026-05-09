@@ -1,4 +1,5 @@
-import mongoose, { Schema, Document, Model, Types } from "mongoose";
+import { Schema, Document, Model, getOrCreateModel } from "../lib/mongoose-shim";
+import type { Types } from "mongoose";
 
 export interface IAuditLog extends Document {
   adminId: Types.ObjectId;
@@ -20,6 +21,7 @@ const AuditLogSchema = new Schema<IAuditLog>(
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
-export const AuditLog: Model<IAuditLog> =
-  mongoose.models.AuditLog ??
-  mongoose.model<IAuditLog>("AuditLog", AuditLogSchema);
+export const AuditLog: Model<IAuditLog> = getOrCreateModel<IAuditLog>(
+  "AuditLog",
+  AuditLogSchema
+);

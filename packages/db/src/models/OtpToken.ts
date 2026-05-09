@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import { Schema, Document, Model, getOrCreateModel } from "../lib/mongoose-shim";
 
 export interface IOtpToken extends Document {
   email: string;
@@ -21,6 +21,7 @@ const OtpTokenSchema = new Schema<IOtpToken>(
 // Auto-delete expired tokens
 OtpTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export const OtpToken: Model<IOtpToken> =
-  mongoose.models.OtpToken ??
-  mongoose.model<IOtpToken>("OtpToken", OtpTokenSchema);
+export const OtpToken: Model<IOtpToken> = getOrCreateModel<IOtpToken>(
+  "OtpToken",
+  OtpTokenSchema
+);

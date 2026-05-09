@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import { Schema, Document, Model, getOrCreateModel } from "../lib/mongoose-shim";
 
 export interface ISiteConfig extends Document {
   key: string;
@@ -14,6 +14,7 @@ const SiteConfigSchema = new Schema<ISiteConfig>(
   { timestamps: true }
 );
 
-export const SiteConfig: Model<ISiteConfig> =
-  mongoose.models.SiteConfig ??
-  mongoose.model<ISiteConfig>("SiteConfig", SiteConfigSchema);
+export const SiteConfig: Model<ISiteConfig> = getOrCreateModel<ISiteConfig>(
+  "SiteConfig",
+  SiteConfigSchema
+);

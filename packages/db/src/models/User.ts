@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import { Schema, Document, Model, getOrCreateModel } from "../lib/mongoose-shim";
 
 export interface IUser extends Document {
   name: string;
@@ -45,5 +45,4 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-export const User: Model<IUser> =
-  mongoose.models.User ?? mongoose.model<IUser>("User", UserSchema);
+export const User: Model<IUser> = getOrCreateModel<IUser>("User", UserSchema);
