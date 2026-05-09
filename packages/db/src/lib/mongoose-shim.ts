@@ -22,6 +22,8 @@ const mongoose =
 
 export default mongoose;
 
-// Re-export type helpers so model files don't need two imports
-export type { Model, Document, Schema, Types, Connection } from "mongoose";
+// Re-export helpers so model files don't need two imports.
+// Schema is exported as a value (which includes its type).
+// Model, Document, Types, Connection are type-only.
 export { Schema } from "mongoose";
+export type { Model, Document, Types, Connection } from "mongoose";
