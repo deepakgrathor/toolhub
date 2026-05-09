@@ -77,6 +77,31 @@ const toolComponents: Record<string, React.ComponentType<{ creditCost?: number }
     () => import("@/tools/resume-screener/ResumeScreenerTool"),
     { loading: () => <ToolLoadingSkeleton /> }
   ),
+  // A16 SME free tools
+  "gst-invoice": dynamic(
+    () => import("@/tools/gst-invoice/GstInvoiceTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "expense-tracker": dynamic(
+    () => import("@/tools/expense-tracker/ExpenseTrackerTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "quotation-generator": dynamic(
+    () => import("@/tools/quotation-generator/QuotationGeneratorTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "salary-slip": dynamic(
+    () => import("@/tools/salary-slip/SalarySlipTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "offer-letter": dynamic(
+    () => import("@/tools/offer-letter/OfferLetterTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "tds-sheet": dynamic(
+    () => import("@/tools/tds-sheet/TdsSheetTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
 };
 
 // ── Page ──────────────────────────────────────────────────────────────────────

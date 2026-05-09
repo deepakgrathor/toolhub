@@ -1,82 +1,68 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #15 | 8 New Tools Batch Build
+Updated: 2026-05-09 | Account: A | Session: #16 | 6 SME Free Tools (Client-side)
 
 ## Where We Are
-Session A15 done. 16 tools total built and wired. TypeScript: 0 errors.
+Session A16 done. 22 tools total built and wired. TypeScript: 0 errors.
 
-### What Was Built (Session A15 — Batch Tool Build)
+### What Was Built (Session A16 — SME Form Tools)
 
-**SEED UPDATED — `packages/db/src/seed.ts`**
-- hook-writer: added aiModel='gemini-flash-2.0', aiProvider='google'
-- caption-generator: added aiModel='gemini-flash-2.0', aiProvider='google'
-- title-generator/email-subject/whatsapp-bulk: primary model changed to gemini-flash-2.0/google
-- legal-disclaimer: changed from claude-haiku-3-5 to gpt-4o-mini/openai
+**SHARED UTILITIES**
+- `apps/web/src/lib/print-pdf.ts` — `printDocument(html, title)` utility using window.open + print
+- `apps/web/src/lib/utils.ts` — Added `amountToWords()`, `fmtInr()`, `INDIAN_STATES` array
 
-**PART 2 — 1-Credit AI Tools (Google Gemini)**
+**TOOL 1 — GST Invoice Generator (slug: gst-invoice, 0cr)**
+- `apps/web/src/tools/gst-invoice/` — config.ts + GstInvoiceTool.tsx
+- Seller + Buyer details with all Indian states dropdown
+- Line items: description, HSN, qty, unit, rate, GST rate (0/5/12/18/28%)
+- Live preview: auto CGST+SGST (same state) or IGST (different state)
+- Amount in words, grand total, Download PDF button
 
-**TOOL 1 — Title Generator (slug: title-generator, 1cr)**
-- `apps/web/src/tools/title-generator/` — config, schema, engine, TitleGeneratorTool.tsx
-- `apps/web/src/app/api/tools/title-generator/route.ts`
-- Input: topic, platform (5 options), style (5 options), count (5/10/15)
-- Output: numbered list of titles, each with individual copy button + Copy All
+**TOOL 2 — Expense Tracker (slug: expense-tracker, 0cr)**
+- `apps/web/src/tools/expense-tracker/` — config.ts + ExpenseTrackerTool.tsx
+- Add expenses: date, category (8 types), description, amount, payment mode
+- Filter by category + date range
+- Summary cards: Total, This Month, Top Category
+- Color-coded category badges, delete per row
+- Export to PDF via printDocument()
 
-**TOOL 2 — Email Subject Line (slug: email-subject, 1cr)**
-- `apps/web/src/tools/email-subject/` — config, schema, engine, EmailSubjectTool.tsx
-- `apps/web/src/app/api/tools/email-subject/route.ts`
-- Input: email goal textarea, tone pills (5), count (5/10)
-- Output: subject lines with character count badge + copy buttons
+**TOOL 3 — Quotation Generator (slug: quotation-generator, 0cr)**
+- `apps/web/src/tools/quotation-generator/` — config.ts + QuotationGeneratorTool.tsx
+- From + To party details (no GST — simple quotation)
+- Line items: description, qty, unit, rate
+- Discount field, Notes, Terms & Conditions
+- Live preview + Download PDF
 
-**TOOL 3 — WhatsApp Bulk Message (slug: whatsapp-bulk, 1cr)**
-- `apps/web/src/tools/whatsapp-bulk/` — config, schema, engine, WhatsappBulkTool.tsx
-- `apps/web/src/app/api/tools/whatsapp-bulk/route.ts`
-- Input: business type, message goal pills (5), offer textarea, emoji toggle
-- Output: 5 message cards with char count + individual copy buttons
+**TOOL 4 — Salary Slip Generator (slug: salary-slip, 0cr)**
+- `apps/web/src/tools/salary-slip/` — config.ts + SalarySlipTool.tsx
+- Company + Employee info (name, ID, designation, department, bank last 4, PAN)
+- Month/Year selector
+- Earnings: Basic, HRA, Special Allowance, Other
+- Deductions: PF (auto 12% of basic toggle or manual), ESI, TDS, Other
+- Net Pay = Gross - Total Deductions, amount in words
+- Live 2-column earnings/deductions preview + Download PDF
 
-**PART 3 — CA/Legal Tools (Anthropic Claude + OpenAI)**
+**TOOL 5 — Offer Letter Generator (slug: offer-letter, 0cr)**
+- `apps/web/src/tools/offer-letter/` — config.ts + OfferLetterTool.tsx
+- Company + Candidate details
+- Offer: role, department, reporting to, joining date, work location, work type, CTC, probation
+- Benefits toggles (6 options as pills)
+- Auto acceptance deadline (7 days from letter date)
+- Formal letter preview + Download PDF
 
-**TOOL 4 — Legal Notice Draft (slug: legal-notice, 12cr)**
-- `apps/web/src/tools/legal-notice/` — config, schema, engine, LegalNoticeTool.tsx
-- `apps/web/src/app/api/tools/legal-notice/route.ts`
-- Uses claude-sonnet-4-5
-- Input: sender/receiver details, notice type (5), subject, incident, demand, deadline
-- Output: full formal legal notice + summary box + Copy/Download .txt + disclaimer warning
-
-**TOOL 5 — NDA Generator (slug: nda-generator, 12cr)**
-- `apps/web/src/tools/nda-generator/` — config, schema, engine, NdaGeneratorTool.tsx
-- `apps/web/src/app/api/tools/nda-generator/route.ts`
-- Uses claude-sonnet-4-5
-- Input: Party A/B details, NDA type (one-way/mutual), purpose, duration, jurisdiction
-- Output: complete NDA document + summary + Copy/Download .txt
-
-**TOOL 6 — Legal Disclaimer (slug: legal-disclaimer, 3cr)**
-- `apps/web/src/tools/legal-disclaimer/` — config, schema, engine, LegalDisclaimerTool.tsx
-- `apps/web/src/app/api/tools/legal-disclaimer/route.ts`
-- Uses gpt-4o-mini
-- Input: business name, URL, disclaimer type (5), additional context
-- Output: ready-to-use disclaimer text + Copy/Download
-
-**PART 4 — Marketing Tools (OpenAI + Anthropic)**
-
-**TOOL 7 — Ad Copy Writer (slug: ad-copy, 3cr)**
-- `apps/web/src/tools/ad-copy/` — config, schema, engine, AdCopyTool.tsx
-- `apps/web/src/app/api/tools/ad-copy/route.ts`
-- Uses gpt-4o-mini
-- Input: product name/description, target audience, USP, platform (5), goal (5)
-- Output: 3 ad variation cards (variant badge, headline, primary text, CTA pill, copy button)
-
-**TOOL 8 — Resume Screener (slug: resume-screener, 3cr)**
-- `apps/web/src/tools/resume-screener/` — config, schema, engine, ResumeScreenerTool.tsx
-- `apps/web/src/app/api/tools/resume-screener/route.ts`
-- Uses claude-haiku-3-5
-- Input: resume text (paste), job description (paste) — both large textareas
-- Output: match score (0-100 color-coded), verdict badge, key matches, gaps, recommendation, interview questions
+**TOOL 6 — TDS Sheet (slug: tds-sheet, 0cr)**
+- `apps/web/src/tools/tds-sheet/` — config.ts + TdsSheetTool.tsx
+- Quarter (Q1–Q4) + Financial Year selector
+- Add entries: vendor, PAN, nature, TDS section dropdown (8 preset sections with auto-fill rate)
+- TDS amount auto-calculated = payment × rate/100
+- Summary cards: Total Payments, TDS Deducted, Payable to Govt
+- Section badge per row, Export PDF
 
 **PAGE.TSX UPDATED**
-- `apps/web/src/app/(site)/tools/[slug]/page.tsx`: all 8 A15 tools added to toolComponents map
+- `apps/web/src/app/(site)/tools/[slug]/page.tsx`: all 6 A16 tools added to toolComponents map
 
 ---
 
-## Tool Registry — All 16 Built Tools
+## Tool Registry — All 22 Built Tools
 
 | Tool | Slug | Credits | Model | Status |
 |------|------|---------|-------|--------|
@@ -96,34 +82,26 @@ Session A15 done. 16 tools total built and wired. TypeScript: 0 errors.
 | Legal Disclaimer | legal-disclaimer | 3 | gpt-4o-mini | ✅ |
 | Ad Copy Writer | ad-copy | 3 | gpt-4o-mini | ✅ |
 | Resume Screener | resume-screener | 3 | claude-haiku-3-5 | ✅ |
+| GST Invoice Generator | gst-invoice | 0 | client-side | ✅ |
+| Expense Tracker | expense-tracker | 0 | client-side | ✅ |
+| Quotation Generator | quotation-generator | 0 | client-side | ✅ |
+| Salary Slip Generator | salary-slip | 0 | client-side | ✅ |
+| Offer Letter Generator | offer-letter | 0 | client-side | ✅ |
+| TDS Sheet | tds-sheet | 0 | client-side | ✅ |
 
 ---
 
-## Next Task (Session A16 — SME Form Tools)
+## Next Task (Session A17 — Remaining AI Tools)
 
-Build 6 remaining free tools (no credits, client-side only):
+Build 5 remaining AI tools:
 
-| Tool | Slug | Credits | Type |
-|------|------|---------|------|
-| GST Invoice Generator | gst-invoice | 0 | Form → PDF download |
-| Expense Tracker | expense-tracker | 0 | Form → expense table |
-| Quotation Generator | quotation-generator | 0 | Form → PDF download |
-| Salary Slip Generator | salary-slip | 0 | Form → PDF download |
-| Offer Letter Generator | offer-letter | 0 | Form → PDF download |
-| TDS Sheet | tds-sheet | 0 | Form → calculation table |
-
-### A16 Notes
-- All are client-side only — no API routes, no credits, no auth required
-- PDF tools: use browser print / window.open approach (no jspdf dependency)
-- These are free tools that showcase the platform — high SEO value
-- Multi-item form needed for gst-invoice and quotation-generator (add/remove rows)
-
-## Tools Remaining After A16
-- thumbnail-ai (7cr, DALL-E 3)
-- website-generator (10cr, claude-sonnet-4-5)
-- seo-auditor (8cr, claude-sonnet-4-5)
-- appraisal-draft (3cr, claude-haiku-3-5)
-- policy-generator (3cr, claude-haiku-3-5)
+| Tool | Slug | Credits | Model |
+|------|------|---------|-------|
+| Thumbnail AI | thumbnail-ai | 7 | dall-e-3 |
+| Website Generator | website-generator | 10 | claude-sonnet-4-5 |
+| SEO Auditor | seo-auditor | 8 | claude-sonnet-4-5 |
+| Appraisal Draft | appraisal-draft | 3 | claude-haiku-3-5 |
+| Policy Generator | policy-generator | 3 | claude-haiku-3-5 |
 
 ## Architecture: Two Redis Connection Types
 
