@@ -1,57 +1,80 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #17 | 5 Final AI Tools — All 27 Complete
+Updated: 2026-05-09 | Account: A | Session: #18 | Dashboard Redesign + Sidebar Overhaul
 
 ## Where We Are
-Session A17 done. **27 tools total built and wired. TypeScript: 0 errors.**
-All tools are complete. Platform is feature-complete for Phase 1.
+Session A18 done. **TypeScript: 0 errors.**
+All 27 tools complete. Premium UX overhaul done — sidebar accordion, new dashboard, navbar polish.
 
-### What Was Built (Session A17 — Final AI Tools)
+---
 
-**callAI() UPDATED**
-- `apps/web/src/lib/ai.ts` — added optional `maxTokens` parameter (default 4096, backward-compatible)
-- Website generator uses maxTokens: 8000 for higher output
+## What Was Built (Session A18 — UX Overhaul)
 
-**TOOL 1 — Appraisal Draft (slug: appraisal-draft, 3cr)**
-- `apps/web/src/tools/appraisal-draft/` — config.ts + schema.ts + engine.ts + AppraisalDraftTool.tsx
-- `apps/web/src/app/api/tools/appraisal-draft/route.ts`
-- Input: employee name, role, review period, manager, rating pills (5 levels), achievements textarea, improvements, tone pills
-- Output: 4 section cards (Summary, Strengths, Areas for Growth, Goals) + copy/download
+### PART 1 — Root Redirect
+- `apps/web/src/app/(site)/page.tsx` — `auth()` check at top; logged-in users redirected to `/dashboard`
 
-**TOOL 2 — Policy Generator (slug: policy-generator, 3cr)**
-- `apps/web/src/tools/policy-generator/` — config.ts + schema.ts + engine.ts + PolicyGeneratorTool.tsx
-- `apps/web/src/app/api/tools/policy-generator/route.ts`
-- Input: company name, policy type dropdown (8 types), company size pills, industry, additional requirements
-- Output: policy title + sections as cards + copy/download
+### PART 2 — Sidebar Complete Overhaul
+- `apps/web/src/store/sidebar-store.ts` — added `expandedKit: string | null` + `setExpandedKit()`
+- `apps/web/src/components/layout/sidebar.tsx` — full rewrite:
+  - **Framer Motion accordion** — one kit open at a time, AnimatePresence + motion.div height animation
+  - **Auto-expand** — `usePathname()` detects active tool slug and auto-expands parent kit
+  - **Active states** — active tool gets `bg-primary/10`, `text-primary`, left 3px accent border
+  - **Collapsed sidebar** (56px) — icons only, tooltips on hover, no tool lists
+  - **Bottom section** — Refer & Earn (Gift icon) + Logout (LogOut icon, destructive on hover)
+  - **Removed** — "All Tools" link, History link, theme toggle (moved to navbar)
+  - **Mobile** — overlay drawer with full sidebar, closes on pathname change
+  - **Kit config** — imported from `@/lib/kit-config` (centralized)
 
-**TOOL 3 — Website Generator (slug: website-generator, 10cr)**
-- `apps/web/src/tools/website-generator/` — config.ts + schema.ts + engine.ts + WebsiteGeneratorTool.tsx
-- `apps/web/src/app/api/tools/website-generator/route.ts` (maxDuration: 60)
-- Uses claude-sonnet-4-5 with 8000 max tokens
-- Engine: returns raw HTML (not JSON), extracts metadata (title, sections) from the HTML
-- Input: business name/type/description, target audience, key services, color scheme pills (6 colors with swatches), style pills, contact toggle
-- Output: iframe with srcdoc, full screen / download HTML / copy buttons, section badges
+### PART 3 — Navbar Update
+- `apps/web/src/components/layout/UserDropdown.tsx` — new file, custom dropdown:
+  - Trigger: avatar initials + name
+  - Items: Dashboard, History, Refer & Earn, Logout (destructive)
+- `apps/web/src/components/layout/Navbar.tsx` — rewritten:
+  - **Logged in**: Search | Credits badge (Coins + balance, click → /pricing) | ThemeToggle | UserDropdown
+  - **Logged out**: Search | ThemeToggle | Login button
+  - ThemeToggle: Sun/Moon icon, useTheme() from next-themes
 
-**TOOL 4 — SEO Auditor (slug: seo-auditor, 8cr)**
-- `apps/web/src/tools/seo-auditor/` — config.ts + schema.ts + engine.ts + SeoAuditorTool.tsx
-- `apps/web/src/app/api/tools/seo-auditor/route.ts`
-- AI-powered recommendations (NOT real crawl — clearly labelled in UI)
-- Input: URL, business type, target keywords, competitors (optional)
-- Output: circular score gauge (0-100), 8 category cards (score bar + status badge + issues + recs), quick wins, priority actions
+### PART 4 — Dashboard Redesign
+- `apps/web/src/app/(site)/dashboard/page.tsx` — full rewrite:
+  - **Auth guard** — `auth()` check, redirects to `/` if not logged in
+  - **Time-based greeting** — "Good morning/afternoon/evening/night, [FirstName]!"
+  - **Stats**: toolsUsed (ToolOutput.countDocuments), creditsUsed (CreditTransaction aggregate), balance (from store), memberSince (User.createdAt from DB)
+  - **Kit-wise tools** — KitSection renders all 27 tools grouped by kit
+  - **Recent Activity** — last 5 runs, client-side fetch
+  - **Referral** — at bottom with `id="referral"` for anchor linking
+  - **Removed** — CreditOverview card, old TransactionHistory + ReferralCard combo layout
 
-**TOOL 5 — Thumbnail AI (slug: thumbnail-ai, 7cr)**
-- `apps/web/src/tools/thumbnail-ai/` — config.ts + schema.ts + engine.ts + ThumbnailAITool.tsx
-- `apps/web/src/app/api/tools/thumbnail-ai/route.ts` (maxDuration: 60)
-- Direct DALL-E 3 API call (bypasses callAI — image generation endpoint)
-- Downloads temp OpenAI URL → uploads to Cloudflare R2 → returns permanent URL
-- Deducts credits AFTER successful R2 upload
-- Input: video title, style pills (4), color scheme pills (4), main subject, optional text overlay
-- Output: full-width image, download + regenerate buttons
+- `apps/web/src/components/dashboard/StatsBar.tsx` — 4-card stats row (tools used, credits left, credits used, member since)
+- `apps/web/src/components/dashboard/DashboardToolCard.tsx` — compact tool card with icon, name, description, FREE/Xcr badge, hover lift + purple border
+- `apps/web/src/components/dashboard/KitSection.tsx` — renders all SIDEBAR_KITS with tool grids (3/2/1 col)
+- `apps/web/src/components/dashboard/RecentActivity.tsx` — last 5 history items, relative time, View link, empty state, loading skeleton
 
-**PAGE.TSX UPDATED**
-- `apps/web/src/app/(site)/tools/[slug]/page.tsx`: all 5 A17 tools added
+### PART 6 — Kit Config Centralization
+- `apps/web/src/lib/kit-config.ts` — **new file**, single source of truth:
+  - `SIDEBAR_KITS` — all 5 kits with full tool lists
+  - `KitConfig` / `KitTool` interfaces
+  - `getKitForSlug(slug)` — returns parent kit id
+  - Imported by both sidebar.tsx and dashboard components
 
-**@aws-sdk/client-s3 INSTALLED**
-- Added to `apps/web/package.json` for R2 uploads in thumbnail-ai
+### PART 7 — Performance
+- `apps/web/src/app/(site)/layout.tsx` — added `animate-in fade-in duration-200` to `<main>` for smooth page transitions; removed `kits` prop from `<Sidebar>` (no longer needed)
+
+---
+
+## Architecture Notes
+
+### Sidebar is now self-contained
+The sidebar no longer needs a `kits` prop passed from the server layout. All kit/tool data lives in `src/lib/kit-config.ts` (static, client-side). The site layout is now simpler — just mounts `<Sidebar />` and `<Navbar />`.
+
+### Two parallel tool configs
+- `src/lib/kit-config.ts` — **static, client-side** — sidebar structure, tool names per kit
+- DB `tool_config` collection — **dynamic, server-side** — credit cost, AI model, active status
+Both are used together in the dashboard KitSection (DB configs fetched server-side, passed as props).
+
+### Credit balance flow
+1. Server renders with `session.user.credits` from JWT (fast)
+2. `useCreditStore.syncFromServer()` runs client-side to get fresh balance
+3. Navbar credits badge reads from `useCreditStore().balance`
+4. StatsBar credits card also reads from store (client component)
 
 ---
 
@@ -89,9 +112,9 @@ All tools are complete. Platform is feature-complete for Phase 1.
 
 ---
 
-## Phase 1 Status: COMPLETE
+## Phase 1 Status: COMPLETE + UX POLISHED
 
-All 27 tools built. Platform is ready for:
+Next steps:
 1. End-to-end testing with real API keys
 2. Razorpay integration wiring
 3. Admin panel polish

@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import Link from "next/link";
 import { Zap, Wrench, Package, IndianRupee, BadgeCheck } from "lucide-react";
 import { getAllTools, getKitList } from "@/lib/tool-registry";
@@ -29,6 +31,9 @@ const STATS = [
 ];
 
 export default async function HomePage() {
+  const session = await auth();
+  if (session?.user) redirect("/dashboard");
+
   let allTools: Awaited<ReturnType<typeof getAllTools>> = [];
   let kitList: Awaited<ReturnType<typeof getKitList>> = [];
   try {

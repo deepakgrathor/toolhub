@@ -1,112 +1,161 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useTheme } from "next-themes";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  ChevronLeft, ChevronRight, Coins, ShoppingBag, Sun, Moon, X, Zap,
-  LayoutDashboard, History,
+  ChevronLeft, ChevronRight, ChevronDown,
+  LayoutDashboard, Gift, LogOut, Zap, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/sidebar-store";
-import { useAuthStore } from "@/store/auth-store";
-import { useCreditStore } from "@/store/credits-store";
-import { getKitIcon } from "@/lib/tool-icons";
+import { SIDEBAR_KITS, getKitForSlug } from "@/lib/kit-config";
+import { getToolIcon } from "@/lib/tool-icons";
 
-const KITS = [
-  { kit: "all",       label: "All Tools" },
-  { kit: "creator",   label: "Creator Kit" },
-  { kit: "sme",       label: "SME Kit" },
-  { kit: "hr",        label: "HR Kit" },
-  { kit: "ca-legal",  label: "CA / Legal Kit" },
-  { kit: "marketing", label: "Marketing Kit" },
-];
+// ── Kit accordion item ────────────────────────────────────────────────────────
 
-type KitCount = { kit: string; toolCount: number };
-
-function KitNav({ isCollapsed, kits }: { isCollapsed: boolean; kits: KitCount[] }) {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const rawKit = searchParams.get("kit");
-  const activeKit = pathname.startsWith("/tools") ? (rawKit ?? "all") : null;
-
-  const getCount = (kit: string) => {
-    if (kit === "all") return kits.reduce((s, k) => s + k.toolCount, 0);
-    return kits.find((k) => k.kit === kit)?.toolCount ?? 0;
-  };
+function KitItem({
+  kit,
+  isCollapsed,
+  isExpanded,
+  activeSlug,
+  onToggle,
+}: {
+  kit: (typeof SIDEBAR_KITS)[0];
+  isCollapsed: boolean;
+  isExpanded: boolean;
+  activeSlug: string | null;
+  onToggle: () => void;
+}) {
+  const KitIcon = kit.icon;
+  const isKitActive = kit.tools.some((t) => t.slug === activeSlug);
 
   return (
-    <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
-      {KITS.map(({ kit, label }) => {
-        const href = kit === "all" ? "/tools" : `/tools?kit=${kit}`;
-        const isActive = activeKit === kit;
-        const count = getCount(kit);
-        const KitIcon = getKitIcon(kit);
-        return (
-          <Link key={kit} href={href} title={isCollapsed ? label : undefined}>
-            <div
+    <div>
+      {/* Kit header button */}
+      <button
+        onClick={onToggle}
+        title={isCollapsed ? kit.name : undefined}
+        className={cn(
+          "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+          isKitActive
+            ? "text-primary font-medium"
+            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+          isCollapsed && "justify-center"
+        )}
+      >
+        <KitIcon className="h-[18px] w-[18px] shrink-0" />
+        {!isCollapsed && (
+          <>
+            <span className="flex-1 truncate text-left">{kit.name}</span>
+            <ChevronDown
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isActive
-                  ? "bg-accent/15 text-accent font-medium"
-                  : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                isExpanded && "rotate-180"
               )}
+            />
+          </>
+        )}
+      </button>
+
+      {/* Tool list — animated expand/collapse, hidden when sidebar collapsed */}
+      {!isCollapsed && (
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div
+              key="tools"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="overflow-hidden"
             >
-              <KitIcon className="h-5 w-5 shrink-0" />
-              {!isCollapsed && (
-                <>
-                  <span className="flex-1 truncate">{label}</span>
-                  {count > 0 && (
-                    <span
+              <div className="pb-1 pl-3">
+                {kit.tools.map((tool) => {
+                  const ToolIcon = getToolIcon(tool.slug);
+                  const isActive = tool.slug === activeSlug;
+                  return (
+                    <Link
+                      key={tool.slug}
+                      href={`/tools/${tool.slug}`}
                       className={cn(
-                        "rounded-full px-1.5 py-0.5 text-xs font-medium",
+                        "relative flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors",
                         isActive
-                          ? "bg-accent/20 text-accent"
-                          : "bg-white/10 text-muted-foreground"
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                       )}
                     >
-                      {count}
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
-          </Link>
-        );
-      })}
-    </nav>
+                      {isActive && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-primary rounded-r-full" />
+                      )}
+                      <ToolIcon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{tool.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
+    </div>
   );
 }
+
+// ── Sidebar content (shared between desktop + mobile drawer) ──────────────────
 
 function SidebarContent({
   isCollapsed = false,
   onClose,
-  kits,
 }: {
   isCollapsed?: boolean;
   onClose?: () => void;
-  kits: KitCount[];
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
-  const { theme, setTheme } = useTheme();
-  const openAuthModal = useAuthStore((s) => s.openAuthModal);
-  const balance = useCreditStore((s) => s.balance);
+  const { expandedKit, setExpandedKit } = useSidebarStore();
+
+  // Derive active tool slug from pathname
+  const activeSlug = pathname.startsWith("/tools/")
+    ? pathname.split("/tools/")[1]?.split("/")[0] ?? null
+    : null;
+
+  // Auto-expand parent kit when navigating to a tool
+  useEffect(() => {
+    if (activeSlug) {
+      const parentKit = getKitForSlug(activeSlug);
+      if (parentKit && expandedKit !== parentKit) {
+        setExpandedKit(parentKit);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSlug]);
+
+  function handleKitToggle(kitId: string) {
+    setExpandedKit(expandedKit === kitId ? null : kitId);
+  }
+
+  const isDashboard = pathname === "/dashboard";
 
   return (
-    <>
+    <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-14 items-center border-b border-border px-3 shrink-0">
-        {!isCollapsed && (
-          <Link href="/" className="flex items-center gap-2 flex-1">
-            <Zap className="h-5 w-5 text-accent shrink-0" />
+        {!isCollapsed ? (
+          <Link href="/dashboard" className="flex items-center gap-2 flex-1 min-w-0">
+            <Zap className="h-5 w-5 text-primary shrink-0" />
             <span className="font-bold text-foreground tracking-tight">
-              Tool<span className="text-accent">spire</span>
+              Tool<span className="text-primary">spire</span>
             </span>
           </Link>
+        ) : (
+          <Link href="/dashboard" className="mx-auto">
+            <Zap className="h-5 w-5 text-primary" />
+          </Link>
         )}
-        {isCollapsed && <Zap className="mx-auto h-5 w-5 text-accent" />}
         {onClose && (
           <button
             onClick={onClose}
@@ -117,83 +166,81 @@ function SidebarContent({
         )}
       </div>
 
-      {/* Kit navigation */}
-      <Suspense fallback={<div className="flex-1" />}>
-        <KitNav isCollapsed={isCollapsed} kits={kits} />
-      </Suspense>
+      {/* Dashboard link */}
+      <div className="px-2 pt-3 pb-1 shrink-0">
+        <Link
+          href="/dashboard"
+          title={isCollapsed ? "Dashboard" : undefined}
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+            isDashboard
+              ? "bg-primary/10 text-primary font-medium"
+              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            isCollapsed && "justify-center"
+          )}
+        >
+          <LayoutDashboard className="h-[18px] w-[18px] shrink-0" />
+          {!isCollapsed && <span>Dashboard</span>}
+        </Link>
+      </div>
 
-      {/* Dashboard nav links (only when logged in) */}
-      {session?.user && (
-        <div className="border-t border-border px-2 py-2 space-y-0.5 shrink-0">
-          {[
-            { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
-            { href: "/dashboard/history", label: "History", Icon: History },
-          ].map(({ href, label, Icon }) => (
-            <Link key={href} href={href} title={isCollapsed ? label : undefined}>
-              <div
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                  "text-muted-foreground hover:bg-white/5 hover:text-foreground"
-                )}
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                {!isCollapsed && <span>{label}</span>}
-              </div>
-            </Link>
-          ))}
-        </div>
+      {/* Kit navigation */}
+      {!isCollapsed && (
+        <p className="px-5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 shrink-0">
+          Kits
+        </p>
       )}
+      <nav className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
+        {SIDEBAR_KITS.map((kit) => (
+          <KitItem
+            key={kit.id}
+            kit={kit}
+            isCollapsed={isCollapsed}
+            isExpanded={expandedKit === kit.id}
+            activeSlug={activeSlug}
+            onToggle={() => handleKitToggle(kit.id)}
+          />
+        ))}
+      </nav>
 
       {/* Bottom section */}
-      <div className="border-t border-border px-2 py-3 space-y-1.5 shrink-0">
-        {session?.user ? (
-          <div
+      {session?.user && (
+        <div className="border-t border-border px-2 py-3 space-y-0.5 shrink-0">
+          <button
+            onClick={() => {
+              onClose?.();
+              router.push("/dashboard#referral");
+            }}
+            title={isCollapsed ? "Refer & Earn" : undefined}
             className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2 bg-accent/10 text-accent text-sm font-medium",
+              "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
               isCollapsed && "justify-center"
             )}
           >
-            <Coins className="h-4 w-4 shrink-0" />
-            {!isCollapsed && <span>{balance} credits</span>}
-          </div>
-        ) : (
-          !isCollapsed && (
-            <button
-              onClick={() => openAuthModal("login")}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors text-left"
-            >
-              Sign in for credits
-            </button>
-          )
-        )}
+            <Gift className="h-[18px] w-[18px] shrink-0" />
+            {!isCollapsed && <span>Refer &amp; Earn</span>}
+          </button>
 
-        {!isCollapsed && (
-          <Link
-            href="/pricing"
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            title={isCollapsed ? "Logout" : undefined}
+            className={cn(
+              "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors",
+              isCollapsed && "justify-center"
+            )}
           >
-            <ShoppingBag className="h-3.5 w-3.5" />
-            Buy Credits
-          </Link>
-        )}
-
-        <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className={cn(
-            "flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors",
-            isCollapsed ? "w-full justify-center" : "w-full"
-          )}
-          title="Toggle theme"
-        >
-          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          {!isCollapsed && <span>Toggle theme</span>}
-        </button>
-      </div>
-    </>
+            <LogOut className="h-[18px] w-[18px] shrink-0" />
+            {!isCollapsed && <span>Logout</span>}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
-function DesktopSidebar({ kits }: { kits: KitCount[] }) {
+// ── Desktop sidebar ───────────────────────────────────────────────────────────
+
+function DesktopSidebar() {
   const { isCollapsed, toggle } = useSidebarStore();
 
   useEffect(() => {
@@ -208,43 +255,51 @@ function DesktopSidebar({ kits }: { kits: KitCount[] }) {
         isCollapsed ? "w-14" : "w-60"
       )}
     >
-      <SidebarContent isCollapsed={isCollapsed} kits={kits} />
+      <SidebarContent isCollapsed={isCollapsed} />
       <button
         onClick={toggle}
         className="absolute -right-3 top-[58px] z-10 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-surface text-muted-foreground hover:text-foreground transition-colors shadow-sm"
         title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
-        {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+        {isCollapsed
+          ? <ChevronRight className="h-3 w-3" />
+          : <ChevronLeft  className="h-3 w-3" />
+        }
       </button>
     </aside>
   );
 }
 
-function MobileDrawer({ kits }: { kits: KitCount[] }) {
+// ── Mobile drawer ─────────────────────────────────────────────────────────────
+
+function MobileDrawer() {
   const { isMobileOpen, closeMobile } = useSidebarStore();
   const pathname = usePathname();
 
   useEffect(() => {
     closeMobile();
-  }, [pathname]); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   if (!isMobileOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 md:hidden">
       <div className="absolute inset-0 bg-black/60" onClick={closeMobile} />
-      <aside className="absolute left-0 top-0 h-full w-64 bg-surface border-r border-border flex flex-col">
-        <SidebarContent onClose={closeMobile} kits={kits} />
+      <aside className="absolute left-0 top-0 h-full w-64 bg-surface border-r border-border">
+        <SidebarContent onClose={closeMobile} />
       </aside>
     </div>
   );
 }
 
-export function Sidebar({ kits }: { kits: KitCount[] }) {
+// ── Public export ─────────────────────────────────────────────────────────────
+
+export function Sidebar() {
   return (
     <>
-      <DesktopSidebar kits={kits} />
-      <MobileDrawer kits={kits} />
+      <DesktopSidebar />
+      <MobileDrawer />
     </>
   );
 }
