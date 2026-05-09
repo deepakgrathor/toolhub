@@ -1,8 +1,28 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #11 | Referral System + Output History (complete)
+Updated: 2026-05-09 | Account: A | Session: #12 | Project Analysis + Critical Bug Fix
 
 ## Where We Are
-Session A11 done. Referral system is fully wired — referral codes generated on every signup, cookie-based referral tracking, atomic credit bonuses, referral info API, and a ReferralCard on the dashboard. Output history page added at `/dashboard/history` with pagination and an output viewer dialog.
+Session A12 done. Full project analysis completed — see `docs/ANALYSIS_REPORT.md`. One critical bug fixed: blog generator engine now reads credit cost from DB instead of hardcoding `3`.
+
+### What Was Built (Session A12 — Analysis + Bug Fix)
+
+**Critical Bug Fixed (`apps/web/src/tools/blog-generator/engine.ts`)**
+- Engine now imports `ToolConfig` from `@toolhub/db`
+- Reads `creditCost` from DB via `ToolConfig.findOne({ toolSlug: context.toolSlug })`
+- Falls back to `3` only if config not found in DB
+- Uses `context.toolSlug` for all DB writes (was hardcoded `"blog-generator"`)
+- Pattern now reusable for future tool engines
+
+**Analysis Report (`docs/ANALYSIS_REPORT.md`)**
+- Complete file-by-file audit of all 100+ files
+- Compliance checklist against CLAUDE.md architecture rules
+- Security audit — all clear
+- 27 tools seeded (plan said 30, HANDOFF.md credit table is the accurate source)
+- Full bug report: 1 CRITICAL (fixed), 3 HIGH, 4 MEDIUM, 3 LOW
+
+---
+
+## Where We Were (Session A11) Referral system is fully wired — referral codes generated on every signup, cookie-based referral tracking, atomic credit bonuses, referral info API, and a ReferralCard on the dashboard. Output history page added at `/dashboard/history` with pagination and an output viewer dialog.
 
 ### What Was Built (Session A11 — Referral System + Output History)
 
@@ -107,12 +127,13 @@ Session A11 done. Referral system is fully wired — referral codes generated on
 - `apps/web/src/tools/blog-generator/BlogGeneratorTool.tsx` — Client component, 2-col layout
 - `apps/web/src/app/(site)/tools/[slug]/page.tsx` — dynamic tool shell
 
-## Next Task
-Session A12 options:
-- Wire Blog Generator to Bull MQ job queue (async generation with polling)
-- Build YT Script Generator (same pattern, creditCost=4)
-- Build second tool (e.g. GST Invoice, QR Generator)
-- Admin panel: tool management + credit pack management
+## Next Task (Session A13)
+Priority order from analysis report:
+1. Fix admin settings key: rename `theme_default` → `default_theme` in seed (or rename API schema key to match)
+2. Fix `BlogGeneratorTool.tsx` UI to read credit cost from tool config (SSR prop) instead of hardcoded `blogGeneratorConfig.creditCost`
+3. Wire Blog Generator to Bull MQ (async generation via LiteLLM gateway)
+4. Build 3–4 zero-credit tools: QR Generator, GST Calculator, Hook Writer, Caption Generator
+5. Then build AI tools via Bull MQ pattern: YT Script (4cr), JD Generator (3cr)
 
 ## How to Seed
 ```bash

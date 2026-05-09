@@ -1,4 +1,4 @@
-import { connectDB, CreditService, InsufficientCreditsError, ToolOutput } from "@toolhub/db";
+import { connectDB, CreditService, InsufficientCreditsError, ToolOutput, ToolConfig } from "@toolhub/db";
 import type { ToolEngineContext, ToolEngineResult } from "@toolhub/shared";
 import type { BlogGeneratorInput } from "./schema";
 
@@ -164,10 +164,16 @@ export async function execute(
 ): Promise<ToolEngineResult> {
   await connectDB();
 
-  const hasBalance = await CreditService.checkBalance(context.userId, 3);
+  // Load credit cost from DB — never hardcode
+  const toolConfigDoc = await ToolConfig.findOne({ toolSlug: context.toolSlug })
+    .select("creditCost")
+    .lean();
+  const creditCost = toolConfigDoc?.creditCost ?? 3;
+
+  const hasBalance = await CreditService.checkBalance(context.userId, creditCost);
   if (!hasBalance) {
     const balance = await CreditService.getBalance(context.userId);
-    throw new InsufficientCreditsError(balance, 3);
+    throw new InsufficientCreditsError(balance, creditCost);
   }
 
   const prompt = buildPrompt(input);
@@ -178,22 +184,22 @@ export async function execute(
   // Deduct ONLY after successful generation
   const { newBalance } = await CreditService.deductCredits(
     context.userId,
-    3,
-    "blog-generator"
+    creditCost,
+    context.toolSlug
   );
 
   await ToolOutput.create({
     userId: context.userId,
-    toolSlug: "blog-generator",
+    toolSlug: context.toolSlug,
     inputSnapshot: input,
     outputText: JSON.stringify(parsed),
-    creditsUsed: 3,
+    creditsUsed: creditCost,
   });
 
   return {
     output: JSON.stringify(parsed),
     structured: parsed,
-    creditsUsed: 3,
+    creditsUsed: creditCost,
     newBalance,
   };
 }
