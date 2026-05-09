@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { connectDB, SiteConfig } from "@toolhub/db";
 import { SettingsForm, type SiteSettings } from "@/components/admin/SettingsForm";
 
-export const metadata: Metadata = { title: "Admin Settings — Toolspire" };
+export const metadata: Metadata = { title: "Admin Settings — SetuLix" };
 export const dynamic = "force-dynamic";
 
 const DEFAULTS: SiteSettings = {

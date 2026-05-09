@@ -1,4 +1,5 @@
 import { Schema, Document, Model, getOrCreateModel } from "../lib/mongoose-shim";
+import type { Types } from "mongoose";
 
 export interface IUser extends Document {
   name: string;
@@ -10,6 +11,10 @@ export interface IUser extends Document {
   plan: "free" | "pro" | "enterprise";
   kitPreference?: string;
   authProvider: "google" | "email";
+  referralCode?: string;
+  referredBy?: Types.ObjectId | null;
+  referralCount: number;
+  isBanned: boolean;
   createdAt: Date;
   updatedAt: Date;
   lastSeen: Date;
@@ -40,6 +45,10 @@ const UserSchema = new Schema<IUser>(
       enum: ["google", "email"],
       default: "email",
     },
+    referralCode: { type: String, unique: true, sparse: true },
+    referredBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    referralCount: { type: Number, default: 0 },
+    isBanned: { type: Boolean, default: false },
     lastSeen: { type: Date, default: Date.now },
   },
   { timestamps: true }

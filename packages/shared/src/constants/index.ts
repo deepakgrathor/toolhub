@@ -39,9 +39,11 @@ export const ROUTES = {
 // ── Tool Kits ─────────────────────────────────────────────────────────────────
 
 export const KITS = {
-  PDF: "PDF Tools",
-  IMAGE: "Image Tools",
-  WRITING: "Writing Tools",
-  BUSINESS: "Business Tools",
-  SEO: "SEO Tools",
+  CREATOR: "creator",
+  SME: "sme",
+  HR: "hr",
+  CA_LEGAL: "ca-legal",
+  MARKETING: "marketing",
 } as const;
+
+export type KitKey = typeof KITS[keyof typeof KITS];

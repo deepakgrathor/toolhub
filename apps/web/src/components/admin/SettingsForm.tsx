@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, AlertTriangle, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export interface SiteSettings {
   default_theme: "dark" | "light";
@@ -34,6 +35,7 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
       });
       if (!res.ok) throw new Error("Failed to save settings.");
       setSaved(true);
+      toast.success("Settings saved");
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");

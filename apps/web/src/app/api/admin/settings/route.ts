@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectDB, SiteConfig, AuditLog } from "@toolhub/db";
+import { getRedis } from "@toolhub/shared";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,16 @@ export async function PATCH(req: NextRequest) {
     before,
     after,
   });
+
+  // Sync maintenance_mode to Redis so middleware can read it without DB access
+  if ("maintenance_mode" in updates) {
+    try {
+      const redis = getRedis();
+      await redis.set("site:maintenance_mode", updates.maintenance_mode ? "1" : "0");
+    } catch {
+      // Redis unavailable — middleware falls back to false (non-blocking)
+    }
+  }
 
   return NextResponse.json({ success: true });
 }

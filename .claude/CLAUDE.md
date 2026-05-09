@@ -187,6 +187,13 @@ Anthropic: claude-haiku-3-5, claude-sonnet-4-5
 Google:    gemini-flash-2.0, gemini-pro
 Images:    dall-e-3
 
+## Deploy:
+- Vercel → apps/web (free tier)
+- MongoDB Atlas → free M0 cluster
+- Upstash Redis → free tier (10k req/day)
+- Railway → Phase 2+ only (100+ users)
+- Bull MQ → Phase 2+ only
+
 ## Session Rules
 - Always read docs/HANDOFF.md before starting
 - Always update docs/HANDOFF.md before finishing

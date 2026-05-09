@@ -1,9 +1,14 @@
-// Worker entrypoint — BullMQ AI job processing
-// Placeholder: full implementation in Session B1+
-console.log("[worker] Toolspire worker starting...");
-console.log("[worker] BullMQ and AI job queues will be wired up in Phase 2.");
+import { worker } from "./worker";
+import { aiQueue } from "./queue";
 
-process.on("SIGTERM", () => {
-  console.log("[worker] Shutting down...");
+console.log("[worker] Toolspire worker started, listening for jobs...");
+
+async function shutdown() {
+  console.log("[worker] Graceful shutdown...");
+  await worker.close();
+  await aiQueue.close();
   process.exit(0);
-});
+}
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);

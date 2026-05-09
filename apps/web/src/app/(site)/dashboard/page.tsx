@@ -1,66 +1,153 @@
-import { Metadata } from "next";
-import { LayoutGrid } from "lucide-react";
-import { getAllTools, ToolWithConfig } from "@/lib/tool-registry";
-import { ToolCard } from "@/components/tools/ToolCard";
-import { CreditOverview } from "@/components/dashboard/CreditOverview";
-import { TransactionHistory } from "@/components/dashboard/TransactionHistory";
+import type { Metadata } from "next";
+import { Suspense } from "react";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { connectDB, CreditTransaction, ToolOutput, User } from "@toolhub/db";
+import { getAllTools } from "@/lib/tool-registry";
+import { StatsBar } from "@/components/dashboard/StatsBar";
+import { KitSection } from "@/components/dashboard/KitSection";
+import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { ReferralCard } from "@/components/dashboard/ReferralCard";
+import { GreetingTagline } from "@/components/dashboard/GreetingTagline";
+import { StatsBarSkeleton, KitSectionSkeleton } from "@/components/ui/skeletons";
+import { getCachedDashStats, setCachedDashStats } from "@/lib/credit-cache";
+import mongoose from "mongoose";
 
 export const metadata: Metadata = {
-  title: "Dashboard — Toolspire",
-  description: "Manage your credits and view transaction history.",
+  title: "Dashboard — SetuLix",
+  description: "Your SetuLix dashboard.",
 };
 
 export const dynamic = "force-dynamic";
 
-const POPULAR_SLUGS = [
-  "blog-generator",
-  "yt-script",
-  "gst-invoice",
-  "resume-screener",
-  "legal-notice",
-  "thumbnail-ai",
-];
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 12) return "Good morning";
+  if (hour >= 12 && hour < 17) return "Good afternoon";
+  if (hour >= 17 && hour < 22) return "Good evening";
+  return "Good night";
+}
 
-export default async function DashboardPage() {
-  let popularTools: ToolWithConfig[] = [];
+function formatMemberSince(date: Date | string): string {
+  return new Date(date).toLocaleDateString("en-IN", {
+    month: "short",
+    year: "numeric",
+  });
+}
+
+// ── Async server components for Suspense streaming ───────────────────────────
+
+async function StatsSection({ userId }: { userId: string }) {
+  // Try Redis cache (2-min TTL) before hitting MongoDB
+  const cached = await getCachedDashStats(userId);
+  if (cached) {
+    return (
+      <StatsBar
+        toolsUsed={cached.toolsUsed}
+        creditsUsed={cached.creditsUsed}
+        memberSince={cached.memberSince}
+      />
+    );
+  }
+
+  let toolsUsed = 0;
+  let creditsUsed = 0;
+  let memberSince = "—";
+
   try {
-    const all = await getAllTools();
-    const bySlug = new Map(all.map((t) => [t.slug, t]));
-    popularTools = POPULAR_SLUGS
-      .map((s) => bySlug.get(s))
-      .filter((t): t is ToolWithConfig => t !== undefined);
-    if (popularTools.length === 0) popularTools = all.slice(0, 6);
+    await connectDB();
+    const uid = new mongoose.Types.ObjectId(userId);
+    const [historyCount, debitAgg, userDoc] = await Promise.all([
+      ToolOutput.countDocuments({ userId: uid }),
+      CreditTransaction.aggregate([
+        { $match: { userId: uid, amount: { $lt: 0 } } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+      User.findById(uid).select("createdAt").lean(),
+    ]);
+    toolsUsed = historyCount;
+    creditsUsed = Math.abs(debitAgg[0]?.total ?? 0);
+    if (userDoc?.createdAt) memberSince = formatMemberSince(userDoc.createdAt);
+
+    // Cache for 2 minutes
+    await setCachedDashStats(userId, { toolsUsed, creditsUsed, memberSince });
   } catch {
-    // DB unavailable — show empty
+    // DB unavailable — show zeros
   }
 
   return (
-    <div className="min-h-full px-4 py-8 md:px-8">
-      <h1 className="text-2xl font-bold text-foreground mb-6">Dashboard</h1>
+    <StatsBar
+      toolsUsed={toolsUsed}
+      creditsUsed={creditsUsed}
+      memberSince={memberSince}
+    />
+  );
+}
 
-      {/* Credit overview card — full width on mobile, 1/3 on lg */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
-        <div className="lg:col-span-1">
-          <CreditOverview />
-        </div>
+async function ToolsSection() {
+  let allTools: Awaited<ReturnType<typeof getAllTools>> = [];
+  try {
+    allTools = await getAllTools();
+  } catch {
+    // DB unavailable
+  }
+
+  return (
+    <div>
+      <h2 className="text-base font-semibold text-foreground mb-4">All Tools</h2>
+      <KitSection tools={allTools} />
+    </div>
+  );
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function DashboardPage() {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/");
+
+  const firstName = session.user.name?.split(" ")[0] ?? "there";
+  const greeting = getGreeting();
+
+  return (
+    <div className="min-h-full px-4 py-8 md:px-8 max-w-6xl mx-auto">
+      {/* Greeting — renders instantly, no DB needed */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-foreground">
+          {greeting}, {firstName}!
+        </h1>
+        <GreetingTagline />
       </div>
 
-      {/* Transaction history */}
+      {/* Stats — streams in after DB query */}
       <div className="mb-10">
-        <TransactionHistory />
+        <Suspense fallback={<StatsBarSkeleton />}>
+          <StatsSection userId={session.user.id} />
+        </Suspense>
       </div>
 
-      {/* Popular tools */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <LayoutGrid className="h-5 w-5 text-[#7c3aed]" />
-          <h2 className="text-lg font-semibold text-foreground">Popular Tools</h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {popularTools.map((tool) => (
-            <ToolCard key={tool.slug} tool={tool} />
-          ))}
-        </div>
+      {/* Recent activity — client component with its own loading state */}
+      <div className="mb-10">
+        <RecentActivity />
+      </div>
+
+      {/* Tools — streams in after DB + Redis query */}
+      <div className="mb-10">
+        <Suspense
+          fallback={
+            <div>
+              <div className="h-5 w-24 mb-4 animate-pulse rounded-lg bg-muted" />
+              <KitSectionSkeleton />
+            </div>
+          }
+        >
+          <ToolsSection />
+        </Suspense>
+      </div>
+
+      {/* Referral section */}
+      <div id="referral" className="scroll-mt-6">
+        <ReferralCard />
       </div>
     </div>
   );

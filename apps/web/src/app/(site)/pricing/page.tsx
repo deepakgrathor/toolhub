@@ -19,7 +19,7 @@ import {
 import { BuyCreditsButton } from "@/components/credits/BuyCreditsButton";
 
 export const metadata: Metadata = {
-  title: "Pricing — Toolspire",
+  title: "Pricing — SetuLix",
   description:
     "Buy credits once, use anytime. No subscriptions. Credits never expire.",
 };
@@ -29,7 +29,7 @@ export const dynamic = "force-dynamic";
 async function getPacks(): Promise<ICreditPack[]> {
   try {
     await connectDB();
-    return CreditPack.find({ isActive: true }).sort({ sortOrder: 1 }).lean();
+    return CreditPack.find({ isActive: true }).sort({ sortOrder: 1 }).lean() as unknown as Promise<ICreditPack[]>;
   } catch {
     return [];
   }
@@ -167,7 +167,7 @@ export default async function PricingPage() {
               <div
                 key={pack._id.toString()}
                 className={cn(
-                  "relative rounded-xl border bg-surface p-5 flex flex-col gap-3 transition-shadow hover:shadow-lg",
+                  "relative rounded-xl border bg-surface p-5 flex flex-col gap-3 transition-shadow hover:shadow-lg min-w-0",
                   pack.isFeatured
                     ? "border-[#7c3aed] ring-2 ring-[#7c3aed]/40"
                     : "border-border"

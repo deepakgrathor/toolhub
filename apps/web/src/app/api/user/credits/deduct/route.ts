@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectDB, CreditService, InsufficientCreditsError } from "@toolhub/db";
 import { z } from "zod";
+import { invalidateBalance, invalidateDashStats } from "@/lib/credit-cache";
 
 const deductSchema = z.object({
   toolSlug: z.string().min(1),
@@ -28,6 +29,13 @@ export async function POST(req: NextRequest) {
       parsed.data.amount,
       parsed.data.toolSlug
     );
+
+    // Invalidate stale cached balance + dashboard stats
+    await Promise.all([
+      invalidateBalance(session.user.id),
+      invalidateDashStats(session.user.id),
+    ]);
+
     return NextResponse.json({ success: true, newBalance });
   } catch (err) {
     if (err instanceof InsufficientCreditsError) {

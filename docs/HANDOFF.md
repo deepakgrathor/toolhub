@@ -1,216 +1,156 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #8 | Admin Pricing + Settings + Announcement Banner (complete)
+Updated: 2026-05-10 | Account: A | Session: #21+22 (Final) | Branding + Critical Fixes + Light Theme + SEO
 
 ## Where We Are
-Session A8 done. Admin panel is now fully complete: Pricing CRUD with drag-to-reorder, Site Settings (theme, announcement banner, maintenance mode), and a global announcement banner that renders SSR and dismisses per session.
+Sessions A21+A22 done. **TypeScript: 0 errors.**
+Product rebranded from Toolspire → **SetuLix** (by **SetuLabsAI**, Founder: **Deepak Rathor**).
+All 20 implementation items complete across 3 sections: Critical Fixes, Branding, SEO+Kit Pages.
 
-### What Was Built (Session A8 — Admin Pricing + Settings)
+---
 
-**Pricing Management**
-- `apps/web/src/app/admin/pricing/page.tsx` — server component; fetches all CreditPacks (sorted by sortOrder); passes `PackRow[]` to client component
-- `apps/web/src/components/admin/PricingTable.tsx` — full client CRUD; table with Name/Credits/Price/₹per Credit/Featured/Active/Order/Actions columns; "Add New Pack" button; shared modal form for add+edit (pre-filled on edit); delete confirm dialog; HTML5 drag-to-reorder (dragstart/dragenter/dragend updates sortOrder + fires PATCH for each affected row)
-- `apps/web/src/app/api/admin/pricing/route.ts` — POST; admin auth; Zod validation; creates CreditPack; AuditLog entry
-- `apps/web/src/app/api/admin/pricing/[id]/route.ts` — PATCH (update fields); DELETE (remove pack); both with admin auth + AuditLog before/after snapshot
+## What Was Built (Session A21+A22)
 
-**Site Settings**
-- `apps/web/src/app/admin/settings/page.tsx` — server component; fetches 4 SiteConfig keys with defaults fallback; passes `SiteSettings` to client component
-- `apps/web/src/components/admin/SettingsForm.tsx` — client form; 3 sections: Default Theme (radio cards), Announcement Banner (textarea + char count + toggle + live preview), Maintenance Mode (toggle + red warning); single Save button → PATCH `/api/admin/settings`; success/error feedback with 3s auto-clear
-- `apps/web/src/app/api/admin/settings/route.ts` — PATCH; admin auth; Zod validation of 4 keys; upserts each key in SiteConfig collection; AuditLog with before/after per-key diff
+### SECTION 0 — Critical Fixes
 
-**Announcement Banner**
-- `apps/web/src/components/layout/AnnouncementBanner.tsx` — client component; shows purple full-width banner with text + X dismiss button; dismissal stored in `sessionStorage` (reappears on new tab/session); mounts conditionally (no DOM node when hidden)
-- `apps/web/src/app/layout.tsx` — updated; fetches `announcement_banner` + `announcement_visible` from SiteConfig in the same `connectDB()` call as kit list; renders `<AnnouncementBanner>` above the main layout div (SSR rendered, no flash)
+#### 0A. Tool Hide/Disable — FIXED
+- `apps/web/src/lib/tool-registry.ts` — **fixed**: `getAllTools()` now fetches all ToolConfig docs (not just `isActive:true`) and filters by BOTH `isActive && isVisible`. Added `isVisible` to `ToolWithConfig` interface.
+- `apps/web/src/app/api/tools/active-slugs/route.ts` — **new**: Returns `{ slugs: string[] }` of all active+visible tools. Sidebar uses this to filter.
+- `apps/web/src/components/layout/sidebar.tsx` — **fixed**: Fetches active slugs on mount (30s client cache), filters `SIDEBAR_KITS` dynamically. Hidden tools disappear from sidebar.
+- `apps/web/src/app/(site)/tools/[slug]/page.tsx` — **fixed**: If `isVisible=false` → redirect to dashboard. If `isActive=false` → show `ToolUnavailableCard`.
 
-### SiteConfig Keys Used
-| Key | Type | Default |
-|-----|------|---------|
-| `default_theme` | `"dark" \| "light"` | `"dark"` |
-| `announcement_banner` | `string` | `""` |
-| `announcement_visible` | `boolean` | `false` |
-| `maintenance_mode` | `boolean` | `false` |
+#### 0B. Google Profile Pic — FIXED
+- `apps/web/src/auth.ts` — **fixed**: JWT callback now sets `token.image = user.image` for both Google and credentials providers. Session callback sets `session.user.image = token.image`.
+- `apps/web/src/types/next-auth.d.ts` — **updated**: Added `image?: string | null` to JWT interface.
 
-### What Was Built (Session A7 — Admin Panel)
+#### 0C. Admin Tool Kit Change — ADDED
+- `apps/web/src/app/api/admin/tools/[slug]/route.ts` — **updated**: PATCH now accepts `kit` field, updates `Tool.kits = [kit]` in DB (alongside ToolConfig changes).
+- `apps/web/src/components/admin/ToolsTable.tsx` — **updated**: Kit column changed from read-only text to editable `<select>` dropdown. `RowState` includes `kits`. Optimistic UI update.
 
-**Admin Layout**
-- `apps/web/src/app/admin/layout.tsx` — client component; nested inside root layout's `<main>`; own two-column structure (admin sidebar + content); `usePathname` for active link highlighting; "Back to site" link; 5 nav items (Overview, Tools, Users, Pricing, Settings)
+### SECTION 1 — SetuLix Branding
 
-**Admin Overview**
-- `apps/web/src/app/admin/page.tsx` — server component; 4 stat cards: Total Users, Active Tools, Credits Sold, Credits This Month; MongoDB aggregations for purchase totals
+#### 1A. Brand Constants
+- `packages/shared/src/brand.ts` — **new**: `BRAND` object with name, tagline, company, founder, domain, emails.
+- `packages/shared/src/index.ts` — **updated**: Exports `brand`.
 
-**Tools Management**
-- `apps/web/src/app/admin/tools/page.tsx` — server component; fetches ALL tools + configs (not filtered by isActive); passes `AdminToolRow[]` to client component
-- `apps/web/src/components/admin/ToolsTable.tsx` — client component; full inline editing; credits input with blur-to-save; model select with immediate save; active toggle switch; icon map for all 27 tool icons; saving overlay per row; PATCH `/api/admin/tools/[slug]`
+#### 1B. Toolspire → SetuLix Replace
+- Global find+replace across 70+ files in `apps/web/src/**`:
+  - "Toolspire" → "SetuLix", "toolspire.io" → "setulix.com", "Gobeens Technology" → "SetuLabsAI"
+- `@toolhub/db` and `@toolhub/shared` package names **unchanged** (internal monorepo names).
 
-**Users Management**
-- `apps/web/src/app/admin/users/page.tsx` — server component; `searchParams.q` → MongoDB `$regex` search on name+email; `AdminUserRow[]` passed to client; 100 user limit
-- `apps/web/src/components/admin/UsersTable.tsx` — client component; search input → `router.push` with `?q=`; Add Credits modal (amount + note); POST `/api/admin/users/[userId]/credits`; credits flash green on successful add; plan badge; avatar initial; admin role indicator
+#### 1C. Logo Component
+- `apps/web/src/components/brand/Logo.tsx` — **new**: SetuLix wordmark with geometric S SVG icon. Sizes: sm/md/lg. Optional `showSubtext` for "by SetuLabsAI".
+- Sidebar and admin layout updated to use Logo component.
 
-**Admin API Routes**
-- `apps/web/src/app/api/admin/tools/[slug]/route.ts` — PATCH; admin role check; upserts ToolConfig; calls `clearToolCache()`; logs to AuditLog with before/after snapshot
-- `apps/web/src/app/api/admin/users/[userId]/credits/route.ts` — POST; admin role check; `CreditService.addCredits(..., 'manual_admin', { note, adminId })`; logs to AuditLog
+#### 1D. Footer
+- `apps/web/src/components/brand/Footer.tsx` — **new**: Full footer with Logo+tagline, Pages+Kits links, contact emails, copyright, "Designed by SetuLabsAI" bar.
 
-### Architecture Note (A7)
-- Admin layout nests inside root layout's `<main>` — main site sidebar/navbar remain visible for admins
-- All admin routes check `session.user.role === "admin"` (enforced by both middleware AND each API route for defense-in-depth)
-- `clearToolCache()` clears the in-process Map cache in `tool-registry.ts` — effective in dev (singleton module); in serverless prod each lambda has its own cache which expires naturally
-- `ToolConfig.findOneAndUpdate(..., { upsert: true })` — creates config if a tool was seeded without one
+#### 1E. /about Page
+- `apps/web/src/app/(site)/about/page.tsx` — **new**: About SetuLix, About SetuLabsAI, Team (Deepak Rathor), Tech Stack, CTA.
 
-### What Was Built (Session A6 — Razorpay Integration)
+#### 1F. OTP Email Branding
+- `apps/web/src/app/api/auth/send-otp/route.ts` — **updated**: HTML email template redesigned with SetuLix header, purple branding, monospace OTP display, SetuLabsAI footer.
 
-**New API Route: Purchase Order**
-- `apps/web/src/app/api/credits/purchase/route.ts` — POST, auth required
-  - Body: `{ packId }` → validates, fetches CreditPack from DB
-  - Calls `POST https://api.razorpay.com/v1/orders` via fetch (no SDK)
-  - Stores `notes: { userId, packId }` so webhook can identify buyer
-  - Returns `{ orderId, amount, currency, packName, credits }`
+### SECTION 2 — Light Theme Fixes
 
-**New API Route: Razorpay Webhook**
-- `apps/web/src/app/api/webhooks/razorpay/route.ts` — POST, public
-  - Verifies `X-Razorpay-Signature` via `HMAC-SHA256(rawBody, WEBHOOK_SECRET)`
-  - Always returns 200 (Razorpay retries on non-200)
-  - Handles only `payment.captured` event
-  - Idempotent: checks `CreditTransaction.findOne({ "meta.paymentId": paymentId })` before adding
-  - On valid capture: calls `CreditService.addCredits(userId, pack.credits, 'purchase', { orderId, paymentId, packId, packName })`
+#### 2A. Navbar
+- Glassmorphism: `bg-background/80 backdrop-blur-md sticky top-0 z-30`.
 
-**New Component: BuyCreditsButton**
-- `apps/web/src/components/credits/BuyCreditsButton.tsx` — client component
-  - Props: `pack: PackData` (serializable, no Mongoose types)
-  - States: loading (spinner), success (green checkmark + "Credits Added!" for 3s)
-  - Loads `checkout.razorpay.com/v1/checkout.js` dynamically, once (caches by script ID)
-  - Opens Razorpay modal with purple `#7c3aed` theme
-  - On payment success: calls `syncFromServer()` from credits-store → live balance update
-  - On modal dismiss: clears loading state
+#### 2B-2F. Component Fixes
+- `apps/web/src/components/admin/ToolsTable.tsx` — hardcoded `bg-[#111111]`/`bg-[#1a1a1a]` → semantic tokens.
+- `apps/web/src/app/admin/layout.tsx` — `bg-[#0a0a0a]`/`bg-[#0d0d0d]` → `bg-background`/`bg-card`. `hover:bg-white/5` → `hover:bg-muted/50`.
 
-**Updated: Pricing Page**
-- `apps/web/src/app/pricing/page.tsx`
-  - Replaced static `<Link href="/dashboard">Get Started</Link>` with `<BuyCreditsButton pack={{...}} />`
-  - Passes serialized pack data (`.toString()` on `_id`, plain fields only)
-  - Removed unused `next/link` import
+#### 2C. Dashboard Count-Up
+- `apps/web/src/hooks/useCountUp.ts` — **new**: `useCountUp(target, duration)` hook. easeOut cubic animation.
+- `apps/web/src/components/dashboard/StatsBar.tsx` — **updated**: `<StatValue>` component animates numbers 0→actual on mount.
 
-**New File: .env.example**
-- `apps/web/.env.example` — full reference for all env vars (was missing from repo)
-  - Includes Razorpay: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `NEXT_PUBLIC_RAZORPAY_KEY_ID`
+#### 2G. Final Polish
+- `apps/web/src/app/globals.css` — **updated**: Global focus ring (`*:focus-visible`), thin scrollbar (`scrollbar-width: thin`), webkit scrollbar 4px, sidebar custom scrollbar.
+- `apps/web/src/app/not-found.tsx` — **rewritten**: SetuLix logo + icon + "404 Page Not Found" + Dashboard + Home buttons.
+- `apps/web/src/app/maintenance/page.tsx` — **rewritten**: SetuLix logo + Wrench icon + "Back Shortly" message. All semantic tokens.
 
-### What Was Built (Session A5 — Credit System + Pricing + Dashboard)
+### SECTION 3 — Kit Landing Pages + SEO
 
-**New DB Model**
-- `packages/db/src/models/CreditTransaction.ts` — Schema: userId, type, amount, balanceAfter, toolSlug?, meta?
-  - Types: purchase | use | refund | referral_bonus | manual_admin
+#### 3C. robots.ts + sitemap.ts
+- `apps/web/src/app/robots.ts` — **new**: Allow all, disallow `/admin /api /dashboard`. Sitemap URL: `https://setulix.com/sitemap.xml`.
+- `apps/web/src/app/sitemap.ts` — **new**: Static routes + 27 tool routes. Domain: `https://setulix.com`.
 
-**New DB Service**
-- `packages/db/src/credit-service.ts` — `CreditService` class (static methods) + `InsufficientCreditsError`
-  - `checkBalance(userId, required)` → boolean
-  - `getBalance(userId)` → number
-  - `deductCredits(userId, amount, toolSlug)` → atomic (MongoDB session + withTransaction)
-  - `addCredits(userId, amount, type, meta?)` → atomic
-  - `getTransactionHistory(userId, limit)` → sorted desc
-  - Note: placed in packages/db (not shared) to avoid circular dependency — shared→db would cycle with db→shared
+#### 3B. SEO Metadata
+- `apps/web/src/app/layout.tsx` — **updated**: Full metadata object with `metadataBase`, title template, OG tags, Twitter card.
 
-**Updated packages/db/src/index.ts**
-- Now exports `CreditTransaction`, `ICreditTransaction`, `CreditService`, `InsufficientCreditsError`
+#### 3A. 5 Kit Landing Pages
+- `apps/web/src/components/brand/KitPage.tsx` — **new**: Shared kit page component. Hero, Tools Grid, How It Works (3 steps), Use Cases (4), FAQ (accordion), CTA Banner + Footer.
+- `/kits/creator` — Creator Kit (6 tools, content creator focus)
+- `/kits/sme` — SME Kit (7 free tools, Indian business focus)
+- `/kits/hr` — HR Kit (5 tools, Indian workplace)
+- `/kits/legal` — CA/Legal Kit (5 tools, Indian law)
+- `/kits/marketing` — Marketing Kit (6 tools, Indian brands)
 
-**New API Routes**
-- `GET /api/user/credits` — auth required; returns `{ balance, transactions }` (20 most recent)
-- `POST /api/user/credits/deduct` — body `{ toolSlug, amount }`; 402 on insufficient credits
-- `GET /api/credits/packs` — public; returns active packs sorted by sortOrder
+#### 3D. Sidebar + Homepage + next.config
+- `apps/web/src/lib/kit-config.ts` — **updated**: Added `pageSlug` field to `KitConfig`.
+- Sidebar `KitItem` — **updated**: Hover shows ExternalLink icon → navigates to `/kits/[pageSlug]`.
+- `apps/web/src/app/(site)/page.tsx` — **updated**: Kit cards now link to `/kits/[pageSlug]`. Section heading: "Explore Our Kits".
+- `apps/web/next.config.mjs` — **updated**: `compress: true`, `images.formats: ['image/avif','image/webp']`, X-Robots-Tag noindex for `/admin/*`.
 
-**New Zustand Store**
-- `apps/web/src/store/credits-store.ts` — `useCreditStore`
-  - state: balance, isLoading, lastSynced
-  - `setBalance`, `deductLocally` (optimistic), `syncFromServer` (GET /api/user/credits)
+---
 
-**Updated: AuthModal** (`apps/web/src/components/auth/AuthModal.tsx`)
-- Calls `syncFromServer()` after successful login AND successful signup+auto-login
+## New Files This Session
 
-**Updated: Sidebar** (`apps/web/src/components/layout/sidebar.tsx`)
-- Credits badge reads from `useCreditStore().balance` (live updates, not stale JWT)
+| File | Purpose |
+|------|---------|
+| `packages/shared/src/brand.ts` | BRAND constants object |
+| `apps/web/src/app/api/tools/active-slugs/route.ts` | Active+visible tool slugs for sidebar |
+| `apps/web/src/components/brand/Logo.tsx` | SetuLix wordmark component |
+| `apps/web/src/components/brand/Footer.tsx` | Site footer with branding |
+| `apps/web/src/components/brand/KitPage.tsx` | Shared kit landing page template |
+| `apps/web/src/app/(site)/about/page.tsx` | About SetuLix + SetuLabsAI page |
+| `apps/web/src/app/(site)/kits/creator/page.tsx` | Creator Kit landing |
+| `apps/web/src/app/(site)/kits/sme/page.tsx` | SME Kit landing |
+| `apps/web/src/app/(site)/kits/hr/page.tsx` | HR Kit landing |
+| `apps/web/src/app/(site)/kits/legal/page.tsx` | CA/Legal Kit landing |
+| `apps/web/src/app/(site)/kits/marketing/page.tsx` | Marketing Kit landing |
+| `apps/web/src/hooks/useCountUp.ts` | Count-up animation hook |
+| `apps/web/src/app/robots.ts` | SEO robots.txt |
+| `apps/web/src/app/sitemap.ts` | SEO sitemap |
 
-**Updated: Navbar** (`apps/web/src/components/layout/Navbar.tsx`)
-- Credits badge reads from `useCreditStore().balance`
+---
 
-**New Page: Pricing** (`apps/web/src/app/pricing/page.tsx`)
-- Server component — fetches packs from DB via `connectDB()` + `CreditPack.find`
-- Responsive grid: 1→2→3→5 columns depending on pack count
-- isFeatured pack: purple ring + "Most Popular" badge + solid purple CTA
-- Per-credit cost shown per card
-- "What can you build?" table: tool name, kit, credits, ₹ cost at popular pack rate
-- FAQ accordion (native `<details>` + CSS chevron rotate)
-- Falls back gracefully if DB is unavailable (empty state, no crash)
+## Architecture Notes
 
-**New Page: Dashboard** (`apps/web/src/app/dashboard/page.tsx`)
-- Server component shell — fetches popular tools server-side
-- Auth protected by Next.js middleware (to be configured separately)
+### Brand
+- Product: **SetuLix** | Company: **SetuLabsAI** | Founder: **Deepak Rathor**
+- Domain: `setulix.com` | Email: `hello@setulix.com`
+- Logo: Geometric S SVG icon + "Setu" (text-foreground) + "Lix" (text-primary purple)
+- Monorepo package names stay `@toolhub/db` and `@toolhub/shared` (internal only, not user-visible)
 
-**New Components: Dashboard**
-- `apps/web/src/components/dashboard/CreditOverview.tsx` — client; syncs balance on mount; Coins icon, large purple number, "Buy More Credits" → /pricing
-- `apps/web/src/components/dashboard/TransactionHistory.tsx` — client; fetches /api/user/credits on mount; table with date/tool/type/amount/balance; skeleton loading (5 rows); empty state with SearchX icon; type badges color-coded
-
-**New Store: Paywall**
-- `apps/web/src/store/paywall-store.ts` — `usePaywallStore`: isOpen, toolName, requiredCredits, openPaywall(), closePaywall()
-
-**New Modal: PaywallModal** (`apps/web/src/components/credits/PaywallModal.tsx`)
-- Globally mounted in root layout
-- Shows required vs available credits
-- "Buy Credits" → /pricing | "Cancel" button
-
-**Updated: Root Layout** (`apps/web/src/app/layout.tsx`)
-- Added `<PaywallModal />` (globally mounted)
-
-### Architecture Note
-- CreditService uses MongoDB transactions (`startSession` + `withTransaction`) for atomic credit deduct+log
-- Credits are deducted AFTER AI response (enforced by design — deductCredits called from tool engine, not from UI)
-- Pricing page is fully public (no auth required)
-- Dashboard requires auth — middleware `/apps/web/src/middleware.ts` should protect `/dashboard`
-
-## Next Task
-Session A9: Tool Engine + First Functional Tool (Blog Generator)
-- Wire up `/tools/blog-generator` with real form + AI call
-- Tool engine pattern: form → /api/tools/blog-generator → AI → deductCredits → return output
-- Store tool output in ToolOutput collection
-- Hook into PaywallModal when balance < creditCost
-- Auth gate: trigger AuthModal if not logged in on form submit
-
-## How to Seed
-```bash
-# From repo root (requires MONGODB_URI in env):
-npm run seed
-
-# Or directly from db package:
-cd packages/db
-MONGODB_URI=mongodb+srv://... npm run seed
+### Tool Visibility Flow
+```
+Admin toggles isActive/isVisible in DB
+→ clearToolCache() called
+→ /api/tools/active-slugs re-fetches (30s cache)
+→ Sidebar refreshes visible tools on next hover/load
+→ Tool page: isVisible=false → redirect /dashboard; isActive=false → ToolUnavailableCard
 ```
 
-## Credit Cost Reference
-| Credits | Tools |
-|---------|-------|
-| 0       | hook-writer, caption-generator, gst-invoice, expense-tracker, quotation-generator, qr-generator, salary-slip, offer-letter, gst-calculator, tds-sheet |
-| 1       | title-generator, email-subject, whatsapp-bulk |
-| 3       | blog-generator, resume-screener, jd-generator, appraisal-draft, policy-generator, linkedin-bio, ad-copy, legal-disclaimer |
-| 4       | yt-script |
-| 7       | thumbnail-ai |
-| 8       | seo-auditor |
-| 10      | website-generator |
-| 12      | legal-notice, nda-generator |
+### Kit Landing Page URLs
+```
+/kits/creator   → Creator Kit
+/kits/sme       → SME Kit
+/kits/hr        → HR Kit
+/kits/legal     → CA/Legal Kit (note: kit id is "ca-legal", page slug is "legal")
+/kits/marketing → Marketing Kit
+```
 
-## Env Vars Status (all in apps/web/.env.example)
-**Must fill before testing:**
-- `MONGODB_URI` — MongoDB Atlas connection string
-- `NEXTAUTH_SECRET` — generate with `openssl rand -base64 32`
-- `NEXTAUTH_URL` — `http://localhost:3000` for local dev
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — from Google Cloud Console
+### Redis Cache Keys (unchanged)
+```
+toolhub:credits:{userId}     TTL 5 min
+toolhub:dashboard:{userId}   TTL 2 min
+registry:all_tools           TTL 5 min
+registry:tool:{slug}         TTL 5 min
+```
 
-**Required for Razorpay payments:**
-- `RAZORPAY_KEY_ID` + `RAZORPAY_KEY_SECRET` — from Razorpay dashboard
-- `RAZORPAY_WEBHOOK_SECRET` — set in Razorpay dashboard → Webhooks → Secret
-- `NEXT_PUBLIC_RAZORPAY_KEY_ID` — same value as `RAZORPAY_KEY_ID`
-- Register webhook URL: `https://<your-domain>/api/webhooks/razorpay` with event `payment.captured`
+---
 
-**Optional for now:**
-- Upstash Redis, Cloudflare R2, Resend, PostHog, LiteLLM
-
-## Branch / PR Status
-- Branch `claude/intelligent-solomon-936673` (current worktree)
-- User should push this branch and open a new PR
+## Phase 1 Status: COMPLETE ✓
 
 ## Issues
-None — code is clean, types reviewed manually (tsc not runnable without npm install in worktree).
+None. TypeScript: 0 errors.

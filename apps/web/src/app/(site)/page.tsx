@@ -1,15 +1,17 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import Link from "next/link";
 import { Zap, Wrench, Package, IndianRupee, BadgeCheck } from "lucide-react";
 import { getAllTools, getKitList } from "@/lib/tool-registry";
 import { ToolCard } from "@/components/tools/ToolCard";
 import { getKitIcon, getToolIcon } from "@/lib/tool-icons";
 
-const KIT_CONFIG: Record<string, { label: string }> = {
-  creator:   { label: "Creator Kit" },
-  sme:       { label: "SME Kit" },
-  hr:        { label: "HR Kit" },
-  "ca-legal":{ label: "CA / Legal Kit" },
-  marketing: { label: "Marketing Kit" },
+const KIT_CONFIG: Record<string, { label: string; pageSlug: string }> = {
+  creator:   { label: "Creator Kit",    pageSlug: "creator" },
+  sme:       { label: "SME Kit",        pageSlug: "sme" },
+  hr:        { label: "HR Kit",         pageSlug: "hr" },
+  "ca-legal":{ label: "CA / Legal Kit", pageSlug: "legal" },
+  marketing: { label: "Marketing Kit",  pageSlug: "marketing" },
 };
 
 const POPULAR_SLUGS = [
@@ -29,6 +31,9 @@ const STATS = [
 ];
 
 export default async function HomePage() {
+  const session = await auth();
+  if (session?.user) redirect("/dashboard");
+
   let allTools: Awaited<ReturnType<typeof getAllTools>> = [];
   let kitList: Awaited<ReturnType<typeof getKitList>> = [];
   try {
@@ -42,10 +47,10 @@ export default async function HomePage() {
     return t ? [t] : [];
   });
 
-  const kitCards = Object.entries(KIT_CONFIG).map(([kit, { label }]) => {
+  const kitCards = Object.entries(KIT_CONFIG).map(([kit, { label, pageSlug }]) => {
     const count = kitList.find((k) => k.kit === kit)?.toolCount ?? 0;
     const examples = allTools.filter((t) => t.kits.includes(kit)).slice(0, 3);
-    return { kit, label, count, examples };
+    return { kit, label, pageSlug, count, examples };
   });
 
   return (
@@ -99,18 +104,18 @@ export default async function HomePage() {
       <section className="px-6 py-14 max-w-6xl mx-auto">
         <div className="text-center mb-10">
           <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-            Built for Every Professional
+            Explore Our Kits
           </h2>
           <p className="text-muted-foreground text-sm mt-2">
             Five purpose-built kits, each packed with AI tools for your workflow
           </p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
-          {kitCards.map(({ kit, label, count, examples }) => {
+          {kitCards.map(({ kit, label, pageSlug, count, examples }) => {
             const KitIcon = getKitIcon(kit);
             return (
-              <Link key={kit} href={`/tools?kit=${kit}`}>
-                <div className="rounded-xl border border-border bg-surface p-4 hover:border-accent/40 hover:bg-accent/5 transition-all duration-200 h-full">
+              <Link key={kit} href={`/kits/${pageSlug}`}>
+                <div className="tool-card rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md transition-all duration-200 h-full">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 mb-3">
                     <KitIcon className="h-5 w-5 text-accent" />
                   </div>

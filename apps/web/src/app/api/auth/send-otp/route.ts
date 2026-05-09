@@ -13,13 +13,14 @@ function generateOtp(): string {
 
 async function sendOtpEmail(email: string, name: string, otp: string) {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL ?? "noreply@toolspire.io";
+  const from = process.env.RESEND_FROM_EMAIL ?? "SetuLix <noreply@setulix.com>";
 
   if (!apiKey) {
-    // Dev fallback — print to server console
     console.log(`\n[OTP] ${email} → ${otp}\n`);
     return;
   }
+
+  const year = new Date().getFullYear();
 
   await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -30,15 +31,28 @@ async function sendOtpEmail(email: string, name: string, otp: string) {
     body: JSON.stringify({
       from,
       to: email,
-      subject: "Your Toolspire verification code",
+      subject: "Your SetuLix verification code",
       html: `
-        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
-          <h2 style="color:#7c3aed;margin-bottom:8px;">Verify your email</h2>
-          <p style="color:#555;margin-bottom:24px;">Hi ${name}, use the code below to verify your Toolspire account.</p>
-          <div style="background:#f4f4f5;border-radius:12px;padding:24px;text-align:center;letter-spacing:8px;font-size:32px;font-weight:700;color:#09090b;">
-            ${otp}
+        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e4e4e7;">
+          <div style="background:#7c3aed;padding:24px 32px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:20px;font-weight:800;color:#fff;">Setu<span style="color:#c4b5fd;">Lix</span></span>
+            </div>
+            <p style="color:#ede9fe;font-size:12px;margin:4px 0 0;">by SetuLabsAI</p>
           </div>
-          <p style="color:#888;font-size:12px;margin-top:16px;">This code expires in 10 minutes. Do not share it with anyone.</p>
+          <div style="padding:32px;">
+            <h2 style="color:#09090b;margin:0 0 8px;font-size:20px;">Verify your email</h2>
+            <p style="color:#71717a;margin:0 0 24px;">Hi ${name}, use the code below to complete your SetuLix sign-up.</p>
+            <div style="background:#f4f4f5;border-radius:12px;padding:24px;text-align:center;font-family:monospace;letter-spacing:10px;font-size:36px;font-weight:700;color:#7c3aed;">
+              ${otp}
+            </div>
+            <p style="color:#71717a;font-size:13px;margin-top:20px;">
+              This code expires in <strong>10 minutes</strong>. Do not share it with anyone.
+            </p>
+          </div>
+          <div style="border-top:1px solid #e4e4e7;padding:16px 32px;text-align:center;">
+            <p style="color:#a1a1aa;font-size:11px;margin:0;">© ${year} SetuLabsAI · setulix.com</p>
+          </div>
         </div>
       `,
     }),

@@ -1,26 +1,54 @@
 "use client";
 
+import Link from "next/link";
+import { useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Menu, Search, Coins } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Menu, Search, Coins, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { useSearchStore } from "@/store/search-store";
 import { useCreditStore } from "@/store/credits-store";
+import { UserDropdown } from "./UserDropdown";
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <button
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+      aria-label="Toggle theme"
+      title="Toggle theme"
+    >
+      {theme === "dark"
+        ? <Sun className="h-4 w-4" />
+        : <Moon className="h-4 w-4" />
+      }
+    </button>
+  );
+}
 
 export function Navbar() {
   const { data: session, status } = useSession();
   const openAuthModal = useAuthStore((s) => s.openAuthModal);
   const toggleMobile = useSidebarStore((s) => s.toggleMobile);
   const openSearch = useSearchStore((s) => s.setOpen);
-  const balance = useCreditStore((s) => s.balance);
+  const { balance, syncFromServer } = useCreditStore();
+
+  // Sync credits from server once session is authenticated
+  useEffect(() => {
+    if (status === "authenticated") {
+      syncFromServer();
+    }
+  }, [status, syncFromServer]);
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4 gap-3">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-md px-4 gap-3 transition-colors duration-200 sticky top-0 z-30">
       {/* Mobile hamburger */}
       <button
         onClick={toggleMobile}
-        className="md:hidden rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+        className="md:hidden rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
         aria-label="Open menu"
       >
         <Menu className="h-5 w-5" />
@@ -32,7 +60,7 @@ export function Navbar() {
         className={cn(
           "flex items-center gap-2 rounded-lg border border-border bg-surface",
           "px-3 py-1.5 text-sm text-muted-foreground",
-          "hover:border-accent/40 hover:text-foreground transition-colors",
+          "hover:border-primary/40 hover:text-foreground transition-colors",
           "flex-1 max-w-xs md:max-w-sm"
         )}
       >
@@ -44,49 +72,45 @@ export function Navbar() {
       </button>
 
       {/* Right side */}
-      <div className="flex items-center gap-3 ml-auto">
+      <div className="flex items-center gap-2 ml-auto">
         {status === "loading" && (
-          <div className="h-8 w-24 animate-pulse rounded-lg bg-white/10" />
+          <div className="h-7 w-20 animate-pulse rounded-full bg-muted/50" />
         )}
 
         {status === "unauthenticated" && (
-          <button
-            onClick={() => openAuthModal("login")}
-            className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
-          >
-            Login
-          </button>
+          <>
+            <ThemeToggle />
+            <button
+              onClick={() => openAuthModal("login")}
+              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+            >
+              Login
+            </button>
+          </>
         )}
 
         {status === "authenticated" && session?.user && (
-          <div className="flex items-center gap-3">
+          <>
             {/* Credits badge */}
-            <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1">
-              <Coins className="h-3.5 w-3.5 text-accent" />
-              <span className="text-xs font-semibold text-accent">
-                {balance} credits
+            <Link
+              href="/pricing"
+              className="hidden sm:flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 hover:bg-primary/25 transition-colors"
+              title="Buy more credits"
+            >
+              <Coins className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-semibold text-primary">
+                {balance}
               </span>
-            </div>
+            </Link>
 
-            {/* Avatar */}
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 overflow-hidden shrink-0">
-              {session.user.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={session.user.image}
-                  alt={session.user.name ?? "User"}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="text-xs font-semibold text-accent uppercase">
-                  {session.user.name?.[0] ?? "U"}
-                </span>
-              )}
-            </div>
-            <span className="hidden md:block text-sm font-medium text-foreground max-w-[120px] truncate">
-              {session.user.name}
-            </span>
-          </div>
+            <ThemeToggle />
+
+            <UserDropdown
+              name={session.user.name}
+              email={session.user.email}
+              image={session.user.image}
+            />
+          </>
         )}
       </div>
     </header>

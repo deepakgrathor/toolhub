@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { connectDB, User, OtpToken } from "@toolhub/db";
+import { connectDB, User, OtpToken, applyReferral } from "@toolhub/db";
+import { generateReferralCode } from "@toolhub/shared";
 import { z } from "zod";
 import { FREE_CREDITS_ON_SIGNUP } from "@toolhub/shared";
+import { createRateLimit } from "@/lib/rate-limit";
+
+const signupLimiter = createRateLimit({ windowMs: 3_600_000, max: 5 });
 
 const signupSchema = z.object({
   name: z.string().min(2).max(60).trim(),
@@ -20,6 +24,18 @@ const signupSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      req.headers.get("x-real-ip") ??
+      "unknown";
+    const limit = signupLimiter(ip);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many signup attempts. Try again later." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const parsed = signupSchema.safeParse(body);
 
@@ -59,8 +75,9 @@ export async function POST(req: NextRequest) {
     }
 
     const hashed = await bcrypt.hash(password, 12);
+    const referralCode = generateReferralCode();
 
-    await Promise.all([
+    const [newUser] = await Promise.all([
       User.create({
         name,
         email,
@@ -68,11 +85,17 @@ export async function POST(req: NextRequest) {
         authProvider: "email",
         role: "user",
         credits: FREE_CREDITS_ON_SIGNUP,
+        referralCode,
         lastSeen: new Date(),
       }),
-      // Invalidate OTP after use
       OtpToken.deleteMany({ email }),
     ]);
+
+    // Apply referral bonus if ref cookie present
+    const refCode = req.cookies.get("ref")?.value;
+    if (refCode) {
+      await applyReferral(newUser._id.toString(), refCode);
+    }
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (err) {

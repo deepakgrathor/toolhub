@@ -108,6 +108,6 @@ export class CreditService {
     return CreditTransaction.find({ userId })
       .sort({ createdAt: -1 })
       .limit(limit)
-      .lean();
+      .lean() as unknown as Promise<ICreditTransaction[]>;
   }
 }
