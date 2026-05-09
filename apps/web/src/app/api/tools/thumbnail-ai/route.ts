@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
       userId: session.user.id,
       toolSlug: "thumbnail-ai",
     });
+    console.log(result, "result")
     return NextResponse.json({
       success: true,
       output: result.structured,

@@ -15,12 +15,13 @@ const ANTHROPIC_MODEL_IDS: Record<string, string> = {
   "claude-sonnet-4-5": "claude-sonnet-4-5",
 };
 
-const MAX_TOKENS = 4096;
+const DEFAULT_MAX_TOKENS = 4096;
 
 export async function callAI(
   prompt: string,
   model: string,
-  provider: string
+  provider: string,
+  maxTokens = DEFAULT_MAX_TOKENS
 ): Promise<string> {
   const gatewayUrl = process.env.LITELLM_GATEWAY_URL;
   const masterKey = process.env.LITELLM_MASTER_KEY;
@@ -34,7 +35,7 @@ export async function callAI(
       body: JSON.stringify({
         model,
         messages: [{ role: "user", content: prompt }],
-        max_tokens: MAX_TOKENS,
+        max_tokens: maxTokens,
       }),
     });
     if (!res.ok) throw new Error(`LiteLLM error ${res.status}: ${await res.text()}`);
@@ -57,7 +58,7 @@ export async function callAI(
       },
       body: JSON.stringify({
         model: apiModel,
-        max_tokens: MAX_TOKENS,
+        max_tokens: maxTokens,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -76,7 +77,7 @@ export async function callAI(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: MAX_TOKENS },
+        generationConfig: { maxOutputTokens: maxTokens },
       }),
     });
     if (!res.ok) throw new Error(`Gemini error ${res.status}: ${await res.text()}`);
@@ -96,7 +97,7 @@ export async function callAI(
       body: JSON.stringify({
         model: resolvedProvider === "openai" ? model : "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: MAX_TOKENS,
+        max_tokens: maxTokens,
         response_format: { type: "json_object" },
       }),
     });

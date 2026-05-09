@@ -1,68 +1,61 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #16 | 6 SME Free Tools (Client-side)
+Updated: 2026-05-09 | Account: A | Session: #17 | 5 Final AI Tools — All 27 Complete
 
 ## Where We Are
-Session A16 done. 22 tools total built and wired. TypeScript: 0 errors.
+Session A17 done. **27 tools total built and wired. TypeScript: 0 errors.**
+All tools are complete. Platform is feature-complete for Phase 1.
 
-### What Was Built (Session A16 — SME Form Tools)
+### What Was Built (Session A17 — Final AI Tools)
 
-**SHARED UTILITIES**
-- `apps/web/src/lib/print-pdf.ts` — `printDocument(html, title)` utility using window.open + print
-- `apps/web/src/lib/utils.ts` — Added `amountToWords()`, `fmtInr()`, `INDIAN_STATES` array
+**callAI() UPDATED**
+- `apps/web/src/lib/ai.ts` — added optional `maxTokens` parameter (default 4096, backward-compatible)
+- Website generator uses maxTokens: 8000 for higher output
 
-**TOOL 1 — GST Invoice Generator (slug: gst-invoice, 0cr)**
-- `apps/web/src/tools/gst-invoice/` — config.ts + GstInvoiceTool.tsx
-- Seller + Buyer details with all Indian states dropdown
-- Line items: description, HSN, qty, unit, rate, GST rate (0/5/12/18/28%)
-- Live preview: auto CGST+SGST (same state) or IGST (different state)
-- Amount in words, grand total, Download PDF button
+**TOOL 1 — Appraisal Draft (slug: appraisal-draft, 3cr)**
+- `apps/web/src/tools/appraisal-draft/` — config.ts + schema.ts + engine.ts + AppraisalDraftTool.tsx
+- `apps/web/src/app/api/tools/appraisal-draft/route.ts`
+- Input: employee name, role, review period, manager, rating pills (5 levels), achievements textarea, improvements, tone pills
+- Output: 4 section cards (Summary, Strengths, Areas for Growth, Goals) + copy/download
 
-**TOOL 2 — Expense Tracker (slug: expense-tracker, 0cr)**
-- `apps/web/src/tools/expense-tracker/` — config.ts + ExpenseTrackerTool.tsx
-- Add expenses: date, category (8 types), description, amount, payment mode
-- Filter by category + date range
-- Summary cards: Total, This Month, Top Category
-- Color-coded category badges, delete per row
-- Export to PDF via printDocument()
+**TOOL 2 — Policy Generator (slug: policy-generator, 3cr)**
+- `apps/web/src/tools/policy-generator/` — config.ts + schema.ts + engine.ts + PolicyGeneratorTool.tsx
+- `apps/web/src/app/api/tools/policy-generator/route.ts`
+- Input: company name, policy type dropdown (8 types), company size pills, industry, additional requirements
+- Output: policy title + sections as cards + copy/download
 
-**TOOL 3 — Quotation Generator (slug: quotation-generator, 0cr)**
-- `apps/web/src/tools/quotation-generator/` — config.ts + QuotationGeneratorTool.tsx
-- From + To party details (no GST — simple quotation)
-- Line items: description, qty, unit, rate
-- Discount field, Notes, Terms & Conditions
-- Live preview + Download PDF
+**TOOL 3 — Website Generator (slug: website-generator, 10cr)**
+- `apps/web/src/tools/website-generator/` — config.ts + schema.ts + engine.ts + WebsiteGeneratorTool.tsx
+- `apps/web/src/app/api/tools/website-generator/route.ts` (maxDuration: 60)
+- Uses claude-sonnet-4-5 with 8000 max tokens
+- Engine: returns raw HTML (not JSON), extracts metadata (title, sections) from the HTML
+- Input: business name/type/description, target audience, key services, color scheme pills (6 colors with swatches), style pills, contact toggle
+- Output: iframe with srcdoc, full screen / download HTML / copy buttons, section badges
 
-**TOOL 4 — Salary Slip Generator (slug: salary-slip, 0cr)**
-- `apps/web/src/tools/salary-slip/` — config.ts + SalarySlipTool.tsx
-- Company + Employee info (name, ID, designation, department, bank last 4, PAN)
-- Month/Year selector
-- Earnings: Basic, HRA, Special Allowance, Other
-- Deductions: PF (auto 12% of basic toggle or manual), ESI, TDS, Other
-- Net Pay = Gross - Total Deductions, amount in words
-- Live 2-column earnings/deductions preview + Download PDF
+**TOOL 4 — SEO Auditor (slug: seo-auditor, 8cr)**
+- `apps/web/src/tools/seo-auditor/` — config.ts + schema.ts + engine.ts + SeoAuditorTool.tsx
+- `apps/web/src/app/api/tools/seo-auditor/route.ts`
+- AI-powered recommendations (NOT real crawl — clearly labelled in UI)
+- Input: URL, business type, target keywords, competitors (optional)
+- Output: circular score gauge (0-100), 8 category cards (score bar + status badge + issues + recs), quick wins, priority actions
 
-**TOOL 5 — Offer Letter Generator (slug: offer-letter, 0cr)**
-- `apps/web/src/tools/offer-letter/` — config.ts + OfferLetterTool.tsx
-- Company + Candidate details
-- Offer: role, department, reporting to, joining date, work location, work type, CTC, probation
-- Benefits toggles (6 options as pills)
-- Auto acceptance deadline (7 days from letter date)
-- Formal letter preview + Download PDF
-
-**TOOL 6 — TDS Sheet (slug: tds-sheet, 0cr)**
-- `apps/web/src/tools/tds-sheet/` — config.ts + TdsSheetTool.tsx
-- Quarter (Q1–Q4) + Financial Year selector
-- Add entries: vendor, PAN, nature, TDS section dropdown (8 preset sections with auto-fill rate)
-- TDS amount auto-calculated = payment × rate/100
-- Summary cards: Total Payments, TDS Deducted, Payable to Govt
-- Section badge per row, Export PDF
+**TOOL 5 — Thumbnail AI (slug: thumbnail-ai, 7cr)**
+- `apps/web/src/tools/thumbnail-ai/` — config.ts + schema.ts + engine.ts + ThumbnailAITool.tsx
+- `apps/web/src/app/api/tools/thumbnail-ai/route.ts` (maxDuration: 60)
+- Direct DALL-E 3 API call (bypasses callAI — image generation endpoint)
+- Downloads temp OpenAI URL → uploads to Cloudflare R2 → returns permanent URL
+- Deducts credits AFTER successful R2 upload
+- Input: video title, style pills (4), color scheme pills (4), main subject, optional text overlay
+- Output: full-width image, download + regenerate buttons
 
 **PAGE.TSX UPDATED**
-- `apps/web/src/app/(site)/tools/[slug]/page.tsx`: all 6 A16 tools added to toolComponents map
+- `apps/web/src/app/(site)/tools/[slug]/page.tsx`: all 5 A17 tools added
+
+**@aws-sdk/client-s3 INSTALLED**
+- Added to `apps/web/package.json` for R2 uploads in thumbnail-ai
 
 ---
 
-## Tool Registry — All 22 Built Tools
+## Tool Registry — All 27 Built Tools
 
 | Tool | Slug | Credits | Model | Status |
 |------|------|---------|-------|--------|
@@ -88,20 +81,21 @@ Session A16 done. 22 tools total built and wired. TypeScript: 0 errors.
 | Salary Slip Generator | salary-slip | 0 | client-side | ✅ |
 | Offer Letter Generator | offer-letter | 0 | client-side | ✅ |
 | TDS Sheet | tds-sheet | 0 | client-side | ✅ |
+| Appraisal Draft | appraisal-draft | 3 | claude-haiku-3-5 | ✅ |
+| Policy Generator | policy-generator | 3 | claude-haiku-3-5 | ✅ |
+| Website Generator | website-generator | 10 | claude-sonnet-4-5 | ✅ |
+| SEO Auditor | seo-auditor | 8 | claude-sonnet-4-5 | ✅ |
+| Thumbnail AI | thumbnail-ai | 7 | dall-e-3 | ✅ |
 
 ---
 
-## Next Task (Session A17 — Remaining AI Tools)
+## Phase 1 Status: COMPLETE
 
-Build 5 remaining AI tools:
-
-| Tool | Slug | Credits | Model |
-|------|------|---------|-------|
-| Thumbnail AI | thumbnail-ai | 7 | dall-e-3 |
-| Website Generator | website-generator | 10 | claude-sonnet-4-5 |
-| SEO Auditor | seo-auditor | 8 | claude-sonnet-4-5 |
-| Appraisal Draft | appraisal-draft | 3 | claude-haiku-3-5 |
-| Policy Generator | policy-generator | 3 | claude-haiku-3-5 |
+All 27 tools built. Platform is ready for:
+1. End-to-end testing with real API keys
+2. Razorpay integration wiring
+3. Admin panel polish
+4. Deploy to Vercel (web) + Railway (worker)
 
 ## Architecture: Two Redis Connection Types
 
@@ -110,12 +104,15 @@ REDIS_URL (rediss://...)        → Bull MQ / ioredis (TCP protocol)
 UPSTASH_REDIS_URL + TOKEN       → @upstash/redis (HTTP REST) — job results, cache, registry
 ```
 
-## Env Vars (apps/web/.env)
-All set except:
-- `REDIS_URL` — needs Upstash ioredis TCP URL
-- `LITELLM_GATEWAY_URL` / `LITELLM_MASTER_KEY` — needs Railway deployment
-- `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_AI_API_KEY` — for LiteLLM
-- `R2_SECRET_ACCESS_KEY` — fill from Cloudflare dashboard
+## Env Vars Needed Before Testing
+- `OPENAI_API_KEY` — for gpt-4o-mini, gpt-4o, dall-e-3 tools
+- `ANTHROPIC_API_KEY` — for claude-haiku-3-5, claude-sonnet-4-5 tools
+- `GOOGLE_AI_API_KEY` — for gemini-flash-2.0 tools
+- `CLOUDFLARE_R2_ACCOUNT_ID` — for thumbnail-ai R2 uploads
+- `CLOUDFLARE_R2_ACCESS_KEY_ID` — fill from Cloudflare dashboard
+- `CLOUDFLARE_R2_SECRET_ACCESS_KEY` — fill from Cloudflare dashboard
+- `CLOUDFLARE_R2_BUCKET_NAME` — your R2 bucket name
+- `CLOUDFLARE_R2_PUBLIC_URL` — public URL base for R2 bucket
 
 ## Issues
 None. TypeScript: 0 errors.

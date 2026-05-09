@@ -102,6 +102,27 @@ const toolComponents: Record<string, React.ComponentType<{ creditCost?: number }
     () => import("@/tools/tds-sheet/TdsSheetTool"),
     { loading: () => <ToolLoadingSkeleton /> }
   ),
+  // A17 AI tools
+  "appraisal-draft": dynamic(
+    () => import("@/tools/appraisal-draft/AppraisalDraftTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "policy-generator": dynamic(
+    () => import("@/tools/policy-generator/PolicyGeneratorTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "website-generator": dynamic(
+    () => import("@/tools/website-generator/WebsiteGeneratorTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "seo-auditor": dynamic(
+    () => import("@/tools/seo-auditor/SeoAuditorTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "thumbnail-ai": dynamic(
+    () => import("@/tools/thumbnail-ai/ThumbnailAITool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
 };
 
 // ── Page ──────────────────────────────────────────────────────────────────────

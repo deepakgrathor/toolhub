@@ -63,6 +63,7 @@ export default function ThumbnailAITool({ creditCost: creditCostProp }: { credit
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      console.log(res.json(), "res")
       if (res.status === 402) { openPaywall(thumbnailAIConfig.name, creditCost); return; }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
