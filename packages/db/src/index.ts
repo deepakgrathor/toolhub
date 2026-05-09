@@ -10,5 +10,4 @@ export * from "./models/CreditTransaction";
 export * from "./models/OtpToken";
 export * from "./credit-service";
 
-// Models added as sessions progress:
-// export * from "./models/ToolOutput";
+export * from "./models/ToolOutput";

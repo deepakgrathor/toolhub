@@ -1,8 +1,47 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #8 | Admin Pricing + Settings + Announcement Banner (complete)
+Updated: 2026-05-09 | Account: A | Session: #9 | Blog Generator — First Functional AI Tool (complete)
 
 ## Where We Are
-Session A8 done. Admin panel is now fully complete: Pricing CRUD with drag-to-reorder, Site Settings (theme, announcement banner, maintenance mode), and a global announcement banner that renders SSR and dismisses per session.
+Session A9 done. Blog Generator is fully wired: form → API → OpenAI → credits deducted → ToolOutput saved → output displayed. The tool shell page now has a dynamic component map so future tools slot in with one line.
+
+### What Was Built (Session A9 — Blog Generator)
+
+**ToolOutput DB Model**
+- `packages/db/src/models/ToolOutput.ts` — Mongoose model: userId, toolSlug, inputSnapshot (Mixed), outputText, creditsUsed, timestamps
+- `packages/db/src/index.ts` — Uncommented/added `export * from "./models/ToolOutput"`
+
+**Shared Types**
+- `packages/shared/src/tool-types.ts` — `ToolEngineResult` (output, structured, creditsUsed, newBalance) + `ToolEngineContext` (userId, toolSlug)
+- `packages/shared/src/index.ts` — Added `export * from "./tool-types"`
+
+**Blog Generator — Tool Files**
+- `apps/web/src/tools/blog-generator/config.ts` — `blogGeneratorConfig`: slug, name, description, creditCost=3, model=gpt-4o-mini, provider=openai, maxTokens=2000
+- `apps/web/src/tools/blog-generator/schema.ts` — Zod schema: topic (min 3, max 200), tone (4 enums), length (3 enums), targetAudience (optional), keywords (optional); exports `BlogGeneratorInput` type
+- `apps/web/src/tools/blog-generator/engine.ts` — Server-only: connectDB → checkBalance → fetch OpenAI → JSON.parse → deductCredits → ToolOutput.create → return result. Credits deducted ONLY after successful parse. OpenAI key ONLY accessed here.
+- `apps/web/src/app/api/tools/blog-generator/route.ts` — POST handler: auth() check → Zod parse → execute() → 402 on InsufficientCreditsError → 500 on other errors
+
+**Blog Generator — UI**
+- `apps/web/src/tools/blog-generator/BlogGeneratorTool.tsx` — Client component; renders own 2-col layout (45/55); Left: tool header + form (topic input, tone pills, length pills, target audience, keywords, generate button with auth/paywall logic); Right: empty state / loading skeleton / blog output with copy+download actions
+- `apps/web/src/components/tools/ToolLoadingSkeleton.tsx` — Animate-pulse 2-col skeleton for dynamic import loading state
+
+**Tool Shell Page (updated)**
+- `apps/web/src/app/(site)/tools/[slug]/page.tsx` — Added `toolComponents` map with `dynamic()` import for blog-generator; ToolComponent replaces placeholder panels when slug matches; placeholder shell preserved for unbuilt tools
+
+### Credit Deduction Flow (confirmed)
+1. Client submits form → POST `/api/tools/blog-generator`
+2. Server: `checkBalance()` → OpenAI fetch → `JSON.parse()` → **only now** `deductCredits()` → `ToolOutput.create()`
+3. Server returns `{ success, output, creditsUsed, newBalance }`
+4. Client: `deductLocally(3)` for optimistic sidebar/navbar update
+
+### OpenAI Key Security (confirmed)
+- `OPENAI_API_KEY` read only inside `engine.ts` (server-only file, never bundled to client)
+- API route imports `execute()` from engine — no key exposure in route.ts
+- Client component calls `/api/tools/blog-generator` — zero knowledge of the key
+
+### Adding Future Tools
+1. Create `apps/web/src/tools/[tool-name]/` with config.ts, schema.ts, engine.ts, BlogGeneratorTool-style component
+2. Add one entry to `toolComponents` map in `apps/web/src/app/(site)/tools/[slug]/page.tsx`
+3. Add API route at `apps/web/src/app/api/tools/[tool-name]/route.ts`
 
 ### What Was Built (Session A8 — Admin Pricing + Settings)
 
@@ -119,56 +158,11 @@ Session A8 done. Admin panel is now fully complete: Pricing CRUD with drag-to-re
   - state: balance, isLoading, lastSynced
   - `setBalance`, `deductLocally` (optimistic), `syncFromServer` (GET /api/user/credits)
 
-**Updated: AuthModal** (`apps/web/src/components/auth/AuthModal.tsx`)
-- Calls `syncFromServer()` after successful login AND successful signup+auto-login
-
-**Updated: Sidebar** (`apps/web/src/components/layout/sidebar.tsx`)
-- Credits badge reads from `useCreditStore().balance` (live updates, not stale JWT)
-
-**Updated: Navbar** (`apps/web/src/components/layout/Navbar.tsx`)
-- Credits badge reads from `useCreditStore().balance`
-
-**New Page: Pricing** (`apps/web/src/app/pricing/page.tsx`)
-- Server component — fetches packs from DB via `connectDB()` + `CreditPack.find`
-- Responsive grid: 1→2→3→5 columns depending on pack count
-- isFeatured pack: purple ring + "Most Popular" badge + solid purple CTA
-- Per-credit cost shown per card
-- "What can you build?" table: tool name, kit, credits, ₹ cost at popular pack rate
-- FAQ accordion (native `<details>` + CSS chevron rotate)
-- Falls back gracefully if DB is unavailable (empty state, no crash)
-
-**New Page: Dashboard** (`apps/web/src/app/dashboard/page.tsx`)
-- Server component shell — fetches popular tools server-side
-- Auth protected by Next.js middleware (to be configured separately)
-
-**New Components: Dashboard**
-- `apps/web/src/components/dashboard/CreditOverview.tsx` — client; syncs balance on mount; Coins icon, large purple number, "Buy More Credits" → /pricing
-- `apps/web/src/components/dashboard/TransactionHistory.tsx` — client; fetches /api/user/credits on mount; table with date/tool/type/amount/balance; skeleton loading (5 rows); empty state with SearchX icon; type badges color-coded
-
-**New Store: Paywall**
-- `apps/web/src/store/paywall-store.ts` — `usePaywallStore`: isOpen, toolName, requiredCredits, openPaywall(), closePaywall()
-
-**New Modal: PaywallModal** (`apps/web/src/components/credits/PaywallModal.tsx`)
-- Globally mounted in root layout
-- Shows required vs available credits
-- "Buy Credits" → /pricing | "Cancel" button
-
-**Updated: Root Layout** (`apps/web/src/app/layout.tsx`)
-- Added `<PaywallModal />` (globally mounted)
-
-### Architecture Note
-- CreditService uses MongoDB transactions (`startSession` + `withTransaction`) for atomic credit deduct+log
-- Credits are deducted AFTER AI response (enforced by design — deductCredits called from tool engine, not from UI)
-- Pricing page is fully public (no auth required)
-- Dashboard requires auth — middleware `/apps/web/src/middleware.ts` should protect `/dashboard`
-
 ## Next Task
-Session A9: Tool Engine + First Functional Tool (Blog Generator)
-- Wire up `/tools/blog-generator` with real form + AI call
-- Tool engine pattern: form → /api/tools/blog-generator → AI → deductCredits → return output
-- Store tool output in ToolOutput collection
-- Hook into PaywallModal when balance < creditCost
-- Auth gate: trigger AuthModal if not logged in on form submit
+Session A10: Second Tool + Tool History Page
+- Build one more tool (e.g. YT Script or Title Generator) following blog-generator pattern
+- Add `/dashboard/history` page: lists user's ToolOutput records (tool name, date, credits used, preview)
+- Consider: tool output preview modal (click row → see full output)
 
 ## How to Seed
 ```bash
@@ -199,6 +193,9 @@ MONGODB_URI=mongodb+srv://... npm run seed
 - `NEXTAUTH_URL` — `http://localhost:3000` for local dev
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — from Google Cloud Console
 
+**Required for Blog Generator:**
+- `OPENAI_API_KEY` — from OpenAI dashboard (used only in engine.ts, never client-side)
+
 **Required for Razorpay payments:**
 - `RAZORPAY_KEY_ID` + `RAZORPAY_KEY_SECRET` — from Razorpay dashboard
 - `RAZORPAY_WEBHOOK_SECRET` — set in Razorpay dashboard → Webhooks → Secret
@@ -209,8 +206,7 @@ MONGODB_URI=mongodb+srv://... npm run seed
 - Upstash Redis, Cloudflare R2, Resend, PostHog, LiteLLM
 
 ## Branch / PR Status
-- Branch `claude/intelligent-solomon-936673` (current worktree)
-- User should push this branch and open a new PR
+- Working on branch `main` (direct commits)
 
 ## Issues
 None — code is clean, types reviewed manually (tsc not runnable without npm install in worktree).
