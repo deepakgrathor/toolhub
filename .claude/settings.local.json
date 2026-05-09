@@ -34,7 +34,8 @@
       "Bash(xargs grep -l \"CreditService\\\\|getBalance\")",
       "PowerShell(head -20)",
       "Bash(git pull *)",
-      "Bash(xargs ls -la)"
+      "Bash(xargs ls -la)",
+      "Bash(git commit *)"
     ]
   }
 }

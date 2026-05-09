@@ -62,12 +62,12 @@ function KitItem({
 
   return (
     <div>
-      <div className="group/kit relative flex items-center">
+      <div className="group/kit flex items-center">
         <button
           onClick={onToggle}
           title={isCollapsed ? kit.name : undefined}
           className={cn(
-            "kit-header flex-1 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors duration-150",
+            "kit-header flex-1 min-w-0 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors duration-150",
             isKitActive
               ? "text-primary font-medium border-l-2 border-primary bg-primary/5"
               : "text-muted-foreground hover:bg-accent/10 hover:text-foreground",
@@ -78,7 +78,7 @@ function KitItem({
           {!isCollapsed && (
             <>
               <span className="flex-1 truncate text-left">{kit.name}</span>
-              <span className="text-[10px] text-muted-foreground/60 font-normal mr-1">
+              <span className="text-[10px] text-muted-foreground/60 font-normal">
                 {kit.tools.length}
               </span>
               <ChevronDown
@@ -95,7 +95,7 @@ function KitItem({
             href={`/kits/${kit.pageSlug}`}
             title={`${kit.name} page`}
             onClick={(e) => e.stopPropagation()}
-            className="absolute right-1 opacity-0 group-hover/kit:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-primary"
+            className="shrink-0 p-1 rounded opacity-0 group-hover/kit:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
           >
             <ExternalLink className="h-3 w-3" />
           </Link>
