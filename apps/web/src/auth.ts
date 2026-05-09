@@ -2,7 +2,9 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { connectDB, User } from "@toolhub/db";
+import { cookies } from "next/headers";
+import { connectDB, User, applyReferral } from "@toolhub/db";
+import { generateReferralCode, FREE_CREDITS_ON_SIGNUP } from "@toolhub/shared";
 import type { NextAuthConfig } from "next-auth";
 
 const config: NextAuthConfig = {
@@ -51,15 +53,29 @@ const config: NextAuthConfig = {
           let dbUser = await User.findOne({ email: user.email });
 
           if (!dbUser) {
+            // First Google login — create user with referral code
+            const referralCode = generateReferralCode();
             dbUser = await User.create({
               name: user.name ?? "User",
               email: user.email!,
               image: user.image,
               authProvider: "google",
               role: "user",
-              credits: 10,
+              credits: FREE_CREDITS_ON_SIGNUP,
+              referralCode,
               lastSeen: new Date(),
             });
+
+            // Apply referral bonus if ref cookie is present
+            try {
+              const cookieStore = cookies();
+              const refCode = cookieStore.get("ref")?.value;
+              if (refCode) {
+                await applyReferral(dbUser._id.toString(), refCode);
+              }
+            } catch {
+              // cookies() unavailable in this context — skip silently
+            }
           } else {
             await User.findByIdAndUpdate(dbUser._id, {
               lastSeen: new Date(),

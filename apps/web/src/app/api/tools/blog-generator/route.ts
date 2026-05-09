@@ -40,7 +40,14 @@ export async function POST(req: NextRequest) {
     if (error instanceof InsufficientCreditsError) {
       return NextResponse.json({ error: "insufficient_credits" }, { status: 402 });
     }
-    console.error("[POST /api/tools/blog-generator]", error);
-    return NextResponse.json({ error: "generation_failed" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("[POST /api/tools/blog-generator]", message);
+    return NextResponse.json(
+      {
+        error: "generation_failed",
+        ...(process.env.NODE_ENV !== "production" && { detail: message }),
+      },
+      { status: 500 }
+    );
   }
 }

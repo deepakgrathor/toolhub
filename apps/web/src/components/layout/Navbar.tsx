@@ -1,12 +1,94 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { Menu, Search, Coins } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { useRef, useState, useEffect } from "react";
+import Link from "next/link";
+import { Menu, Search, Coins, LayoutDashboard, History, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { useSearchStore } from "@/store/search-store";
 import { useCreditStore } from "@/store/credits-store";
+
+function UserMenu({ name, image, email }: { name?: string | null; image?: string | null; email?: string | null }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 rounded-lg p-1 hover:bg-white/5 transition-colors"
+        aria-label="User menu"
+      >
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 overflow-hidden shrink-0">
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image} alt={name ?? "User"} className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-xs font-semibold text-accent uppercase">
+              {name?.[0] ?? "U"}
+            </span>
+          )}
+        </div>
+        <span className="hidden md:block text-sm font-medium text-foreground max-w-[120px] truncate">
+          {name}
+        </span>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-border bg-surface shadow-lg z-50 overflow-hidden">
+          {/* User info */}
+          <div className="px-4 py-3 border-b border-border">
+            <p className="text-sm font-semibold text-foreground truncate">{name}</p>
+            {email && <p className="text-xs text-muted-foreground truncate">{email}</p>}
+          </div>
+
+          {/* Links */}
+          <div className="py-1">
+            <Link
+              href="/dashboard"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-white/5 transition-colors"
+            >
+              <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
+              Dashboard
+            </Link>
+            <Link
+              href="/dashboard/history"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-white/5 transition-colors"
+            >
+              <History className="h-4 w-4 text-muted-foreground" />
+              History
+            </Link>
+          </div>
+
+          {/* Logout */}
+          <div className="border-t border-border py-1">
+            <button
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Navbar() {
   const { data: session, status } = useSession();
@@ -68,24 +150,12 @@ export function Navbar() {
               </span>
             </div>
 
-            {/* Avatar */}
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 overflow-hidden shrink-0">
-              {session.user.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={session.user.image}
-                  alt={session.user.name ?? "User"}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="text-xs font-semibold text-accent uppercase">
-                  {session.user.name?.[0] ?? "U"}
-                </span>
-              )}
-            </div>
-            <span className="hidden md:block text-sm font-medium text-foreground max-w-[120px] truncate">
-              {session.user.name}
-            </span>
+            {/* Avatar dropdown */}
+            <UserMenu
+              name={session.user.name}
+              image={session.user.image}
+              email={session.user.email}
+            />
           </div>
         )}
       </div>

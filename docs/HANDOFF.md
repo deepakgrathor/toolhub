@@ -1,8 +1,82 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #10 | LiteLLM Gateway + Bull MQ Worker (complete)
+Updated: 2026-05-09 | Account: A | Session: #11 | Referral System + Output History (complete)
 
 ## Where We Are
-Session A10 done. Full async job pipeline is in place: web app creates jobs → Bull MQ queue (Redis) → worker processes them → results stored in Upstash Redis → web app polls for status.
+Session A11 done. Referral system is fully wired — referral codes generated on every signup, cookie-based referral tracking, atomic credit bonuses, referral info API, and a ReferralCard on the dashboard. Output history page added at `/dashboard/history` with pagination and an output viewer dialog.
+
+### What Was Built (Session A11 — Referral System + Output History)
+
+**User Model Update (packages/db/src/models/User.ts)**
+- Added: `referralCode` (String, unique, sparse), `referredBy` (ObjectId ref User, default null), `referralCount` (Number, default 0)
+
+**Referral Code Generator (packages/shared/src/referral.ts)**
+- `generateReferralCode()` — 6-char alphanumeric uppercase; pure function, no DB deps
+- Exported via `packages/shared/src/index.ts`
+
+**Atomic Referral Service (packages/db/src/referral-service.ts)**
+- `applyReferral(newUserId, referralCode)` — finds referrer by code; single MongoDB session/transaction:
+  - New user: +15 credits, sets `referredBy`
+  - Referrer: +10 credits, `referralCount += 1`
+  - Two `CreditTransaction` records (type: `referral_bonus`) created atomically
+  - Silent fail — never throws; logs error only
+- Exported via `packages/db/src/index.ts`
+
+**Note on package placement**: `generateReferralCode` is in `@toolhub/shared` (pure), `applyReferral` is in `@toolhub/db` (needs mongoose). This avoids circular deps since `@toolhub/db` depends on `@toolhub/shared` but not vice versa.
+
+**Referral Cookie Middleware (apps/web/src/middleware.ts)**
+- Expanded matcher to all pages (excluding `api`, `_next/static`, `_next/image`, `favicon.ico`)
+- Cookie set FIRST (step 1), BEFORE auth redirect checks (step 2)
+- `?ref=XXXXXX` → `httpOnly` cookie `ref`, `maxAge=604800` (7 days), `sameSite=lax`
+- Only sets if code matches `^[A-Z0-9]{6}$`
+
+**Email Signup Update (apps/web/src/app/api/auth/signup/route.ts)**
+- `generateReferralCode()` called on every new user — stored in `referralCode` field
+- After user created: reads `req.cookies.get("ref")?.value` → calls `applyReferral()` if present
+
+**Google OAuth Update (apps/web/src/auth.ts)**
+- First Google login: generates `referralCode`, saves to user
+- Reads `cookies()` from `next/headers` → calls `applyReferral()` if ref cookie present
+- Wrapped in try/catch — silent fail if `cookies()` unavailable in context
+- `FREE_CREDITS_ON_SIGNUP` constant used instead of hardcoded `10`
+
+**Referral Info API (apps/web/src/app/api/referral/info/route.ts)**
+- `GET /api/referral/info` — auth required
+- Returns: `{ referralCode, referralLink, referralCount, creditsEarned }`
+- `referralLink = NEXTAUTH_URL + "?ref=" + code`
+- `creditsEarned` via `CreditTransaction.aggregate` (type: referral_bonus, amount > 0)
+
+**ReferralCard Component (apps/web/src/components/dashboard/ReferralCard.tsx)**
+- Client component; fetches `/api/referral/info` on mount
+- Gift icon header, referral link input (readonly), Copy button (shows "Copied!" 2s with Check icon)
+- Stats: "X friends joined • Y credits earned"
+- WhatsApp share button (green, MessageCircle icon)
+- Loading skeleton while fetching
+
+**Output History API (apps/web/src/app/api/user/history/route.ts)**
+- `GET /api/user/history?page=1&limit=10` — auth required
+- `ToolOutput.find({ userId }).sort({ createdAt: -1 }).skip().limit()` + `countDocuments`
+- Returns: `{ outputs, total, page, totalPages }`
+
+**HistoryTable Component (apps/web/src/components/dashboard/HistoryTable.tsx)**
+- Client component; fetches paginated history
+- Columns: Date, Tool (slug → display name map), Credits Used (purple badge), Actions
+- Eye icon → opens inline dialog showing raw `outputText` (pre-wrap, scrollable)
+- ExternalLink icon → links to `/tools/[slug]`
+- Previous/Next pagination with disabled states
+- Empty state: History icon + "No history yet" message
+- 5-row skeleton while loading
+
+**History Page (apps/web/src/app/(site)/dashboard/history/page.tsx)**
+- Server component shell; renders `<HistoryTable />`
+
+**Dashboard Page Update (apps/web/src/app/(site)/dashboard/page.tsx)**
+- `<ReferralCard />` added beside `<CreditOverview />` in a 3-col grid (CreditOverview: 1 col, ReferralCard: 2 cols)
+- "View Full History →" link with History icon below TransactionHistory → `/dashboard/history`
+
+**Sidebar Update (apps/web/src/components/layout/sidebar.tsx)**
+- Added "Dashboard" (`LayoutDashboard`) and "History" (`History`) nav links
+- Visible only when logged in (`session?.user`)
+- Collapses to icon-only when sidebar is collapsed
 
 ### What Was Built (Session A10 — LiteLLM + Bull MQ Worker)
 
@@ -16,83 +90,29 @@ Session A10 done. Full async job pipeline is in place: web app creates jobs → 
 - `jobs/image-generation.ts` — fetch `${LITELLM_GATEWAY_URL}/images/generations` → download image → upload to Cloudflare R2 via `@aws-sdk/client-s3`; returns permanent `{ imageUrl }`
 - `index.ts` — imports worker + queue; graceful SIGTERM/SIGINT shutdown (worker.close + queue.close)
 
-**Package Changes**
-- `apps/worker/package.json` — added: bullmq, ioredis, @aws-sdk/client-s3
-- `apps/web/package.json` — added: bullmq, ioredis (for job creation from API routes)
-- `packages/shared/package.json` — added: @upstash/redis (runtime dep, shared by web + worker)
-
-**Shared Redis Client (packages/shared/)**
-- `packages/shared/src/redis-client.ts` — lazy singleton `getRedis()` using `UPSTASH_REDIS_URL` + `UPSTASH_REDIS_TOKEN`; throws clearly if env vars missing
-- `packages/shared/src/index.ts` — added `export * from "./redis-client"`
-
 **Job API Routes (apps/web/src/app/api/jobs/)**
-- `create/route.ts` — POST; auth required; Zod validates `{ jobType, payload }`; module-level Queue singleton (ioredis TCP); adds job with `userId` merged into payload; returns `{ jobId }`
-- `[jobId]/status/route.ts` — GET; auth required; checks Upstash Redis for `job:<id>:result` / `job:<id>:error` first (fast path); falls back to Bull MQ `queue.getJob()` for live state; maps Bull MQ states → `queued|processing|done|failed`
+- `create/route.ts` — POST; auth required; Zod validates `{ jobType, payload }`; adds job with `userId` merged into payload; returns `{ jobId }`
+- `[jobId]/status/route.ts` — GET; auth required; checks Upstash Redis for `job:<id>:result` / `job:<id>:error` first (fast path); falls back to Bull MQ `queue.getJob()` for live state
 
 **Frontend Hook**
-- `apps/web/src/hooks/useJobStatus.ts` — `useJobStatus(jobId: string | null)`: polls `/api/jobs/[jobId]/status` every 2s; stops on `done`/`failed`/`null jobId`; returns `{ status, result, error, isLoading }`
-
-**Next.js Config**
-- `apps/web/next.config.mjs` — added `ioredis` and `bullmq` to `serverComponentsExternalPackages` (prevents webpack from bundling native Node.js modules)
-
-**Env Files**
-- `apps/worker/.env.example` — full reference for all worker env vars
-- `apps/web/.env` — updated: replaced placeholder LiteLLM vars with real names; added `UPSTASH_REDIS_URL/TOKEN` (mapped from existing REST credentials); added `REDIS_URL` placeholder for Bull MQ TCP connection
-
-### Architecture: Two Redis Connection Types
-```
-REDIS_URL (rediss://...)        → Bull MQ / ioredis (TCP protocol)
-                                  Used by: apps/worker/src/queue.ts
-                                           apps/web/src/app/api/jobs/*/
-
-UPSTASH_REDIS_URL + TOKEN       → @upstash/redis (HTTP REST)
-                                  Used by: packages/shared/src/redis-client.ts
-                                  Stores: job:<id>:result  (TTL 1h)
-                                          job:<id>:error   (TTL 1h)
-```
-
-### To Get REDIS_URL for Bull MQ
-1. Go to [Upstash Console](https://console.upstash.com) → your Redis database
-2. Click "Connect" → select "ioredis" tab
-3. Copy the `rediss://default:<password>@<host>:<port>` URL
-4. Set as `REDIS_URL` in both `apps/web/.env` and `apps/worker` env
-
-### To Deploy LiteLLM on Railway
-```bash
-# In Railway, create a new service from Docker:
-# Image: ghcr.io/berriai/litellm:main-latest
-# Start command: litellm --config /app/litellm-config.yaml --port 4000
-# Mount: apps/worker/litellm-config.yaml → /app/litellm-config.yaml
-# Set env vars: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_AI_API_KEY, LITELLM_MASTER_KEY
-```
+- `apps/web/src/hooks/useJobStatus.ts` — polls `/api/jobs/[jobId]/status` every 2s; stops on `done`/`failed`/`null jobId`
 
 ### What Was Built (Session A9 — Blog Generator)
 
 **ToolOutput DB Model**
-- `packages/db/src/models/ToolOutput.ts` — Mongoose model: userId, toolSlug, inputSnapshot (Mixed), outputText, creditsUsed, timestamps
-- `packages/db/src/index.ts` — Uncommented/added `export * from "./models/ToolOutput"`
+- `packages/db/src/models/ToolOutput.ts` — userId, toolSlug, inputSnapshot, outputText, creditsUsed, timestamps
 
-**Shared Types**
-- `packages/shared/src/tool-types.ts` — `ToolEngineResult` (output, structured, creditsUsed, newBalance) + `ToolEngineContext` (userId, toolSlug)
-
-**Blog Generator — Tool Files**
-- `apps/web/src/tools/blog-generator/config.ts` — creditCost=3, model=gpt-4o-mini
-- `apps/web/src/tools/blog-generator/schema.ts` — Zod schema
-- `apps/web/src/tools/blog-generator/engine.ts` — Server-only: checkBalance → OpenAI fetch → parse → deductCredits → ToolOutput.create
-- `apps/web/src/app/api/tools/blog-generator/route.ts` — POST handler
-
-**Blog Generator — UI**
+**Blog Generator**
+- `apps/web/src/tools/blog-generator/` — config, schema, engine, page, api
 - `apps/web/src/tools/blog-generator/BlogGeneratorTool.tsx` — Client component, 2-col layout
-- `apps/web/src/components/tools/ToolLoadingSkeleton.tsx` — Loading skeleton
-
-**Tool Shell Page**
-- `apps/web/src/app/(site)/tools/[slug]/page.tsx` — `toolComponents` map with dynamic imports
+- `apps/web/src/app/(site)/tools/[slug]/page.tsx` — dynamic tool shell
 
 ## Next Task
-Session A11: Wire blog-generator to use job queue (optional), OR build next tool (e.g. YT Script Generator)
-- Blog generator currently calls OpenAI directly — can migrate to use job queue
-- Or build yt-script-generator following same pattern (creditCost=4)
-- Consider: tool output history page at /dashboard/history
+Session A12 options:
+- Wire Blog Generator to Bull MQ job queue (async generation with polling)
+- Build YT Script Generator (same pattern, creditCost=4)
+- Build second tool (e.g. GST Invoice, QR Generator)
+- Admin panel: tool management + credit pack management
 
 ## How to Seed
 ```bash
@@ -111,9 +131,15 @@ cd packages/db && MONGODB_URI=... npm run seed
 | 10 | website-generator |
 | 12 | legal-notice, nda-generator |
 
+## Architecture: Two Redis Connection Types
+```
+REDIS_URL (rediss://...)        → Bull MQ / ioredis (TCP protocol)
+UPSTASH_REDIS_URL + TOKEN       → @upstash/redis (HTTP REST) — job results, cache
+```
+
 ## Env Vars (apps/web/.env)
 All set except:
-- `REDIS_URL` — needs Upstash ioredis TCP URL (see instructions above)
+- `REDIS_URL` — needs Upstash ioredis TCP URL
 - `LITELLM_GATEWAY_URL` / `LITELLM_MASTER_KEY` — needs Railway deployment
 - `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_AI_API_KEY` — for LiteLLM
 - `R2_SECRET_ACCESS_KEY` — fill from Cloudflare dashboard

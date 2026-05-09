@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { connectDB, User, OtpToken } from "@toolhub/db";
+import { connectDB, User, OtpToken, applyReferral } from "@toolhub/db";
+import { generateReferralCode } from "@toolhub/shared";
 import { z } from "zod";
 import { FREE_CREDITS_ON_SIGNUP } from "@toolhub/shared";
 
@@ -59,8 +60,9 @@ export async function POST(req: NextRequest) {
     }
 
     const hashed = await bcrypt.hash(password, 12);
+    const referralCode = generateReferralCode();
 
-    await Promise.all([
+    const [newUser] = await Promise.all([
       User.create({
         name,
         email,
@@ -68,11 +70,17 @@ export async function POST(req: NextRequest) {
         authProvider: "email",
         role: "user",
         credits: FREE_CREDITS_ON_SIGNUP,
+        referralCode,
         lastSeen: new Date(),
       }),
-      // Invalidate OTP after use
       OtpToken.deleteMany({ email }),
     ]);
+
+    // Apply referral bonus if ref cookie present
+    const refCode = req.cookies.get("ref")?.value;
+    if (refCode) {
+      await applyReferral(newUser._id.toString(), refCode);
+    }
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (err) {

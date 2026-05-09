@@ -1,9 +1,11 @@
 import { Metadata } from "next";
-import { LayoutGrid } from "lucide-react";
+import Link from "next/link";
+import { LayoutGrid, History } from "lucide-react";
 import { getAllTools, ToolWithConfig } from "@/lib/tool-registry";
 import { ToolCard } from "@/components/tools/ToolCard";
 import { CreditOverview } from "@/components/dashboard/CreditOverview";
 import { TransactionHistory } from "@/components/dashboard/TransactionHistory";
+import { ReferralCard } from "@/components/dashboard/ReferralCard";
 
 export const metadata: Metadata = {
   title: "Dashboard — Toolspire",
@@ -38,16 +40,30 @@ export default async function DashboardPage() {
     <div className="min-h-full px-4 py-8 md:px-8">
       <h1 className="text-2xl font-bold text-foreground mb-6">Dashboard</h1>
 
-      {/* Credit overview card — full width on mobile, 1/3 on lg */}
+      {/* Credit overview + Referral card */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
         <div className="lg:col-span-1">
           <CreditOverview />
         </div>
+        <div className="lg:col-span-2">
+          <ReferralCard />
+        </div>
       </div>
 
       {/* Transaction history */}
-      <div className="mb-10">
+      <div className="mb-2">
         <TransactionHistory />
+      </div>
+
+      {/* Link to full output history */}
+      <div className="mb-10 flex justify-end">
+        <Link
+          href="/dashboard/history"
+          className="flex items-center gap-2 text-sm text-[#7c3aed] hover:underline"
+        >
+          <History className="h-4 w-4" />
+          View Full History →
+        </Link>
       </div>
 
       {/* Popular tools */}

@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import {
   ChevronLeft, ChevronRight, Coins, ShoppingBag, Sun, Moon, X, Zap,
+  LayoutDashboard, History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/sidebar-store";
@@ -120,6 +121,28 @@ function SidebarContent({
       <Suspense fallback={<div className="flex-1" />}>
         <KitNav isCollapsed={isCollapsed} kits={kits} />
       </Suspense>
+
+      {/* Dashboard nav links (only when logged in) */}
+      {session?.user && (
+        <div className="border-t border-border px-2 py-2 space-y-0.5 shrink-0">
+          {[
+            { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
+            { href: "/dashboard/history", label: "History", Icon: History },
+          ].map(({ href, label, Icon }) => (
+            <Link key={href} href={href} title={isCollapsed ? label : undefined}>
+              <div
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                  "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                )}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                {!isCollapsed && <span>{label}</span>}
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* Bottom section */}
       <div className="border-t border-border px-2 py-3 space-y-1.5 shrink-0">
