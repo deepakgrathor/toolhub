@@ -8,7 +8,12 @@ const nextConfig = {
     // "mongoose.models is undefined" ESM/CJS interop crash.
     // Note: Next.js 14 uses experimental.serverComponentsExternalPackages;
     //       Next.js 15 renamed this to the top-level serverExternalPackages.
-    serverComponentsExternalPackages: ["mongoose", "bcryptjs"],
+    serverComponentsExternalPackages: [
+      "mongoose",
+      "bcryptjs",
+      "ioredis",
+      "bullmq",
+    ],
   },
 };
 
