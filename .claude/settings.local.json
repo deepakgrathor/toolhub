@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(pnpm --version)",
+      "Bash(npm install *)",
+      "Bash(node -e \"const tw = require\\('./node_modules/tailwindcss/package.json'\\); console.log\\('tailwindcss:', tw.version\\)\")",
+      "Bash(node -e \"const atp = require\\('./node_modules/@tailwindcss/postcss/package.json'\\); console.log\\('@tailwindcss/postcss:', atp.version\\)\")",
+      "Bash(node -e \"try { const twa = require\\('./node_modules/tw-animate-css/package.json'\\); console.log\\('tw-animate-css:', twa.version\\); } catch\\(e\\) { console.log\\('tw-animate-css: NOT FOUND'\\); }\")",
+      "Bash(npx next *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__browser_batch",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('framer-motion:', p.dependencies['framer-motion'], 'cmdk:', p.dependencies['cmdk']\\)\")",
+      "Bash(node_modules/.bin/turbo --version)",
+      "Read(//f/2026/AI_Project/toolhub/apps/**)",
+      "Read(//f/2026/AI_Project/toolhub/**)",
+      "Bash(node -e \"const c = require\\('crypto'\\); console.log\\(c.randomBytes\\(32\\).toString\\('base64'\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(git add *)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(mkdir -p \"F:/2026/AI_Project/toolhub/.claude/worktrees/intelligent-solomon-936673/apps/web/src/app/api/admin/tools/[slug]\")",
+      "Bash(mkdir -p \"F:/2026/AI_Project/toolhub/.claude/worktrees/intelligent-solomon-936673/apps/web/src/app/api/admin/users/[userId]/credits\")"
+    ]
+  }
+}
