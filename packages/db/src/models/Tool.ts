@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Document, Model } from "../lib/mongoose-shim";
 
 export interface ITool extends Document {
   slug: string;
@@ -28,4 +28,5 @@ const ToolSchema = new Schema<ITool>(
 );
 
 export const Tool: Model<ITool> =
-  mongoose.models.Tool ?? mongoose.model<ITool>("Tool", ToolSchema);
+  (mongoose.models["Tool"] as Model<ITool>) ??
+  mongoose.model<ITool>("Tool", ToolSchema);

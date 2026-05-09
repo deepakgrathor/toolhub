@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Document, Model } from "../lib/mongoose-shim";
 
 export interface IOtpToken extends Document {
   email: string;
@@ -22,5 +22,5 @@ const OtpTokenSchema = new Schema<IOtpToken>(
 OtpTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export const OtpToken: Model<IOtpToken> =
-  mongoose.models.OtpToken ??
+  (mongoose.models["OtpToken"] as Model<IOtpToken>) ??
   mongoose.model<IOtpToken>("OtpToken", OtpTokenSchema);

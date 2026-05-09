@@ -1,11 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@toolhub/shared", "@toolhub/db"],
-  // Prevent Next.js from bundling mongoose (and bcryptjs which also uses
-  // native bindings). Instead, Node.js resolves them through its require
-  // cache, preserving the expected singleton behaviour and avoiding the
-  // ESM/CJS interop issue where `mongoose.models` appears undefined.
-  serverExternalPackages: ["mongoose", "bcryptjs"],
+  experimental: {
+    // Prevent Next.js from bundling mongoose through webpack.
+    // Instead Node.js resolves it via its native require cache so all
+    // server files share ONE mongoose singleton — fixing the
+    // "mongoose.models is undefined" ESM/CJS interop crash.
+    // Note: Next.js 14 uses experimental.serverComponentsExternalPackages;
+    //       Next.js 15 renamed this to the top-level serverExternalPackages.
+    serverComponentsExternalPackages: ["mongoose", "bcryptjs"],
+  },
 };
 
 export default nextConfig;

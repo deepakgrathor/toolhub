@@ -1,4 +1,6 @@
-import mongoose from "mongoose";
+import _mongoose from "mongoose";
+const mongoose =
+  (_mongoose as unknown as { default: typeof _mongoose }).default ?? _mongoose;
 import { User } from "./models/User";
 import { CreditTransaction, ICreditTransaction } from "./models/CreditTransaction";
 

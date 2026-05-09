@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Document, Model } from "../lib/mongoose-shim";
 
 export interface IUser extends Document {
   name: string;
@@ -46,4 +46,5 @@ const UserSchema = new Schema<IUser>(
 );
 
 export const User: Model<IUser> =
-  mongoose.models.User ?? mongoose.model<IUser>("User", UserSchema);
+  (mongoose.models["User"] as Model<IUser>) ??
+  mongoose.model<IUser>("User", UserSchema);

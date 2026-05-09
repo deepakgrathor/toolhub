@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Document, Model } from "../lib/mongoose-shim";
 
 export interface ISiteConfig extends Document {
   key: string;
@@ -15,5 +15,5 @@ const SiteConfigSchema = new Schema<ISiteConfig>(
 );
 
 export const SiteConfig: Model<ISiteConfig> =
-  mongoose.models.SiteConfig ??
+  (mongoose.models["SiteConfig"] as Model<ISiteConfig>) ??
   mongoose.model<ISiteConfig>("SiteConfig", SiteConfigSchema);

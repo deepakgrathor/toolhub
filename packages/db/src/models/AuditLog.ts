@@ -1,4 +1,5 @@
-import mongoose, { Schema, Document, Model, Types } from "mongoose";
+import mongoose, { Schema, Document, Model } from "../lib/mongoose-shim";
+import type { Types } from "mongoose";
 
 export interface IAuditLog extends Document {
   adminId: Types.ObjectId;
@@ -21,5 +22,5 @@ const AuditLogSchema = new Schema<IAuditLog>(
 );
 
 export const AuditLog: Model<IAuditLog> =
-  mongoose.models.AuditLog ??
+  (mongoose.models["AuditLog"] as Model<IAuditLog>) ??
   mongoose.model<IAuditLog>("AuditLog", AuditLogSchema);
