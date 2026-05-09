@@ -44,6 +44,39 @@ const toolComponents: Record<string, React.ComponentType<{ creditCost?: number }
     () => import("@/tools/linkedin-bio/LinkedinBioTool"),
     { loading: () => <ToolLoadingSkeleton /> }
   ),
+  // A15 tools
+  "title-generator": dynamic(
+    () => import("@/tools/title-generator/TitleGeneratorTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "email-subject": dynamic(
+    () => import("@/tools/email-subject/EmailSubjectTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "whatsapp-bulk": dynamic(
+    () => import("@/tools/whatsapp-bulk/WhatsappBulkTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "legal-notice": dynamic(
+    () => import("@/tools/legal-notice/LegalNoticeTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "nda-generator": dynamic(
+    () => import("@/tools/nda-generator/NdaGeneratorTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "legal-disclaimer": dynamic(
+    () => import("@/tools/legal-disclaimer/LegalDisclaimerTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "ad-copy": dynamic(
+    () => import("@/tools/ad-copy/AdCopyTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
+  "resume-screener": dynamic(
+    () => import("@/tools/resume-screener/ResumeScreenerTool"),
+    { loading: () => <ToolLoadingSkeleton /> }
+  ),
 };
 
 // ── Page ──────────────────────────────────────────────────────────────────────

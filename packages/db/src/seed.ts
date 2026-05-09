@@ -324,8 +324,8 @@ function cfg(
 
 const TOOL_CONFIGS: ConfigSeed[] = [
   // Free / no-AI tools
-  cfg("hook-writer", 0),
-  cfg("caption-generator", 0),
+  cfg("hook-writer", 0, "gemini-flash-2.0", "google", "gpt-4o-mini", "openai"),
+  cfg("caption-generator", 0, "gemini-flash-2.0", "google", "gpt-4o-mini", "openai"),
   cfg("gst-invoice", 0),
   cfg("expense-tracker", 0),
   cfg("quotation-generator", 0),
@@ -336,9 +336,9 @@ const TOOL_CONFIGS: ConfigSeed[] = [
   cfg("tds-sheet", 0),
 
   // 1 credit
-  cfg("title-generator", 1, "gpt-4o-mini", "openai", "gemini-flash-2.0", "google"),
-  cfg("email-subject", 1, "gpt-4o-mini", "openai", "gemini-flash-2.0", "google"),
-  cfg("whatsapp-bulk", 1, "gpt-4o-mini", "openai", "gemini-flash-2.0", "google"),
+  cfg("title-generator", 1, "gemini-flash-2.0", "google", "gpt-4o-mini", "openai"),
+  cfg("email-subject", 1, "gemini-flash-2.0", "google", "gpt-4o-mini", "openai"),
+  cfg("whatsapp-bulk", 1, "gemini-flash-2.0", "google", "gpt-4o-mini", "openai"),
 
   // 3 credits
   cfg("blog-generator", 3, "claude-haiku-3-5", "anthropic", "gpt-4o-mini", "openai"),
@@ -348,7 +348,7 @@ const TOOL_CONFIGS: ConfigSeed[] = [
   cfg("policy-generator", 3, "claude-haiku-3-5", "anthropic", "gpt-4o-mini", "openai"),
   cfg("linkedin-bio", 3, "gpt-4o-mini", "openai", "gemini-flash-2.0", "google"),
   cfg("ad-copy", 3, "gpt-4o-mini", "openai", "gemini-flash-2.0", "google"),
-  cfg("legal-disclaimer", 3, "claude-haiku-3-5", "anthropic", "gpt-4o-mini", "openai"),
+  cfg("legal-disclaimer", 3, "gpt-4o-mini", "openai", "gemini-flash-2.0", "google"),
 
   // 4 credits
   cfg("yt-script", 4, "claude-haiku-3-5", "anthropic", "gpt-4o-mini", "openai"),

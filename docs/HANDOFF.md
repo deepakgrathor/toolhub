@@ -1,113 +1,129 @@
 # Handoff Note
-Updated: 2026-05-09 | Account: A | Session: #14 | New Tools + Upstash Registry
+Updated: 2026-05-09 | Account: A | Session: #15 | 8 New Tools Batch Build
 
 ## Where We Are
-Session A14 done. 7 new tools built and wired. Tool registry upgraded to Upstash Redis. TypeScript: 0 errors.
+Session A15 done. 16 tools total built and wired. TypeScript: 0 errors.
 
-### What Was Built (Session A14 — New Tools + Registry Upgrade)
+### What Was Built (Session A15 — Batch Tool Build)
 
-**NEW UTILITY — `apps/web/src/lib/ai.ts`**
-- Shared `callAI(prompt, model, provider)` function — extracted from blog-generator engine
-- All new tool engines import from here; blog-generator unchanged (backward compatible)
-- Supports LiteLLM gateway → Anthropic → Google → OpenAI fallback chain
-- Also exports `repairJson()` and `extractJson()` JSON repair utilities
+**SEED UPDATED — `packages/db/src/seed.ts`**
+- hook-writer: added aiModel='gemini-flash-2.0', aiProvider='google'
+- caption-generator: added aiModel='gemini-flash-2.0', aiProvider='google'
+- title-generator/email-subject/whatsapp-bulk: primary model changed to gemini-flash-2.0/google
+- legal-disclaimer: changed from claude-haiku-3-5 to gpt-4o-mini/openai
 
-**TOOL 1 — QR Generator (0 credits, client-side)**
-- `apps/web/src/tools/qr-generator/` — config, schema, QrGeneratorTool.tsx
-- Uses `qrcode` npm package (installed: `npm install qrcode @types/qrcode --workspace=apps/web`)
-- No API route needed — fully client-side
-- Input: URL/text, size (128/256/512), error correction level (L/M/Q/H)
-- Output: QR code PNG data URL, displayed as image with download + clipboard copy
+**PART 2 — 1-Credit AI Tools (Google Gemini)**
 
-**TOOL 2 — GST Calculator (0 credits, client-side)**
-- `apps/web/src/tools/gst-calculator/` — config, schema, GstCalculatorTool.tsx
-- Pure math, no API route needed
-- Input: amount, GST rate (5/12/18/28%), exclusive/inclusive, intrastate/interstate
-- Output: CGST, SGST (intrastate) or IGST (interstate) breakdown with totals
+**TOOL 1 — Title Generator (slug: title-generator, 1cr)**
+- `apps/web/src/tools/title-generator/` — config, schema, engine, TitleGeneratorTool.tsx
+- `apps/web/src/app/api/tools/title-generator/route.ts`
+- Input: topic, platform (5 options), style (5 options), count (5/10/15)
+- Output: numbered list of titles, each with individual copy button + Copy All
 
-**TOOL 3 — Hook Writer (0 credits, AI)**
-- `apps/web/src/tools/hook-writer/` — config, schema, engine, HookWriterTool.tsx
-- `apps/web/src/app/api/tools/hook-writer/route.ts`
-- Input: topic, platform (instagram/youtube/linkedin/twitter), count (3/5/10)
-- Output: list of viral hook lines with individual copy buttons
+**TOOL 2 — Email Subject Line (slug: email-subject, 1cr)**
+- `apps/web/src/tools/email-subject/` — config, schema, engine, EmailSubjectTool.tsx
+- `apps/web/src/app/api/tools/email-subject/route.ts`
+- Input: email goal textarea, tone pills (5), count (5/10)
+- Output: subject lines with character count badge + copy buttons
 
-**TOOL 4 — Caption Generator (0 credits, AI)**
-- `apps/web/src/tools/caption-generator/` — config, schema, engine, CaptionGeneratorTool.tsx
-- `apps/web/src/app/api/tools/caption-generator/route.ts`
-- Input: topic, platform, tone, include hashtags toggle
-- Output: 3 captions each with text + hashtag array
+**TOOL 3 — WhatsApp Bulk Message (slug: whatsapp-bulk, 1cr)**
+- `apps/web/src/tools/whatsapp-bulk/` — config, schema, engine, WhatsappBulkTool.tsx
+- `apps/web/src/app/api/tools/whatsapp-bulk/route.ts`
+- Input: business type, message goal pills (5), offer textarea, emoji toggle
+- Output: 5 message cards with char count + individual copy buttons
 
-**TOOL 5 — YT Script Writer (4 credits, AI)**
-- `apps/web/src/tools/yt-script/` — config, schema, engine, YtScriptTool.tsx
-- `apps/web/src/app/api/tools/yt-script/route.ts`
-- Input: video title, duration (5/10/15/20 min), style, optional audience + keywords
-- Output: hook, intro, N segments, outro, CTA — full copy + download as .txt
+**PART 3 — CA/Legal Tools (Anthropic Claude + OpenAI)**
 
-**TOOL 6 — JD Generator (3 credits, AI)**
-- `apps/web/src/tools/jd-generator/` — config, schema, engine, JdGeneratorTool.tsx
-- `apps/web/src/app/api/tools/jd-generator/route.ts`
-- Input: job title, department, experience level, work type, skills, location, company context
-- Output: full JD with overview, responsibilities, requirements, nice-to-have, benefits
+**TOOL 4 — Legal Notice Draft (slug: legal-notice, 12cr)**
+- `apps/web/src/tools/legal-notice/` — config, schema, engine, LegalNoticeTool.tsx
+- `apps/web/src/app/api/tools/legal-notice/route.ts`
+- Uses claude-sonnet-4-5
+- Input: sender/receiver details, notice type (5), subject, incident, demand, deadline
+- Output: full formal legal notice + summary box + Copy/Download .txt + disclaimer warning
 
-**TOOL 7 — LinkedIn Bio Generator (3 credits, AI)**
-- `apps/web/src/tools/linkedin-bio/` — config, schema, engine, LinkedinBioTool.tsx
-- `apps/web/src/app/api/tools/linkedin-bio/route.ts`
-- Input: name, current role, industry, top skills, career highlight, years of experience
-- Output: 3 bio variants (concise ~60w, storytelling ~110w, professional ~90w)
+**TOOL 5 — NDA Generator (slug: nda-generator, 12cr)**
+- `apps/web/src/tools/nda-generator/` — config, schema, engine, NdaGeneratorTool.tsx
+- `apps/web/src/app/api/tools/nda-generator/route.ts`
+- Uses claude-sonnet-4-5
+- Input: Party A/B details, NDA type (one-way/mutual), purpose, duration, jurisdiction
+- Output: complete NDA document + summary + Copy/Download .txt
 
-**REGISTRY UPGRADE — `apps/web/src/lib/tool-registry.ts`**
-- Replaced in-memory Map with Upstash Redis (HTTP REST, works in Vercel serverless)
-- Pattern: Upstash Redis first → falls back to in-memory if Redis not configured (dev safety)
-- Redis keys prefixed `registry:*`, TTL 5 min (300s)
-- `clearToolCache()` is now async — clears Redis + in-memory
-- Updated `/api/admin/tools/[slug]/route.ts` to `await clearToolCache()`
+**TOOL 6 — Legal Disclaimer (slug: legal-disclaimer, 3cr)**
+- `apps/web/src/tools/legal-disclaimer/` — config, schema, engine, LegalDisclaimerTool.tsx
+- `apps/web/src/app/api/tools/legal-disclaimer/route.ts`
+- Uses gpt-4o-mini
+- Input: business name, URL, disclaimer type (5), additional context
+- Output: ready-to-use disclaimer text + Copy/Download
 
-**PAGE.TSX UPDATE**
-- `apps/web/src/app/(site)/tools/[slug]/page.tsx`: 7 new tools added to `toolComponents` map
+**PART 4 — Marketing Tools (OpenAI + Anthropic)**
+
+**TOOL 7 — Ad Copy Writer (slug: ad-copy, 3cr)**
+- `apps/web/src/tools/ad-copy/` — config, schema, engine, AdCopyTool.tsx
+- `apps/web/src/app/api/tools/ad-copy/route.ts`
+- Uses gpt-4o-mini
+- Input: product name/description, target audience, USP, platform (5), goal (5)
+- Output: 3 ad variation cards (variant badge, headline, primary text, CTA pill, copy button)
+
+**TOOL 8 — Resume Screener (slug: resume-screener, 3cr)**
+- `apps/web/src/tools/resume-screener/` — config, schema, engine, ResumeScreenerTool.tsx
+- `apps/web/src/app/api/tools/resume-screener/route.ts`
+- Uses claude-haiku-3-5
+- Input: resume text (paste), job description (paste) — both large textareas
+- Output: match score (0-100 color-coded), verdict badge, key matches, gaps, recommendation, interview questions
+
+**PAGE.TSX UPDATED**
+- `apps/web/src/app/(site)/tools/[slug]/page.tsx`: all 8 A15 tools added to toolComponents map
 
 ---
 
-## Where We Were (Session A13 — Bug Fixes + Polish)
-All HIGH + MEDIUM bugs fixed. Maintenance mode, toast notifications, rate limiting, mobile responsiveness, error pages, make-admin script.
+## Tool Registry — All 16 Built Tools
+
+| Tool | Slug | Credits | Model | Status |
+|------|------|---------|-------|--------|
+| Blog Generator | blog-generator | 3 | claude-haiku-3-5 | ✅ |
+| QR Generator | qr-generator | 0 | client-side | ✅ |
+| GST Calculator | gst-calculator | 0 | client-side | ✅ |
+| Hook Writer | hook-writer | 0 | gemini-flash-2.0 | ✅ |
+| Caption Generator | caption-generator | 0 | gemini-flash-2.0 | ✅ |
+| YT Script Writer | yt-script | 4 | claude-haiku-3-5 | ✅ |
+| JD Generator | jd-generator | 3 | gpt-4o-mini | ✅ |
+| LinkedIn Bio | linkedin-bio | 3 | gpt-4o-mini | ✅ |
+| Title Generator | title-generator | 1 | gemini-flash-2.0 | ✅ |
+| Email Subject | email-subject | 1 | gemini-flash-2.0 | ✅ |
+| WhatsApp Bulk | whatsapp-bulk | 1 | gemini-flash-2.0 | ✅ |
+| Legal Notice | legal-notice | 12 | claude-sonnet-4-5 | ✅ |
+| NDA Generator | nda-generator | 12 | claude-sonnet-4-5 | ✅ |
+| Legal Disclaimer | legal-disclaimer | 3 | gpt-4o-mini | ✅ |
+| Ad Copy Writer | ad-copy | 3 | gpt-4o-mini | ✅ |
+| Resume Screener | resume-screener | 3 | claude-haiku-3-5 | ✅ |
 
 ---
 
-## Next Task (Session A15)
-1. Seed DB tool configs for A14 tools (qr-generator, gst-calculator, hook-writer, caption-generator, yt-script, jd-generator, linkedin-bio)
-2. Build remaining 1-credit tools: Title Generator, Email Subject, WhatsApp Bulk
-3. Build CA/Legal tools: Legal Notice (12cr), NDA Generator (12cr), Legal Disclaimer (3cr)
-4. Build marketing tools: Ad Copy (3cr), SEO Auditor (8cr)
-5. Build SME form tools: GST Invoice, Expense Tracker, Quotation Generator, Salary Slip
+## Next Task (Session A16 — SME Form Tools)
 
-## How to Seed
+Build 6 remaining free tools (no credits, client-side only):
 
-```bash
-cd packages/db && MONGODB_URI=... npm run seed
-```
+| Tool | Slug | Credits | Type |
+|------|------|---------|------|
+| GST Invoice Generator | gst-invoice | 0 | Form → PDF download |
+| Expense Tracker | expense-tracker | 0 | Form → expense table |
+| Quotation Generator | quotation-generator | 0 | Form → PDF download |
+| Salary Slip Generator | salary-slip | 0 | Form → PDF download |
+| Offer Letter Generator | offer-letter | 0 | Form → PDF download |
+| TDS Sheet | tds-sheet | 0 | Form → calculation table |
 
-> **Important**: After A14, DB seed must include tool configs for all 7 A14 tools. Currently only blog-generator is fully configured in DB.
+### A16 Notes
+- All are client-side only — no API routes, no credits, no auth required
+- PDF tools: use browser print / window.open approach (no jspdf dependency)
+- These are free tools that showcase the platform — high SEO value
+- Multi-item form needed for gst-invoice and quotation-generator (add/remove rows)
 
-## Credit Cost Reference
-| Credits | Tools |
-|---------|-------|
-| 0 | hook-writer, caption-generator, gst-invoice, expense-tracker, quotation-generator, qr-generator, salary-slip, offer-letter, gst-calculator, tds-sheet |
-| 1 | title-generator, email-subject, whatsapp-bulk |
-| 3 | blog-generator, resume-screener, jd-generator, appraisal-draft, policy-generator, linkedin-bio, ad-copy, legal-disclaimer |
-| 4 | yt-script |
-| 7 | thumbnail-ai |
-| 8 | seo-auditor |
-| 10 | website-generator |
-| 12 | legal-notice, nda-generator |
-
-## Tools Built (UI Complete)
-- blog-generator ✅ (A9)
-- qr-generator ✅ (A14) — client-side
-- gst-calculator ✅ (A14) — client-side
-- hook-writer ✅ (A14) — AI, 0cr
-- caption-generator ✅ (A14) — AI, 0cr
-- yt-script ✅ (A14) — AI, 4cr
-- jd-generator ✅ (A14) — AI, 3cr
-- linkedin-bio ✅ (A14) — AI, 3cr
+## Tools Remaining After A16
+- thumbnail-ai (7cr, DALL-E 3)
+- website-generator (10cr, claude-sonnet-4-5)
+- seo-auditor (8cr, claude-sonnet-4-5)
+- appraisal-draft (3cr, claude-haiku-3-5)
+- policy-generator (3cr, claude-haiku-3-5)
 
 ## Architecture: Two Redis Connection Types
 
