@@ -107,3 +107,20 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 }
+
+/* Global cursor-pointer for all interactive elements */
+button,
+a,
+[role="button"],
+[role="link"],
+[role="tab"],
+[role="menuitem"],
+label[for],
+select,
+.tool-card,
+.kit-header,
+.sidebar-link,
+[data-clickable] {
+  cursor: pointer;
+}
+

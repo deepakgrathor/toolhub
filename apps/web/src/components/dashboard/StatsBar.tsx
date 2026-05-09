@@ -18,48 +18,52 @@ export function StatsBar({ toolsUsed, creditsUsed, memberSince }: StatsBarProps)
       label: "Tools Used",
       value: toolsUsed,
       icon: Activity,
-      color: "text-blue-500",
-      bg: "bg-blue-500/10",
+      iconColor: "text-blue-500",
+      iconBg: "bg-blue-500/10",
+      borderColor: "border-l-blue-500",
       href: undefined,
     },
     {
       label: "Credits Left",
       value: balance,
       icon: Coins,
-      color: "text-primary",
-      bg: "bg-primary/10",
+      iconColor: "text-primary",
+      iconBg: "bg-primary/10",
+      borderColor: "border-l-primary",
       href: "/pricing",
     },
     {
       label: "Credits Used",
       value: creditsUsed,
       icon: TrendingDown,
-      color: "text-orange-500",
-      bg: "bg-orange-500/10",
+      iconColor: "text-orange-500",
+      iconBg: "bg-orange-500/10",
+      borderColor: "border-l-orange-500",
       href: undefined,
     },
     {
       label: "Member Since",
       value: memberSince,
       icon: CalendarDays,
-      color: "text-emerald-500",
-      bg: "bg-emerald-500/10",
+      iconColor: "text-emerald-500",
+      iconBg: "bg-emerald-500/10",
+      borderColor: "border-l-emerald-500",
       href: undefined,
     },
   ] as const;
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {stats.map(({ label, value, icon: Icon, color, bg, href }) => {
+      {stats.map(({ label, value, icon: Icon, iconColor, iconBg, borderColor, href }) => {
         const card = (
           <div
-            className={`rounded-xl border border-border bg-surface p-4 flex items-center gap-3 transition-colors hover:border-border/80 ${href ? "cursor-pointer" : ""}`}
+            className={`tool-card rounded-xl border border-border border-l-4 ${borderColor} bg-surface p-4 flex items-center gap-3 transition-all duration-150 hover:shadow-sm hover:border-border/80 ${href ? "cursor-pointer" : ""}`}
           >
-            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${bg} shrink-0`}>
-              <Icon className={`h-5 w-5 ${color}`} />
+            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconBg} shrink-0`}>
+              <Icon className={`h-5 w-5 ${iconColor}`} />
             </div>
             <div className="min-w-0">
-              <p className="text-xl font-bold text-foreground leading-none mb-0.5 truncate">
+              <p className="text-3xl font-bold text-foreground leading-none mb-1 truncate">
                 {value}
               </p>
               <p className="text-xs text-muted-foreground">{label}</p>

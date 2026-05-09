@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { Menu, Search, Coins, Sun, Moon } from "lucide-react";
@@ -33,7 +34,14 @@ export function Navbar() {
   const openAuthModal = useAuthStore((s) => s.openAuthModal);
   const toggleMobile = useSidebarStore((s) => s.toggleMobile);
   const openSearch = useSearchStore((s) => s.setOpen);
-  const balance = useCreditStore((s) => s.balance);
+  const { balance, syncFromServer } = useCreditStore();
+
+  // Sync credits from server once session is authenticated
+  useEffect(() => {
+    if (status === "authenticated") {
+      syncFromServer();
+    }
+  }, [status, syncFromServer]);
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4 gap-3">

@@ -7,10 +7,11 @@ import { useSession, signOut } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, ChevronDown,
-  LayoutDashboard, Gift, LogOut, Zap, X,
+  LayoutDashboard, Gift, LogOut, Sparkles, X, Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/sidebar-store";
+import { useCreditStore } from "@/store/credits-store";
 import { SIDEBAR_KITS, getKitForSlug } from "@/lib/kit-config";
 import { getToolIcon } from "@/lib/tool-icons";
 
@@ -34,22 +35,24 @@ function KitItem({
 
   return (
     <div>
-      {/* Kit header button */}
       <button
         onClick={onToggle}
         title={isCollapsed ? kit.name : undefined}
         className={cn(
-          "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+          "kit-header w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors duration-150",
           isKitActive
-            ? "text-primary font-medium"
-            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-          isCollapsed && "justify-center"
+            ? "text-primary font-medium border-l-2 border-primary bg-primary/5"
+            : "text-muted-foreground hover:bg-accent/10 hover:text-foreground",
+          isCollapsed && "justify-center border-l-0"
         )}
       >
         <KitIcon className="h-[18px] w-[18px] shrink-0" />
         {!isCollapsed && (
           <>
             <span className="flex-1 truncate text-left">{kit.name}</span>
+            <span className="text-[10px] text-muted-foreground/60 font-normal mr-1">
+              {kit.tools.length}
+            </span>
             <ChevronDown
               className={cn(
                 "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
@@ -60,7 +63,6 @@ function KitItem({
         )}
       </button>
 
-      {/* Tool list — animated expand/collapse, hidden when sidebar collapsed */}
       {!isCollapsed && (
         <AnimatePresence initial={false}>
           {isExpanded && (
@@ -81,10 +83,10 @@ function KitItem({
                       key={tool.slug}
                       href={`/tools/${tool.slug}`}
                       className={cn(
-                        "relative flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors",
+                        "sidebar-link relative flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors",
                         isActive
                           ? "bg-primary/10 text-primary font-medium"
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                          : "text-muted-foreground hover:bg-accent/5 hover:text-accent"
                       )}
                     >
                       {isActive && (
@@ -104,6 +106,42 @@ function KitItem({
   );
 }
 
+// ── Credits widget ────────────────────────────────────────────────────────────
+
+function CreditsWidget({ isCollapsed }: { isCollapsed: boolean }) {
+  const { balance, isLoading } = useCreditStore();
+
+  if (isCollapsed) {
+    return (
+      <Link
+        href="/pricing"
+        title={`${balance} credits`}
+        className="flex justify-center rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted/50 hover:text-primary transition-colors"
+      >
+        <Coins className="h-[18px] w-[18px] shrink-0" />
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href="/pricing"
+      className="flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-primary/10 transition-colors group"
+      title="Buy more credits"
+    >
+      <Coins className="h-[18px] w-[18px] shrink-0 text-primary" />
+      <span className="flex-1 text-sm text-foreground font-medium">Credits</span>
+      {isLoading ? (
+        <div className="h-5 w-10 animate-pulse rounded-full bg-muted/50" />
+      ) : (
+        <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary group-hover:bg-primary/25 transition-colors">
+          {balance}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 // ── Sidebar content (shared between desktop + mobile drawer) ──────────────────
 
 function SidebarContent({
@@ -118,12 +156,10 @@ function SidebarContent({
   const { data: session } = useSession();
   const { expandedKit, setExpandedKit } = useSidebarStore();
 
-  // Derive active tool slug from pathname
   const activeSlug = pathname.startsWith("/tools/")
     ? pathname.split("/tools/")[1]?.split("/")[0] ?? null
     : null;
 
-  // Auto-expand parent kit when navigating to a tool
   useEffect(() => {
     if (activeSlug) {
       const parentKit = getKitForSlug(activeSlug);
@@ -146,14 +182,14 @@ function SidebarContent({
       <div className="flex h-14 items-center border-b border-border px-3 shrink-0">
         {!isCollapsed ? (
           <Link href="/dashboard" className="flex items-center gap-2 flex-1 min-w-0">
-            <Zap className="h-5 w-5 text-primary shrink-0" />
-            <span className="font-bold text-foreground tracking-tight">
-              Tool<span className="text-primary">spire</span>
+            <Sparkles className="h-5 w-5 text-primary shrink-0" />
+            <span className="font-bold tracking-tight bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+              Toolspire
             </span>
           </Link>
         ) : (
           <Link href="/dashboard" className="mx-auto">
-            <Zap className="h-5 w-5 text-primary" />
+            <Sparkles className="h-5 w-5 text-primary" />
           </Link>
         )}
         {onClose && (
@@ -172,7 +208,7 @@ function SidebarContent({
           href="/dashboard"
           title={isCollapsed ? "Dashboard" : undefined}
           className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+            "sidebar-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
             isDashboard
               ? "bg-primary/10 text-primary font-medium"
               : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -184,12 +220,14 @@ function SidebarContent({
         </Link>
       </div>
 
-      {/* Kit navigation */}
+      {/* Kits label */}
       {!isCollapsed && (
         <p className="px-5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 shrink-0">
           Kits
         </p>
       )}
+
+      {/* Kit navigation */}
       <nav className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
         {SIDEBAR_KITS.map((kit) => (
           <KitItem
@@ -206,6 +244,10 @@ function SidebarContent({
       {/* Bottom section */}
       {session?.user && (
         <div className="border-t border-border px-2 py-3 space-y-0.5 shrink-0">
+          {/* Credits widget */}
+          <CreditsWidget isCollapsed={isCollapsed} />
+
+          {/* Refer & Earn */}
           <button
             onClick={() => {
               onClose?.();
@@ -213,7 +255,7 @@ function SidebarContent({
             }}
             title={isCollapsed ? "Refer & Earn" : undefined}
             className={cn(
-              "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
+              "sidebar-link w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
               isCollapsed && "justify-center"
             )}
           >
@@ -221,11 +263,12 @@ function SidebarContent({
             {!isCollapsed && <span>Refer &amp; Earn</span>}
           </button>
 
+          {/* Logout */}
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
             title={isCollapsed ? "Logout" : undefined}
             className={cn(
-              "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors",
+              "sidebar-link w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors",
               isCollapsed && "justify-center"
             )}
           >
@@ -252,7 +295,7 @@ function DesktopSidebar() {
     <aside
       className={cn(
         "hidden md:flex h-screen flex-col border-r border-border bg-surface transition-[width] duration-200 shrink-0 relative",
-        isCollapsed ? "w-14" : "w-60"
+        isCollapsed ? "w-14" : "w-[220px]"
       )}
     >
       <SidebarContent isCollapsed={isCollapsed} />
@@ -286,7 +329,7 @@ function MobileDrawer() {
   return (
     <div className="fixed inset-0 z-50 md:hidden">
       <div className="absolute inset-0 bg-black/60" onClick={closeMobile} />
-      <aside className="absolute left-0 top-0 h-full w-64 bg-surface border-r border-border">
+      <aside className="absolute left-0 top-0 h-full w-[220px] bg-surface border-r border-border">
         <SidebarContent onClose={closeMobile} />
       </aside>
     </div>

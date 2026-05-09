@@ -26,8 +26,11 @@ export const useCreditStore = create<CreditsStore>((set) => ({
       const res = await fetch("/api/user/credits");
       if (res.ok) {
         const data = await res.json();
-        console.log(data, "data")
-        set({ balance: data.balance, lastSynced: new Date() });
+        if (typeof data.balance === "number") {
+          set({ balance: data.balance, lastSynced: new Date() });
+        } else {
+          console.error("[credits-store] Unexpected response:", data);
+        }
       }
     } finally {
       set({ isLoading: false });

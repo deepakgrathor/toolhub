@@ -9,11 +9,26 @@ interface HistoryItem {
   _id: string;
   toolSlug: string;
   toolName: string;
+  outputPreview: string;
   createdAt: string;
 }
 
 function Skeleton({ className }: { className: string }) {
   return <div className={`animate-pulse rounded-lg bg-muted/50 ${className}`} />;
+}
+
+function timeAgo(dateStr: string): string {
+  try {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  } catch {
+    return "";
+  }
 }
 
 export function RecentActivity() {
@@ -50,7 +65,7 @@ export function RecentActivity() {
               <Skeleton className="h-8 w-8 rounded-lg shrink-0" />
               <div className="flex-1 space-y-1.5">
                 <Skeleton className="h-3 w-28" />
-                <Skeleton className="h-2.5 w-16" />
+                <Skeleton className="h-2.5 w-40" />
               </div>
               <Skeleton className="h-6 w-14 rounded-md" />
             </div>
@@ -64,22 +79,12 @@ export function RecentActivity() {
         ) : (
           items.map((item) => {
             const Icon = getToolIcon(item.toolSlug);
-            const ago = (() => {
-              try {
-                const diff = Date.now() - new Date(item.createdAt).getTime();
-                const mins = Math.floor(diff / 60000);
-                if (mins < 1) return "just now";
-                if (mins < 60) return `${mins}m ago`;
-                const hrs = Math.floor(mins / 60);
-                if (hrs < 24) return `${hrs}h ago`;
-                return `${Math.floor(hrs / 24)}d ago`;
-              } catch {
-                return "";
-              }
-            })();
-
             return (
-              <div key={item._id} className="flex items-center gap-3 px-4 py-3">
+              <Link
+                key={item._id}
+                href={`/tools/${item.toolSlug}`}
+                className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+              >
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
                   <Icon className="h-4 w-4 text-primary" />
                 </div>
@@ -87,16 +92,17 @@ export function RecentActivity() {
                   <p className="text-sm font-medium text-foreground truncate">
                     {item.toolName}
                   </p>
-                  <p className="text-xs text-muted-foreground">{ago}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {item.outputPreview
+                      ? `${item.outputPreview}${item.outputPreview.length >= 60 ? "…" : ""}`
+                      : timeAgo(item.createdAt)}
+                  </p>
                 </div>
-                <Link
-                  href={`/tools/${item.toolSlug}`}
-                  className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors shrink-0"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  View
-                </Link>
-              </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-xs text-muted-foreground">{timeAgo(item.createdAt)}</span>
+                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                </div>
+              </Link>
             );
           })
         )}

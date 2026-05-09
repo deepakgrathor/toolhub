@@ -14,6 +14,7 @@ export interface AdminToolRow {
   aiModel: string;
   aiProvider: string;
   isActive: boolean;
+  isVisible: boolean;
 }
 
 async function getAdminTools(): Promise<AdminToolRow[]> {
@@ -38,6 +39,7 @@ async function getAdminTools(): Promise<AdminToolRow[]> {
         aiModel: cfg?.aiModel ?? "",
         aiProvider: cfg?.aiProvider ?? "",
         isActive: cfg?.isActive ?? true,
+        isVisible: cfg?.isVisible ?? true,
       };
     });
   } catch {

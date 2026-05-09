@@ -14,6 +14,7 @@ export interface IUser extends Document {
   referralCode?: string;
   referredBy?: Types.ObjectId | null;
   referralCount: number;
+  isBanned: boolean;
   createdAt: Date;
   updatedAt: Date;
   lastSeen: Date;
@@ -47,6 +48,7 @@ const UserSchema = new Schema<IUser>(
     referralCode: { type: String, unique: true, sparse: true },
     referredBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     referralCount: { type: Number, default: 0 },
+    isBanned: { type: Boolean, default: false },
     lastSeen: { type: Date, default: Date.now },
   },
   { timestamps: true }

@@ -20,7 +20,7 @@ export function DashboardToolCard({
 
   return (
     <Link href={`/tools/${slug}`}>
-      <div className="group flex items-start gap-3 rounded-xl border border-border bg-surface p-3.5 transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm">
+      <div className="tool-card group flex items-start gap-3 rounded-xl border border-border bg-surface p-3.5 transition-all duration-150 hover:scale-[1.02] hover:border-primary/40 hover:shadow-md cursor-pointer">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 shrink-0">
           <Icon className="h-4 w-4 text-primary" />
         </div>

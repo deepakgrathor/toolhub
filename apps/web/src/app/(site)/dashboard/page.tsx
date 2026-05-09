@@ -8,6 +8,7 @@ import { StatsBar } from "@/components/dashboard/StatsBar";
 import { KitSection } from "@/components/dashboard/KitSection";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { ReferralCard } from "@/components/dashboard/ReferralCard";
+import { GreetingTagline } from "@/components/dashboard/GreetingTagline";
 import { StatsBarSkeleton, KitSectionSkeleton } from "@/components/ui/skeletons";
 import { getCachedDashStats, setCachedDashStats } from "@/lib/credit-cache";
 import mongoose from "mongoose";
@@ -115,9 +116,7 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold text-foreground">
           {greeting}, {firstName}!
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          What would you like to create today?
-        </p>
+        <GreetingTagline />
       </div>
 
       {/* Stats — streams in after DB query */}

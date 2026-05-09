@@ -11,6 +11,7 @@ const schema = z.object({
   aiModel: z.string().optional(),
   aiProvider: z.string().optional(),
   isActive: z.boolean().optional(),
+  isVisible: z.boolean().optional(),
 });
 
 export async function PATCH(
