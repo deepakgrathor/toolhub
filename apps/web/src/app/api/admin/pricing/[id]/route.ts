@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/admin-auth";
 import { connectDB, CreditPack, AuditLog } from "@toolhub/db";
 import { z } from "zod";
 
@@ -19,8 +19,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "admin") {
+  const admin = await requireAdmin(req);
+  if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -47,7 +47,7 @@ export async function PATCH(
   ).lean();
 
   await AuditLog.create({
-    adminId: session.user.id,
+    adminId: admin.userId,
     action: "update_credit_pack",
     target: `pack:${params.id}`,
     before: {
@@ -65,11 +65,11 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "admin") {
+  const admin = await requireAdmin(req);
+  if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -81,7 +81,7 @@ export async function DELETE(
   }
 
   await AuditLog.create({
-    adminId: session.user.id,
+    adminId: admin.userId,
     action: "delete_credit_pack",
     target: `pack:${params.id}`,
     before: {

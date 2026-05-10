@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/admin-auth";
 import { connectDB, Tool, ToolConfig, AuditLog } from "@toolhub/db";
 import { z } from "zod";
 import { clearToolCache } from "@/lib/tool-registry";
@@ -21,8 +21,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { slug: string } }
 ) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "admin") {
+  const admin = await requireAdmin(req);
+  if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -60,7 +60,7 @@ export async function PATCH(
   await clearToolCache();
 
   await AuditLog.create({
-    adminId: session.user.id,
+    adminId: admin.userId,
     action: "update_tool_config",
     target: `tool:${slug}`,
     before: before

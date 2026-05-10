@@ -27,6 +27,7 @@ const config: NextAuthConfig = {
         await connectDB();
         const user = await User.findOne({ email }).select("+password");
         if (!user || !user.password) return null;
+        if (user.isBanned) return null;
 
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return null;

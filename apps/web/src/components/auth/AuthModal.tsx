@@ -107,20 +107,22 @@ function OtpInput({
   onChange: (v: string) => void;
 }) {
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
-  const digits = value.padEnd(6, "").split("").slice(0, 6);
+  const digits = Array.from({ length: 6 }, (_, i) => value[i] ?? "");
 
   const handleChange = (i: number, v: string) => {
     const digit = v.replace(/\D/g, "").slice(-1);
-    const next = digits.map((d, idx) => (idx === i ? digit : d)).join("");
-    onChange(next.trimEnd());
+    const arr = Array.from({ length: 6 }, (_, j) => value[j] ?? "");
+    arr[i] = digit;
+    onChange(arr.join("").trimEnd());
     if (digit && i < 5) inputs.current[i + 1]?.focus();
   };
 
   const handleKeyDown = (i: number, e: React.KeyboardEvent) => {
     if (e.key === "Backspace" && !digits[i] && i > 0) {
       inputs.current[i - 1]?.focus();
-      const next = digits.map((d, idx) => (idx === i - 1 ? "" : d)).join("");
-      onChange(next.trimEnd());
+      const arr = Array.from({ length: 6 }, (_, j) => value[j] ?? "");
+      arr[i - 1] = "";
+      onChange(arr.join("").trimEnd());
     }
   };
 

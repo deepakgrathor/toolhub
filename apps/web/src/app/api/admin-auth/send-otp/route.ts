@@ -1,18 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomInt } from "crypto";
 import { connectDB, OtpToken, User } from "@toolhub/db";
 import { sendOtpSMS } from "@/lib/sms";
+import { createRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const schema = z.object({
   mobile: z.string().min(10).max(15).regex(/^\d+$/),
 });
 
+// IP-based: max 5 attempts per 15 min (catches multi-mobile attacks from same IP)
+const ipLimiter = createRateLimit({ windowMs: 15 * 60 * 1000, max: 5 });
+
 function generateOtp(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(randomInt(100000, 1000000));
 }
 
 export async function POST(req: NextRequest) {
   try {
+    // IP rate limit — blocks spray attacks from same IP across different mobiles
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      req.headers.get("x-real-ip") ??
+      "unknown";
+    const ipCheck = ipLimiter(ip);
+    if (!ipCheck.allowed) {
+      return NextResponse.json(
+        { error: "Too many attempts. Try again later." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
@@ -44,6 +62,8 @@ export async function POST(req: NextRequest) {
     }
 
     const otp = generateOtp();
+    const { createHash } = await import("crypto");
+    const otpHash = createHash("sha256").update(otp).digest("hex");
 
     // Delete any existing unused OTPs for this mobile
     await OtpToken.deleteMany({ identifier: mobile, type: "admin_login" });
@@ -51,8 +71,8 @@ export async function POST(req: NextRequest) {
     await OtpToken.create({
       identifier: mobile,
       type: "admin_login",
-      otp,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
+      otp: otpHash,        // store hash, never plaintext
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       used: false,
       attempts: 0,
     });

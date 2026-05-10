@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/admin-auth";
 import { connectDB, SiteConfig, AuditLog } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 import { z } from "zod";
@@ -14,8 +14,8 @@ const settingsSchema = z.object({
 });
 
 export async function PATCH(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "admin") {
+  const admin = await requireAdmin(req);
+  if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -52,7 +52,7 @@ export async function PATCH(req: NextRequest) {
   );
 
   await AuditLog.create({
-    adminId: session.user.id,
+    adminId: admin.userId,
     action: "update_site_settings",
     target: "site_config",
     before,

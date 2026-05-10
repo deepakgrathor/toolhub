@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, ShieldCheck, ArrowLeft, RefreshCw, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -9,20 +8,22 @@ import { cn } from "@/lib/utils";
 
 function OtpInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
-  const digits = value.padEnd(6, "").split("").slice(0, 6);
+  const digits = Array.from({ length: 6 }, (_, i) => value[i] ?? "");
 
   const handleChange = (i: number, v: string) => {
     const digit = v.replace(/\D/g, "").slice(-1);
-    const next = digits.map((d, idx) => (idx === i ? digit : d)).join("");
-    onChange(next.trimEnd());
+    const arr = Array.from({ length: 6 }, (_, j) => value[j] ?? "");
+    arr[i] = digit;
+    onChange(arr.join("").trimEnd());
     if (digit && i < 5) inputs.current[i + 1]?.focus();
   };
 
   const handleKeyDown = (i: number, e: React.KeyboardEvent) => {
     if (e.key === "Backspace" && !digits[i] && i > 0) {
       inputs.current[i - 1]?.focus();
-      const next = digits.map((d, idx) => (idx === i - 1 ? "" : d)).join("");
-      onChange(next.trimEnd());
+      const arr = Array.from({ length: 6 }, (_, j) => value[j] ?? "");
+      arr[i - 1] = "";
+      onChange(arr.join("").trimEnd());
     }
   };
 
@@ -62,8 +63,6 @@ function OtpInput({ value, onChange }: { value: string; onChange: (v: string) =>
 type Step = "mobile" | "otp";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
-
   const [step, setStep] = useState<Step>("mobile");
   const [mobile10, setMobile10] = useState(""); // 10 digits user enters
   const [maskedMobile, setMaskedMobile] = useState("");
@@ -142,8 +141,7 @@ export default function AdminLoginPage() {
       if (!res.ok) {
         setError(json.error ?? "Verification failed");
       } else {
-        router.push("/admin");
-        router.refresh();
+        window.location.href = "/admin";
       }
     } catch {
       setError("Something went wrong. Please try again.");

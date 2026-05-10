@@ -1,4 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
+import { cookies } from "next/headers";
+import { NextRequest } from "next/server";
 
 export interface AdminTokenPayload {
   userId: string;
@@ -24,6 +26,23 @@ export async function verifyAdminToken(token: string): Promise<AdminTokenPayload
   try {
     const { payload } = await jwtVerify(token, getSecret());
     return payload as unknown as AdminTokenPayload;
+  } catch {
+    return null;
+  }
+}
+
+// Use in Route Handlers: reads setulix_admin cookie, returns payload or null
+export async function requireAdmin(req?: NextRequest): Promise<AdminTokenPayload | null> {
+  try {
+    let token: string | undefined;
+    if (req) {
+      token = req.cookies.get("setulix_admin")?.value;
+    } else {
+      const cookieStore = await cookies();
+      token = cookieStore.get("setulix_admin")?.value;
+    }
+    if (!token) return null;
+    return await verifyAdminToken(token);
   } catch {
     return null;
   }

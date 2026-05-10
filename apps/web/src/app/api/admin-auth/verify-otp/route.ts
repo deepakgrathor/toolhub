@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { connectDB, OtpToken, User, AuditLog } from "@toolhub/db";
 import { createAdminToken } from "@/lib/admin-auth";
 import { z } from "zod";
@@ -47,8 +48,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check OTP
-    if (otpRecord.otp !== otp) {
+    // Check OTP — compare against stored SHA-256 hash
+    const otpHash = createHash("sha256").update(otp).digest("hex");
+    if (otpRecord.otp !== otpHash) {
       await OtpToken.updateOne({ _id: otpRecord._id }, { $inc: { attempts: 1 } });
       const remaining = 4 - (otpRecord.attempts ?? 0);
       return NextResponse.json(
@@ -60,10 +62,10 @@ export async function POST(req: NextRequest) {
     // Mark used
     await OtpToken.updateOne({ _id: otpRecord._id }, { used: true });
 
-    // Get admin user
-    const user = await User.findOne({ mobile, role: "admin" });
+    // Get admin user — must be active and not banned
+    const user = await User.findOne({ mobile, role: "admin", isBanned: false });
     if (!user) {
-      return NextResponse.json({ error: "Admin not found" }, { status: 401 });
+      return NextResponse.json({ error: "Access denied" }, { status: 401 });
     }
 
     await User.findByIdAndUpdate(user._id, { lastSeen: new Date() });
@@ -90,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     // Set httpOnly cookie
     const res = NextResponse.json({ success: true });
-    res.cookies.set("setulix.admin", token, {
+    res.cookies.set("setulix_admin", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

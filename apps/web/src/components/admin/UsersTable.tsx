@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, Coins, Loader2, Ban, CheckCircle2 } from "lucide-react";
+import { Search, X, Coins, Loader2, Ban, CheckCircle2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { AdminUserRow } from "@/app/admin/users/page";
@@ -101,8 +101,9 @@ export function UsersTable({ initialUsers, initialQuery }: Props) {
 
   return (
     <>
-      {/* Search */}
-      <div className="relative mb-4 max-w-sm">
+      {/* Search + Export */}
+      <div className="flex items-center gap-3 mb-4">
+      <div className="relative flex-1 max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <input
           value={query}
@@ -115,6 +116,15 @@ export function UsersTable({ initialUsers, initialQuery }: Props) {
             <X className="h-4 w-4" />
           </button>
         )}
+      </div>
+      <a
+        href="/api/admin/export/users"
+        download
+        className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
+      >
+        <Download className="h-3.5 w-3.5" />
+        Export CSV
+      </a>
       </div>
 
       {/* Table */}

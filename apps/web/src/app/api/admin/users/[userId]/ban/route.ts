@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/admin-auth";
 import { connectDB, User, AuditLog } from "@toolhub/db";
 import { z } from "zod";
 
@@ -9,8 +9,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { userId: string } }
 ) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "admin") {
+  const admin = await requireAdmin(req);
+  if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -29,7 +29,7 @@ export async function PATCH(
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   await AuditLog.create({
-    adminId: session.user.id,
+    adminId: admin.userId,
     action: parsed.data.isBanned ? "ban_user" : "unban_user",
     target: `user:${params.userId}`,
     after: { isBanned: parsed.data.isBanned },

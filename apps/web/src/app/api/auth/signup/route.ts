@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { createHash } from "crypto";
 import { connectDB, User, OtpToken, applyReferral } from "@toolhub/db";
 import { generateReferralCode } from "@toolhub/shared";
 import { z } from "zod";
@@ -50,10 +51,11 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    // Verify OTP
+    // Verify OTP — compare against stored hash
+    const otpHash = createHash("sha256").update(otp).digest("hex");
     const token = await OtpToken.findOne({
       email,
-      otp,
+      otp: otpHash,
       verified: false,
       expiresAt: { $gt: new Date() },
     });

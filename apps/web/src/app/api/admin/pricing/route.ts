@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/admin-auth";
 import { connectDB, CreditPack, AuditLog } from "@toolhub/db";
 import { z } from "zod";
 
@@ -16,8 +16,8 @@ const createSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "admin") {
+  const admin = await requireAdmin(req);
+  if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const pack = await CreditPack.create(parsed.data);
 
   await AuditLog.create({
-    adminId: session.user.id,
+    adminId: admin.userId,
     action: "create_credit_pack",
     target: `pack:${pack._id}`,
     before: null,

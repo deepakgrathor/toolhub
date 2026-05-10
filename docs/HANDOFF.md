@@ -1,24 +1,51 @@
 # Handoff Note
-Updated: 2026-05-10 | Account: A | Session: #24 | Admin Mobile OTP Login (BulkSMS, separate cookie)
+Updated: 2026-05-10 | Account: A | Session: #25 | Security hardening + Admin dashboard features
 
 ## Where We Are
-Session A24 done. **TypeScript: 0 errors.**
-Admin auth completely rewritten — mobile+OTP via BulkSMS, own cookie (`setulix.admin`), fully independent from NextAuth.
+Session A25 done. **TypeScript: 0 errors.** Deployed to Vercel.
 
-**PENDING BEFORE ADMIN LOGIN WORKS ON LIVE:**
-1. Add `ADMIN_JWT_SECRET` to Vercel env vars (generate below)
-2. Add `BULKSMS_TOKEN` to Vercel env vars (from bulk9.com)
-3. Run `set-admin-mobile.ts` script to set mobile on admin user in MongoDB
+**REQUIRED VERCEL ENV VARS (add before admin login works):**
+1. `ADMIN_JWT_SECRET` = `lfc3tMXaG+rWRFmn+Pj6aBJ+LNZg4q63+LYBOVi177s=`
+2. `BULKSMS_TOKEN` = (from bulk9.com dashboard)
 
-Generate ADMIN_JWT_SECRET:
-```
-node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-```
-
-Run set-admin-mobile (replace with real values):
+**ONE-TIME SETUP (run once after deploying):**
 ```
 MONGODB_URI="mongodb+srv://..." ADMIN_MOBILE="917723970629" npx tsx apps/web/src/scripts/set-admin-mobile.ts
 ```
+
+**IMPORTANT — cookie renamed:** `setulix.admin` → `setulix_admin` (dots caused Edge Runtime parsing bugs). Clear old cookie in browser after deploying.
+
+---
+
+## What Was Built (Session A25)
+
+### Security Hardening (Auth)
+- `crypto.randomInt()` replaces `Math.random()` for OTP generation (both admin + signup flows)
+- OTPs now stored as SHA-256 hash in MongoDB (never plaintext)
+- `isBanned` check added to admin verify-otp and web credentials login
+- IP-based rate limiting added to admin send-otp (5/15min per IP)
+- BulkSMS token moved from GET query param to Authorization header
+- Cookie renamed `setulix.admin` → `setulix_admin` (Edge Runtime dot-parsing bug)
+- `window.location.href` replaces `router.push` for post-login redirect (cookie visibility)
+- All 7 `/api/admin/*` routes now use `requireAdmin()` cookie check instead of NextAuth session
+
+### Admin Dashboard Features
+- **Recent Signups** widget — last 8 users with auth provider badge
+- **Low Credits Alert** — orange banner when users have < 5 credits
+- **Announcement Toggle** — quick show/hide from dashboard (no need to open Settings)
+- **System Health** — MongoDB + Redis live ping status
+- **Date range tabs** on charts — 7d / 30d / 90d
+- **Tool Performance Table** — uses, credits consumed, avg per use (all-time)
+- **Export CSV** — download all users as CSV from Users page
+- **Empty states** on charts (no flat lines when data is zero)
+
+### New Files
+| File | Purpose |
+|------|---------|
+| `apps/web/src/app/api/admin/system-health/route.ts` | MongoDB + Redis health check |
+| `apps/web/src/app/api/admin/export/users/route.ts` | CSV export of all users |
+| `apps/web/src/components/admin/SystemHealth.tsx` | Health status client component |
+| `apps/web/src/components/admin/AnnouncementToggle.tsx` | Quick announcement toggle |
 
 ---
 

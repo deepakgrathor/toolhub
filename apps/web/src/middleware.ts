@@ -31,11 +31,11 @@ async function checkMaintenanceMode(): Promise<boolean> {
   }
 }
 
-// ── Verify the setulix.admin cookie (Edge-safe jose) ─────────────────────────
+// ── Verify the setulix_admin cookie (Edge-safe jose) ─────────────────────────
 
 async function verifyAdminCookie(req: NextRequest): Promise<boolean> {
   try {
-    const adminToken = req.cookies.get("setulix.admin")?.value;
+    const adminToken = req.cookies.get("setulix_admin")?.value;
     if (!adminToken) return false;
 
     const secret = process.env.ADMIN_JWT_SECRET;
@@ -64,7 +64,7 @@ export async function middleware(req: NextRequest) {
     });
   }
 
-  // ── Step 2: Admin routes — use setulix.admin cookie (independent of NextAuth)
+  // ── Step 2: Admin routes — use setulix_admin cookie (independent of NextAuth)
   if (pathname.startsWith("/admin")) {
     const isAdminAuthed = await verifyAdminCookie(req);
 
@@ -81,7 +81,7 @@ export async function middleware(req: NextRequest) {
       const loginUrl = new URL("/admin/login", req.url);
       const res = NextResponse.redirect(loginUrl);
       // Clear stale cookie if present
-      res.cookies.set("setulix.admin", "", { maxAge: 0, path: "/" });
+      res.cookies.set("setulix_admin", "", { maxAge: 0, path: "/" });
       return res;
     }
 

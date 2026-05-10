@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomInt, createHash } from "crypto";
 import { connectDB, OtpToken, User } from "@toolhub/db";
 import { z } from "zod";
 
@@ -8,7 +9,7 @@ const schema = z.object({
 });
 
 function generateOtp(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(randomInt(100000, 1000000));
 }
 
 async function sendOtpEmail(email: string, name: string, otp: string) {
@@ -96,12 +97,13 @@ export async function POST(req: NextRequest) {
     }
 
     const otp = generateOtp();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    const otpHash = createHash("sha256").update(otp).digest("hex");
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     // Invalidate previous OTPs for this email
     await OtpToken.deleteMany({ email });
 
-    await OtpToken.create({ email, otp, expiresAt, verified: false });
+    await OtpToken.create({ email, otp: otpHash, expiresAt, verified: false });
 
     await sendOtpEmail(email, name, otp);
 
