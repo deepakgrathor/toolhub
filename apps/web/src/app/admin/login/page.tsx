@@ -1,23 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Eye, EyeOff, ShieldCheck, ArrowLeft, RefreshCw } from "lucide-react";
+import { Loader2, ShieldCheck, ArrowLeft, RefreshCw, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function GoogleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-    </svg>
-  );
-}
-
-type Step = "credentials" | "otp";
+// ── OTP Input — 6 individual boxes ───────────────────────────────────────────
 
 function OtpInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
@@ -59,9 +47,9 @@ function OtpInput({ value, onChange }: { value: string; onChange: (v: string) =>
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={handlePaste}
           className={cn(
-            "h-12 w-10 rounded-lg border text-center text-lg font-bold bg-background text-foreground",
+            "h-12 w-10 rounded-lg border text-center text-lg font-bold bg-[#111111] text-white",
             "focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:border-transparent transition-colors",
-            digits[i] ? "border-[#7c3aed]" : "border-border"
+            digits[i] ? "border-[#7c3aed]" : "border-white/10"
           )}
         />
       ))}
@@ -69,102 +57,90 @@ function OtpInput({ value, onChange }: { value: string; onChange: (v: string) =>
   );
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+type Step = "mobile" | "otp";
+
 export default function AdminLoginPage() {
   const router = useRouter();
 
-  const [step, setStep] = useState<Step>("credentials");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [step, setStep] = useState<Step>("mobile");
+  const [mobile10, setMobile10] = useState(""); // 10 digits user enters
+  const [maskedMobile, setMaskedMobile] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  const inputCls = cn(
-    "w-full rounded-lg border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground",
-    "focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:border-transparent transition-colors border-border"
-  );
+  // Countdown timer for resend
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
+
+  const fullMobile = `91${mobile10}`; // prepend India country code
+
+  async function sendOtp(mobileNum: string): Promise<string | null> {
+    const res = await fetch("/api/admin-auth/send-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mobile: mobileNum }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      setError(json.error ?? "Failed to send OTP");
+      return null;
+    }
+    return json.maskedMobile as string;
+  }
 
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault();
+    if (mobile10.length !== 10) {
+      setError("Enter a valid 10-digit mobile number");
+      return;
+    }
     setLoading(true);
     setError("");
-    try {
-      const res = await fetch("/api/admin/auth/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        setError(json.error ?? "Authentication failed");
-      } else {
-        setStep("otp");
-        startResendCountdown();
-      }
-    } catch {
-      setError("Something went wrong. Please try again.");
+    const masked = await sendOtp(fullMobile);
+    if (masked) {
+      setMaskedMobile(masked);
+      setStep("otp");
+      setResendCooldown(60);
     }
     setLoading(false);
   }
 
-  function startResendCountdown() {
-    setResendCooldown(60);
-    const interval = setInterval(() => {
-      setResendCooldown((c) => {
-        if (c <= 1) { clearInterval(interval); return 0; }
-        return c - 1;
-      });
-    }, 1000);
-  }
-
-  async function handleResendOtp() {
+  async function handleResend() {
     if (resendCooldown > 0) return;
     setLoading(true);
     setError("");
-    try {
-      await fetch("/api/admin/auth/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+    const masked = await sendOtp(fullMobile);
+    if (masked) {
+      setMaskedMobile(masked);
       setOtp("");
-      startResendCountdown();
-    } catch {
-      setError("Failed to resend OTP");
+      setResendCooldown(60);
     }
     setLoading(false);
   }
 
   async function handleVerifyOtp() {
     if (otp.length !== 6) {
-      setError("Enter the 6-digit OTP sent to your email");
+      setError("Enter the 6-digit OTP sent to your mobile");
       return;
     }
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/auth/verify-otp", {
+      const res = await fetch("/api/admin-auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp }),
+        body: JSON.stringify({ mobile: fullMobile, otp }),
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? "Invalid OTP");
-        setLoading(false);
-        return;
-      }
-
-      // Use the adminToken to sign in via NextAuth
-      const result = await signIn("credentials", {
-        adminToken: json.adminToken,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setError("Login failed. Please try again.");
+        setError(json.error ?? "Verification failed");
       } else {
         router.push("/admin");
         router.refresh();
@@ -178,132 +154,105 @@ export default function AdminLoginPage() {
   return (
     <div className="w-full max-w-sm">
       {/* Card */}
-      <div className="rounded-xl border border-border bg-card p-8 shadow-xl">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#7c3aed]/15 mb-3">
-            <ShieldCheck className="h-6 w-6 text-[#7c3aed]" />
+      <div className="rounded-2xl border border-white/10 bg-[#111111] p-8 shadow-2xl">
+
+        {/* Logo + heading */}
+        <div className="flex flex-col items-center mb-7">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#7c3aed]/20 mb-4 ring-1 ring-[#7c3aed]/30">
+            <ShieldCheck className="h-7 w-7 text-[#7c3aed]" />
           </div>
-          <h1 className="text-xl font-bold text-foreground">
+          <h1 className="text-xl font-bold text-white">
             <span>Setu</span><span className="text-[#7c3aed]">Lix</span>{" "}
-            <span className="text-muted-foreground font-normal text-sm">Admin</span>
+            <span className="text-white/40 font-normal text-sm">Admin</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {step === "credentials"
-              ? "Sign in to the admin panel"
-              : `OTP sent to ${email}`}
+          <p className="text-sm text-white/40 mt-1">
+            {step === "mobile" ? "Admin Access" : "Verify Identity"}
           </p>
         </div>
 
-        {/* Error */}
+        {/* Error banner */}
         {error && (
-          <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">
+          <div className="mb-5 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">
             {error}
           </div>
         )}
 
-        {/* Step 1: Email + Password */}
-        {step === "credentials" && (
-          <div className="space-y-4">
-            {/* Google OAuth — primary for Google-signed-up admins */}
-            <button
-              type="button"
-              onClick={() => signIn("google", { callbackUrl: "/admin" })}
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 transition-colors"
-            >
-              <GoogleIcon />
-              Continue with Google
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">or email + password</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-
-            <form onSubmit={handleSendOtp} className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">
-                  Admin Email
-                </label>
+        {/* ── STEP 1: Mobile Input ── */}
+        {step === "mobile" && (
+          <form onSubmit={handleSendOtp} className="space-y-5">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-white/70">
+                Mobile Number
+              </label>
+              <div className="flex items-center rounded-lg border border-white/10 bg-[#0d0d0d] focus-within:ring-2 focus-within:ring-[#7c3aed] focus-within:border-transparent transition-all overflow-hidden">
+                <div className="flex items-center gap-1.5 pl-3 pr-2 py-2.5 border-r border-white/10 shrink-0">
+                  <Smartphone className="h-3.5 w-3.5 text-white/40" />
+                  <span className="text-sm text-white/50 font-medium">+91</span>
+                </div>
                 <input
-                  type="email"
-                  autoComplete="email"
-                  placeholder="admin@setulix.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className={inputCls}
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="98XXXXXXXX"
+                  value={mobile10}
+                  onChange={(e) => setMobile10(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  autoFocus
+                  className="flex-1 bg-transparent px-3 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none"
                 />
               </div>
+            </div>
 
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className={cn(inputCls, "pr-10")}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || !email || !password}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#7c3aed] py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
-              >
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                Continue with OTP
-              </button>
-            </form>
-          </div>
+            <button
+              type="submit"
+              disabled={loading || mobile10.length !== 10}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#7c3aed] py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 transition-opacity"
+            >
+              {loading
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : null
+              }
+              {loading ? "Sending OTP..." : "Send OTP →"}
+            </button>
+          </form>
         )}
 
-        {/* Step 2: OTP Verification */}
+        {/* ── STEP 2: OTP Verification ── */}
         {step === "otp" && (
           <div className="space-y-5">
+            <div className="text-center">
+              <p className="text-sm text-white/50">
+                OTP sent to <span className="text-white font-medium">+91 {maskedMobile.slice(2)}</span>
+              </p>
+              <p className="text-xs text-white/30 mt-0.5">Valid for 10 minutes</p>
+            </div>
+
             <OtpInput value={otp} onChange={setOtp} />
 
             <button
               type="button"
               onClick={handleVerifyOtp}
               disabled={loading || otp.length < 6}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#7c3aed] py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#7c3aed] py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 transition-opacity"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Verify &amp; Sign In
+              {loading ? "Verifying..." : "Verify & Login"}
             </button>
 
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center justify-between text-xs text-white/30">
               <button
                 type="button"
-                onClick={() => { setStep("credentials"); setOtp(""); setError(""); }}
-                className="flex items-center gap-1 hover:text-foreground transition-colors"
+                onClick={() => { setStep("mobile"); setOtp(""); setError(""); }}
+                className="flex items-center gap-1 hover:text-white/60 transition-colors"
               >
                 <ArrowLeft className="h-3 w-3" />
-                Back
+                Change Number
               </button>
+
               <button
                 type="button"
-                onClick={handleResendOtp}
+                onClick={handleResend}
                 disabled={resendCooldown > 0 || loading}
-                className="flex items-center gap-1 hover:text-foreground disabled:opacity-40 transition-colors"
+                className="flex items-center gap-1 hover:text-white/60 disabled:opacity-40 transition-colors"
               >
                 <RefreshCw className="h-3 w-3" />
                 {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
@@ -313,8 +262,8 @@ export default function AdminLoginPage() {
         )}
       </div>
 
-      <p className="mt-4 text-center text-xs text-muted-foreground">
-        SetuLix Admin Panel · <span className="text-[#7c3aed]">SetuLabsAI</span>
+      <p className="mt-4 text-center text-xs text-white/20">
+        SetuLix Admin · by <span className="text-[#7c3aed]/60">SetuLabsAI</span>
       </p>
     </div>
   );

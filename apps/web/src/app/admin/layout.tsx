@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Wrench, Users, CreditCard, Settings,
-  ArrowLeft, ClipboardList,
+  ArrowLeft, ClipboardList, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,14 +19,21 @@ const NAV_ITEMS = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
 
-  // Login page gets a clean centered layout without the sidebar
+  // Login page gets a clean full-screen dark layout (no sidebar)
   if (pathname === "/admin/login") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4">
         {children}
       </div>
     );
+  }
+
+  async function handleLogout() {
+    await fetch("/api/admin-auth/logout", { method: "POST" });
+    router.push("/admin/login");
+    router.refresh();
   }
 
   return (
@@ -70,8 +77,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* Back to site */}
-        <div className="border-t border-border p-3">
+        {/* Bottom actions */}
+        <div className="border-t border-border p-3 space-y-0.5">
           <Link
             href="/dashboard"
             className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
@@ -79,6 +86,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <ArrowLeft className="h-4 w-4 shrink-0" />
             Back to App
           </Link>
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            Logout
+          </button>
         </div>
       </aside>
 

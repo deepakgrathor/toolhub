@@ -1,4 +1,5 @@
 import { getToken } from "next-auth/jwt";
+import { jwtVerify } from "jose";
 import { NextResponse, type NextRequest } from "next/server";
 
 // ── Maintenance mode cache (60s TTL, Edge-compatible HTTP fetch) ──────────────
@@ -30,6 +31,23 @@ async function checkMaintenanceMode(): Promise<boolean> {
   }
 }
 
+// ── Verify the setulix.admin cookie (Edge-safe jose) ─────────────────────────
+
+async function verifyAdminCookie(req: NextRequest): Promise<boolean> {
+  try {
+    const adminToken = req.cookies.get("setulix.admin")?.value;
+    if (!adminToken) return false;
+
+    const secret = process.env.ADMIN_JWT_SECRET;
+    if (!secret) return false;
+
+    await jwtVerify(adminToken, new TextEncoder().encode(secret));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -46,19 +64,43 @@ export async function middleware(req: NextRequest) {
     });
   }
 
-  // ── Step 2: Decode JWT (Edge-safe — no CompressionStream) ─────────────────
+  // ── Step 2: Admin routes — use setulix.admin cookie (independent of NextAuth)
+  if (pathname.startsWith("/admin")) {
+    const isAdminAuthed = await verifyAdminCookie(req);
+
+    // Allow login page; redirect if already logged in
+    if (pathname === "/admin/login") {
+      if (isAdminAuthed) {
+        return NextResponse.redirect(new URL("/admin", req.url));
+      }
+      return response;
+    }
+
+    // All other /admin/* — require valid admin cookie
+    if (!isAdminAuthed) {
+      const loginUrl = new URL("/admin/login", req.url);
+      const res = NextResponse.redirect(loginUrl);
+      // Clear stale cookie if present
+      res.cookies.set("setulix.admin", "", { maxAge: 0, path: "/" });
+      return res;
+    }
+
+    return response;
+  }
+
+  // ── Step 3: Decode NextAuth JWT for web-app routes ────────────────────────
   const token = await getToken({
     req,
     secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "",
   });
 
   const isLoggedIn = !!token;
-  const isAdmin = token?.role === "admin";
 
-  // ── Step 3: Maintenance mode ──────────────────────────────────────────────
+  // ── Step 4: Maintenance mode ──────────────────────────────────────────────
   const maintenance = await checkMaintenanceMode();
+  const isAdminForMaintenance = await verifyAdminCookie(req);
 
-  if (maintenance && !isAdmin) {
+  if (maintenance && !isAdminForMaintenance) {
     if (pathname !== "/maintenance") {
       return NextResponse.redirect(new URL("/maintenance", req.url));
     }
@@ -69,22 +111,9 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // ── Step 4: Auth-protected routes ─────────────────────────────────────────
+  // ── Step 5: Web-app protected routes ─────────────────────────────────────
   if (pathname.startsWith("/dashboard") && !isLoggedIn) {
     return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  // Admin login page: allow through, but redirect already-logged-in admins
-  if (pathname === "/admin/login") {
-    if (isAdmin) {
-      return NextResponse.redirect(new URL("/admin", req.url));
-    }
-    return response;
-  }
-
-  // All other /admin/* routes require admin role
-  if (pathname.startsWith("/admin") && !isAdmin) {
-    return NextResponse.redirect(new URL("/admin/login", req.url));
   }
 
   return response;

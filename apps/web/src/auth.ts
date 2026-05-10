@@ -4,7 +4,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { connectDB, User, applyReferral } from "@toolhub/db";
-import { generateReferralCode, FREE_CREDITS_ON_SIGNUP, getRedis } from "@toolhub/shared";
+import { generateReferralCode, FREE_CREDITS_ON_SIGNUP } from "@toolhub/shared";
 import type { NextAuthConfig } from "next-auth";
 
 const config: NextAuthConfig = {
@@ -18,41 +18,8 @@ const config: NextAuthConfig = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        adminToken: { label: "Admin Token", type: "text" },
       },
       async authorize(credentials) {
-        const adminToken = credentials?.adminToken as string | undefined;
-
-        // Admin OTP flow: verify the short-lived token from Redis
-        if (adminToken) {
-          try {
-            const redis = getRedis();
-            const email = await redis.get<string>(`setulix:admin:login:${adminToken}`);
-            if (!email) return null;
-
-            // One-time use — delete immediately
-            await redis.del(`setulix:admin:login:${adminToken}`);
-
-            await connectDB();
-            const user = await User.findOne({ email });
-            if (!user || user.role !== "admin") return null;
-
-            await User.findByIdAndUpdate(user._id, { lastSeen: new Date() });
-
-            return {
-              id: user._id.toString(),
-              email: user.email,
-              name: user.name,
-              image: user.image,
-              role: user.role,
-              credits: user.credits,
-            };
-          } catch {
-            return null;
-          }
-        }
-
-        // Regular email + password flow
         const email = credentials?.email as string | undefined;
         const password = credentials?.password as string | undefined;
         if (!email || !password) return null;
