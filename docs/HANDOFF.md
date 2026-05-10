@@ -1,9 +1,85 @@
 # Handoff Note
-Updated: 2026-05-10 | Account: A | Session: #23 | Bug Fixes: Admin Login + Post-Login Redirect
+Updated: 2026-05-10 | Account: A | Session: #24 | Admin Mobile OTP Login (BulkSMS, separate cookie)
 
 ## Where We Are
-Session A23 done. **TypeScript: 0 errors.**
-BUG-01 and BUG-02 from the test suite fixed. Committed and pushed — Vercel deploying.
+Session A24 done. **TypeScript: 0 errors.**
+Admin auth completely rewritten — mobile+OTP via BulkSMS, own cookie (`setulix.admin`), fully independent from NextAuth.
+
+**PENDING BEFORE ADMIN LOGIN WORKS ON LIVE:**
+1. Add `ADMIN_JWT_SECRET` to Vercel env vars (generate below)
+2. Add `BULKSMS_TOKEN` to Vercel env vars (from bulk9.com)
+3. Run `set-admin-mobile.ts` script to set mobile on admin user in MongoDB
+
+Generate ADMIN_JWT_SECRET:
+```
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+Run set-admin-mobile (replace with real values):
+```
+MONGODB_URI="mongodb+srv://..." ADMIN_MOBILE="917723970629" npx tsx apps/web/src/scripts/set-admin-mobile.ts
+```
+
+---
+
+## What Was Built (Session A24)
+
+### Admin Mobile OTP Login — Complete Rewrite
+
+**Architecture:** Admin session is now 100% independent of NextAuth.
+- Uses `setulix.admin` httpOnly cookie (HS256 JWT signed with `ADMIN_JWT_SECRET`, 8h TTL)
+- No email, no password, no Google OAuth for admin panel
+- Web-app NextAuth sessions completely unaffected
+
+#### New Files
+| File | Purpose |
+|------|---------|
+| `apps/web/src/lib/admin-auth.ts` | `createAdminToken` + `verifyAdminToken` using jose (Edge-compatible) |
+| `apps/web/src/lib/sms.ts` | `sendOtpSMS()` via bulk9.com DLT API; dev fallback: console.log |
+| `apps/web/src/app/api/admin-auth/send-otp/route.ts` | Verify mobile=admin, rate-limit 3/15min, send SMS OTP |
+| `apps/web/src/app/api/admin-auth/verify-otp/route.ts` | Verify OTP (5 attempt lockout), set setulix.admin cookie, audit log |
+| `apps/web/src/app/api/admin-auth/logout/route.ts` | Clear setulix.admin cookie |
+| `apps/web/src/scripts/set-admin-mobile.ts` | One-time: set mobile field on admin user in MongoDB |
+
+#### Modified Files
+| File | Change |
+|------|--------|
+| `packages/db/src/models/OtpToken.ts` | Added: identifier, type, used, attempts fields |
+| `packages/db/src/models/User.ts` | Added: mobile (sparse unique) field |
+| `apps/web/src/middleware.ts` | Admin routes: check setulix.admin cookie via jose; web routes: still NextAuth |
+| `apps/web/src/app/admin/login/page.tsx` | Rewritten: +91 mobile input → OTP boxes → setulix.admin cookie |
+| `apps/web/src/app/admin/layout.tsx` | Login: dark full-screen; Panel: added Logout button |
+| `apps/web/src/auth.ts` | Removed adminToken workaround; cleaned getRedis import |
+
+#### Deleted Files
+- `apps/web/src/app/api/admin/auth/send-otp/route.ts` (old email flow)
+- `apps/web/src/app/api/admin/auth/verify-otp/route.ts` (old email flow)
+
+### Admin Login Flow (after setup)
+```
+1. Visit /admin/login
+2. Enter 10-digit mobile (India, +91 prefix shown)
+3. POST /api/admin-auth/send-otp → SMS sent via BulkSMS
+4. Enter 6-digit OTP in boxes
+5. POST /api/admin-auth/verify-otp → setulix.admin cookie set
+6. Redirected to /admin dashboard
+```
+
+### Middleware Change
+```
+/admin/* routes:
+  → check setulix.admin cookie (jose jwtVerify, Edge-safe)
+  → valid: allow through
+  → invalid/missing: redirect to /admin/login
+
+/dashboard, / routes:
+  → still use NextAuth JWT (getToken)
+  → no change from user's perspective
+```
+
+---
+
+## Where We Were (Session A23)
 
 ---
 
