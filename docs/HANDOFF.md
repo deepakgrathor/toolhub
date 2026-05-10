@@ -1,7 +1,40 @@
 # Handoff Note
-Updated: 2026-05-10 | Account: A | Session: #21+22 (Final) | Branding + Critical Fixes + Light Theme + SEO
+Updated: 2026-05-10 | Account: A | Session: #23 | Bug Fixes: Admin Login + Post-Login Redirect
 
 ## Where We Are
+Session A23 done. **TypeScript: 0 errors.**
+BUG-01 and BUG-02 from the test suite fixed. Committed and pushed — Vercel deploying.
+
+---
+
+## What Was Built (Session A23)
+
+### BUG-02 Fix — Admin Login Page (CRITICAL)
+- `apps/web/src/middleware.ts` — **fixed**: `/admin/*` now redirects to `/admin/login` (not `/`). `/admin/login` is allowed through without auth. Admins already logged in are auto-redirected from login → `/admin`.
+- `apps/web/src/app/api/admin/auth/send-otp/route.ts` — **new**: Verifies email+password, checks `role === "admin"`, sends OTP email via Resend. Generic error to prevent user enumeration.
+- `apps/web/src/app/api/admin/auth/verify-otp/route.ts` — **new**: Verifies OTP from DB, deletes it, generates a one-time `adminToken` UUID stored in Redis (`setulix:admin:login:{token}`, TTL 5 min). Returns `{ adminToken }`.
+- `apps/web/src/auth.ts` — **updated**: Credentials `authorize` now handles `adminToken` path: looks up Redis key, gets email, fetches admin user, returns user. One-time use token deleted from Redis immediately.
+- `apps/web/src/app/admin/layout.tsx` — **updated**: Pathname `/admin/login` gets a minimal centered layout (no sidebar, no sidebar nav). All other admin routes keep the existing panel layout.
+- `apps/web/src/app/admin/login/page.tsx` — **new**: Two-step admin login UI. Step 1: email+password → calls send-otp. Step 2: 6-digit OTP entry → calls verify-otp → gets adminToken → calls `signIn("credentials", { adminToken })` → redirects to `/admin`.
+
+### BUG-01 Fix — Post-Login Redirect + Stable Selector
+- `apps/web/src/components/auth/AuthModal.tsx` — **fixed**: After successful login or signup, calls `router.push("/dashboard")` so user lands on dashboard. Google OAuth `callbackUrl` changed from `window.location.href` to `/dashboard`.
+- `apps/web/src/components/layout/Navbar.tsx` — **fixed**: Uses stable Zustand selectors (`useCreditStore((s) => s.balance)` and `useCreditStore((s) => s.syncFromServer)`). Effect dependency array is `[status]` only (not `[status, syncFromServer]`) to prevent any potential re-run on function reference changes.
+
+### TC Coverage After Session A23
+- TC-01 ✓ Signup → OTP → account → redirected to /dashboard
+- TC-02 ✓ Login → redirected to /dashboard (no reload loop)
+- TC-03 ✓ Google OAuth → callbackUrl /dashboard
+- TC-05 ✓ Admin login via /admin/login with OTP
+- TC-06 ✓ /admin (not logged in) → /admin/login
+- TC-07 ✓ Regular user visiting /admin → /admin/login
+
+### Known Limitations
+- TC-08 (Admin/user session independence): Both admin and regular user share the same NextAuth JWT cookie. If admin and user are logged in in the same browser simultaneously (not incognito), the second login overwrites the first. This requires a completely separate session system (separate cookie name) to fully fix — out of scope for Phase 1.
+
+---
+
+## Where We Were (Sessions A21+A22)
 Sessions A21+A22 done. **TypeScript: 0 errors.**
 Product rebranded from Toolspire → **SetuLix** (by **SetuLabsAI**, Founder: **Deepak Rathor**).
 All 20 implementation items complete across 3 sections: Critical Fixes, Branding, SEO+Kit Pages.
