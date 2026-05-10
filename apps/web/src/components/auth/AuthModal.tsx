@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useCreditStore } from "@/store/credits-store";
 import { signIn } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -187,6 +188,7 @@ const inputCls = (hasError: boolean) =>
 type SignupStep = "form" | "otp";
 
 export function AuthModal() {
+  const router = useRouter();
   const { isAuthModalOpen, authMode, closeAuthModal, setAuthMode } = useAuthStore();
   const syncCredits = useCreditStore((s) => s.syncFromServer);
 
@@ -252,6 +254,7 @@ export function AuthModal() {
       closeAuthModal();
       syncCredits();
       toast.success(`Welcome back!`);
+      router.push("/dashboard");
     }
   };
 
@@ -316,6 +319,7 @@ export function AuthModal() {
         closeAuthModal();
         syncCredits();
         toast.success("Account created! 10 free credits added.");
+        router.push("/dashboard");
       }
     } catch {
       setServerError("Something went wrong. Please try again.");
@@ -346,7 +350,7 @@ export function AuthModal() {
   // ── Google ─────────────────────────────────────────────────────────────────
 
   const handleGoogle = () => {
-    signIn("google", { callbackUrl: window.location.href });
+    signIn("google", { callbackUrl: "/dashboard" });
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────

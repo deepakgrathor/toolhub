@@ -34,14 +34,16 @@ export function Navbar() {
   const openAuthModal = useAuthStore((s) => s.openAuthModal);
   const toggleMobile = useSidebarStore((s) => s.toggleMobile);
   const openSearch = useSearchStore((s) => s.setOpen);
-  const { balance, syncFromServer } = useCreditStore();
+  const balance = useCreditStore((s) => s.balance);
+  const syncFromServer = useCreditStore((s) => s.syncFromServer);
 
-  // Sync credits from server once session is authenticated
+  // Sync credits from server once when session becomes authenticated
   useEffect(() => {
     if (status === "authenticated") {
       syncFromServer();
     }
-  }, [status, syncFromServer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-md px-4 gap-3 transition-colors duration-200 sticky top-0 z-30">

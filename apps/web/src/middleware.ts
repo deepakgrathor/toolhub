@@ -74,8 +74,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
+  // Admin login page: allow through, but redirect already-logged-in admins
+  if (pathname === "/admin/login") {
+    if (isAdmin) {
+      return NextResponse.redirect(new URL("/admin", req.url));
+    }
+    return response;
+  }
+
+  // All other /admin/* routes require admin role
   if (pathname.startsWith("/admin") && !isAdmin) {
-    return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.redirect(new URL("/admin/login", req.url));
   }
 
   return response;

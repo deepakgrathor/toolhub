@@ -20,6 +20,15 @@ const NAV_ITEMS = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
+  // Login page gets a clean centered layout without the sidebar
+  if (pathname === "/admin/login") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Admin sidebar */}
