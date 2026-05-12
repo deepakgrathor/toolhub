@@ -48,7 +48,7 @@ const UserSchema = new Schema<IUser>(
     },
     password: { type: String, select: false },
     image: { type: String },
-    mobile: { type: String, sparse: true, unique: true, default: null },
+    mobile: { type: String, sparse: true, unique: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     credits: { type: Number, default: 0, min: 0 },
     plan: {
