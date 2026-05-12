@@ -48,7 +48,9 @@
       "Bash(mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\\\(marketing\\)\\\\pricing\" && mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\\\(marketing\\)\\\\about\" && mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\\\(marketing\\)\\\\tools\" && mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\\\(marketing\\)\\\\kits\\\\[slug]\" && mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\public\\\\plans\" && mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\public\\\\tools\" && mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\user\\\\workspace\" && echo \"dirs created\")",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('version','not found'\\)\\)\")",
       "Bash(Get-ChildItem -Path \"F:\\\\2026\\\\AI_Project\\\\toolhub\" -Directory)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "Bash(xargs grep -l \"search\" -i)",
+      "Bash(xargs grep -l \"cmdk\\\\|CommandMenu\\\\|CommandPalette\\\\|useSearchStore\")"
     ]
   }
 }

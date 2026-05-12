@@ -22,7 +22,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "yt-script",
     name: "YT Script Writer",
-    description: "Generate engaging YouTube video scripts with AI — intro, body, and CTA included.",
+    description:
+      "Generate engaging YouTube video scripts with AI — intro, body, and CTA included.",
     category: "Content Creation",
     kits: ["creator"],
     isAI: true,
@@ -32,7 +33,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "blog-generator",
     name: "Blog Generator",
-    description: "Write SEO-optimised blog posts in seconds. Pick tone, length, and keywords.",
+    description:
+      "Write SEO-optimised blog posts in seconds. Pick tone, length, and keywords.",
     category: "Content Creation",
     kits: ["creator", "marketing"],
     isAI: true,
@@ -42,7 +44,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "thumbnail-ai",
     name: "Thumbnail AI",
-    description: "Generate eye-catching YouTube thumbnail ideas with AI-powered visuals.",
+    description:
+      "Generate eye-catching YouTube thumbnail ideas with AI-powered visuals.",
     category: "Content Creation",
     kits: ["creator"],
     isAI: true,
@@ -52,7 +55,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "title-generator",
     name: "Title Generator",
-    description: "Create click-worthy titles for videos, blogs, and social posts in one click.",
+    description:
+      "Create click-worthy titles for videos, blogs, and social posts in one click.",
     category: "Content Creation",
     kits: ["creator"],
     isAI: true,
@@ -62,7 +66,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "hook-writer",
     name: "Hook Writer",
-    description: "Write powerful opening hooks that grab attention instantly — free tool.",
+    description:
+      "Write powerful opening hooks that grab attention instantly — free tool.",
     category: "Content Creation",
     kits: ["creator"],
     isAI: false,
@@ -72,7 +77,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "caption-generator",
     name: "Caption Generator",
-    description: "Generate social media captions with hashtags in seconds — free tool.",
+    description:
+      "Generate social media captions with hashtags in seconds — free tool.",
     category: "Content Creation",
     kits: ["creator"],
     isAI: false,
@@ -84,7 +90,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "gst-invoice",
     name: "GST Invoice Generator",
-    description: "Create professional GST-compliant invoices instantly — free, no login required.",
+    description:
+      "Create professional GST-compliant invoices instantly — free, no login required.",
     category: "Business Documents",
     kits: ["sme"],
     isAI: false,
@@ -94,7 +101,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "expense-tracker",
     name: "Expense Tracker",
-    description: "Track and categorise business expenses, export to PDF or CSV — free tool.",
+    description:
+      "Track and categorise business expenses, export to PDF or CSV — free tool.",
     category: "Finance",
     kits: ["sme"],
     isAI: false,
@@ -104,7 +112,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "quotation-generator",
     name: "Quotation Generator",
-    description: "Generate branded quotations for clients in seconds — free tool.",
+    description:
+      "Generate branded quotations for clients in seconds — free tool.",
     category: "Business Documents",
     kits: ["sme"],
     isAI: false,
@@ -114,7 +123,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "website-generator",
     name: "Website Generator",
-    description: "AI builds a complete business website from your company details in minutes.",
+    description:
+      "AI builds a complete business website from your company details in minutes.",
     category: "Business Tools",
     kits: ["sme"],
     isAI: true,
@@ -124,7 +134,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "qr-generator",
     name: "QR Generator",
-    description: "Generate QR codes for URLs, payments, and contact details — free tool.",
+    description:
+      "Generate QR codes for URLs, payments, and contact details — free tool.",
     category: "Utilities",
     kits: ["sme"],
     isAI: false,
@@ -134,7 +145,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "whatsapp-bulk",
     name: "WhatsApp Bulk Message",
-    description: "Draft personalised bulk WhatsApp messages for your customer list using AI.",
+    description:
+      "Draft personalised bulk WhatsApp messages for your customer list using AI.",
     category: "Marketing",
     kits: ["sme", "marketing"],
     isAI: true,
@@ -144,9 +156,10 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "salary-slip",
     name: "Salary Slip Generator",
-    description: "Generate professional salary slips with all components — free tool.",
-    category: "Business Documents",
-    kits: ["sme"],
+    description:
+      "Generate professional salary slips with all components — free tool.",
+    category: "HR Documents",
+    kits: ["hr"],
     isAI: false,
     isFree: true,
     icon: "Banknote",
@@ -156,7 +169,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "resume-screener",
     name: "Resume Screener",
-    description: "AI screens resumes against your JD and ranks candidates with fit scores.",
+    description:
+      "AI screens resumes against your JD and ranks candidates with fit scores.",
     category: "Recruitment",
     kits: ["hr"],
     isAI: true,
@@ -166,7 +180,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "jd-generator",
     name: "JD Generator",
-    description: "Create detailed, unbiased job descriptions for any role using AI.",
+    description:
+      "Create detailed, unbiased job descriptions for any role using AI.",
     category: "Recruitment",
     kits: ["hr"],
     isAI: true,
@@ -176,7 +191,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "offer-letter",
     name: "Offer Letter Generator",
-    description: "Generate professional offer letters with all standard clauses — free tool.",
+    description:
+      "Generate professional offer letters with all standard clauses — free tool.",
     category: "HR Documents",
     kits: ["hr"],
     isAI: false,
@@ -186,7 +202,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "appraisal-draft",
     name: "Appraisal Draft",
-    description: "AI drafts fair, structured performance appraisal documents for employees.",
+    description:
+      "AI drafts fair, structured performance appraisal documents for employees.",
     category: "HR Documents",
     kits: ["hr"],
     isAI: true,
@@ -196,7 +213,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "policy-generator",
     name: "Policy Generator",
-    description: "Generate HR policy documents (leave, remote work, etc.) tailored to your org.",
+    description:
+      "Generate HR policy documents (leave, remote work, etc.) tailored to your org.",
     category: "HR Documents",
     kits: ["hr"],
     isAI: true,
@@ -208,7 +226,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "gst-calculator",
     name: "GST Calculator",
-    description: "Quickly calculate GST for any amount with all slabs — free tool.",
+    description:
+      "Quickly calculate GST for any amount with all slabs — free tool.",
     category: "Finance",
     kits: ["ca-legal"],
     isAI: false,
@@ -218,7 +237,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "tds-sheet",
     name: "TDS Sheet",
-    description: "Generate TDS deduction sheets for your employees or vendors — free tool.",
+    description:
+      "Generate TDS deduction sheets for your employees or vendors — free tool.",
     category: "Finance",
     kits: ["ca-legal"],
     isAI: false,
@@ -228,7 +248,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "legal-notice",
     name: "Legal Notice Draft",
-    description: "AI drafts legally sound notices for consumer, employment, or property matters.",
+    description:
+      "AI drafts legally sound notices for consumer, employment, or property matters.",
     category: "Legal",
     kits: ["ca-legal"],
     isAI: true,
@@ -238,7 +259,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "nda-generator",
     name: "NDA Generator",
-    description: "Generate a complete Non-Disclosure Agreement tailored to your requirements.",
+    description:
+      "Generate a complete Non-Disclosure Agreement tailored to your requirements.",
     category: "Legal",
     kits: ["ca-legal"],
     isAI: true,
@@ -248,7 +270,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "legal-disclaimer",
     name: "Legal Disclaimer",
-    description: "AI creates custom legal disclaimers for websites, apps, and documents.",
+    description:
+      "AI creates custom legal disclaimers for websites, apps, and documents.",
     category: "Legal",
     kits: ["ca-legal"],
     isAI: true,
@@ -260,7 +283,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "email-subject",
     name: "Email Subject Line",
-    description: "Generate high open-rate email subject lines for any campaign using AI.",
+    description:
+      "Generate high open-rate email subject lines for any campaign using AI.",
     category: "Marketing",
     kits: ["marketing"],
     isAI: true,
@@ -270,7 +294,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "linkedin-bio",
     name: "LinkedIn Bio",
-    description: "AI writes a compelling LinkedIn profile bio that gets you noticed.",
+    description:
+      "AI writes a compelling LinkedIn profile bio that gets you noticed.",
     category: "Marketing",
     kits: ["marketing"],
     isAI: true,
@@ -280,7 +305,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "seo-auditor",
     name: "SEO Website Auditor",
-    description: "Deep AI audit of your website — technical SEO, content gaps, and fixes.",
+    description:
+      "Deep AI audit of your website — technical SEO, content gaps, and fixes.",
     category: "Marketing",
     kits: ["marketing"],
     isAI: true,
@@ -290,7 +316,8 @@ const TOOLS: ToolSeed[] = [
   {
     slug: "ad-copy",
     name: "Ad Copy Writer",
-    description: "AI writes Google, Facebook, and Instagram ad copy that converts.",
+    description:
+      "AI writes Google, Facebook, and Instagram ad copy that converts.",
     category: "Marketing",
     kits: ["marketing"],
     isAI: true,
@@ -317,15 +344,30 @@ function cfg(
   aiModel = "",
   aiProvider = "",
   fallbackModel = "",
-  fallbackProvider = ""
+  fallbackProvider = "",
 ): ConfigSeed {
-  return { toolSlug, creditCost, isActive: true, aiModel, aiProvider, fallbackModel, fallbackProvider };
+  return {
+    toolSlug,
+    creditCost,
+    isActive: true,
+    aiModel,
+    aiProvider,
+    fallbackModel,
+    fallbackProvider,
+  };
 }
 
 const TOOL_CONFIGS: ConfigSeed[] = [
   // Free / no-AI tools
   cfg("hook-writer", 0, "gemini-flash-2.0", "google", "gpt-4o-mini", "openai"),
-  cfg("caption-generator", 0, "gemini-flash-2.0", "google", "gpt-4o-mini", "openai"),
+  cfg(
+    "caption-generator",
+    0,
+    "gemini-flash-2.0",
+    "google",
+    "gpt-4o-mini",
+    "openai",
+  ),
   cfg("gst-invoice", 0),
   cfg("expense-tracker", 0),
   cfg("quotation-generator", 0),
@@ -336,19 +378,75 @@ const TOOL_CONFIGS: ConfigSeed[] = [
   cfg("tds-sheet", 0),
 
   // 1 credit
-  cfg("title-generator", 1, "gemini-flash-2.0", "google", "gpt-4o-mini", "openai"),
-  cfg("email-subject", 1, "gemini-flash-2.0", "google", "gpt-4o-mini", "openai"),
-  cfg("whatsapp-bulk", 1, "gemini-flash-2.0", "google", "gpt-4o-mini", "openai"),
+  cfg(
+    "title-generator",
+    1,
+    "gemini-flash-2.0",
+    "google",
+    "gpt-4o-mini",
+    "openai",
+  ),
+  cfg(
+    "email-subject",
+    1,
+    "gemini-flash-2.0",
+    "google",
+    "gpt-4o-mini",
+    "openai",
+  ),
+  cfg(
+    "whatsapp-bulk",
+    1,
+    "gemini-flash-2.0",
+    "google",
+    "gpt-4o-mini",
+    "openai",
+  ),
 
   // 3 credits
-  cfg("blog-generator", 3, "claude-haiku-3-5", "anthropic", "gpt-4o-mini", "openai"),
-  cfg("resume-screener", 3, "claude-haiku-3-5", "anthropic", "gpt-4o-mini", "openai"),
+  cfg(
+    "blog-generator",
+    3,
+    "claude-haiku-3-5",
+    "anthropic",
+    "gpt-4o-mini",
+    "openai",
+  ),
+  cfg(
+    "resume-screener",
+    3,
+    "claude-haiku-3-5",
+    "anthropic",
+    "gpt-4o-mini",
+    "openai",
+  ),
   cfg("jd-generator", 3, "gpt-4o-mini", "openai", "gemini-flash-2.0", "google"),
-  cfg("appraisal-draft", 3, "claude-haiku-3-5", "anthropic", "gpt-4o-mini", "openai"),
-  cfg("policy-generator", 3, "claude-haiku-3-5", "anthropic", "gpt-4o-mini", "openai"),
+  cfg(
+    "appraisal-draft",
+    3,
+    "claude-haiku-3-5",
+    "anthropic",
+    "gpt-4o-mini",
+    "openai",
+  ),
+  cfg(
+    "policy-generator",
+    3,
+    "claude-haiku-3-5",
+    "anthropic",
+    "gpt-4o-mini",
+    "openai",
+  ),
   cfg("linkedin-bio", 3, "gpt-4o-mini", "openai", "gemini-flash-2.0", "google"),
   cfg("ad-copy", 3, "gpt-4o-mini", "openai", "gemini-flash-2.0", "google"),
-  cfg("legal-disclaimer", 3, "gpt-4o-mini", "openai", "gemini-flash-2.0", "google"),
+  cfg(
+    "legal-disclaimer",
+    3,
+    "gpt-4o-mini",
+    "openai",
+    "gemini-flash-2.0",
+    "google",
+  ),
 
   // 4 credits
   cfg("yt-script", 4, "claude-haiku-3-5", "anthropic", "gpt-4o-mini", "openai"),
@@ -360,21 +458,70 @@ const TOOL_CONFIGS: ConfigSeed[] = [
   cfg("seo-auditor", 8, "claude-sonnet-4-5", "anthropic", "gpt-4o", "openai"),
 
   // 10 credits
-  cfg("website-generator", 10, "claude-sonnet-4-5", "anthropic", "gpt-4o", "openai"),
+  cfg(
+    "website-generator",
+    10,
+    "claude-sonnet-4-5",
+    "anthropic",
+    "gpt-4o",
+    "openai",
+  ),
 
   // 12 credits
   cfg("legal-notice", 12, "claude-sonnet-4-5", "anthropic", "gpt-4o", "openai"),
-  cfg("nda-generator", 12, "claude-sonnet-4-5", "anthropic", "gpt-4o", "openai"),
+  cfg(
+    "nda-generator",
+    12,
+    "claude-sonnet-4-5",
+    "anthropic",
+    "gpt-4o",
+    "openai",
+  ),
 ];
 
 // ── CreditPack seed ─────────────────────────────────────────────────────────
 
 const CREDIT_PACKS = [
-  { name: "Try Pack", credits: 20, priceInr: 39, isFeatured: false, isActive: true, sortOrder: 1 },
-  { name: "Starter", credits: 60, priceInr: 99, isFeatured: false, isActive: true, sortOrder: 2 },
-  { name: "Popular", credits: 150, priceInr: 199, isFeatured: true, isActive: true, sortOrder: 3 },
-  { name: "Pro", credits: 400, priceInr: 449, isFeatured: false, isActive: true, sortOrder: 4 },
-  { name: "Enterprise", credits: 1200, priceInr: 999, isFeatured: false, isActive: true, sortOrder: 5 },
+  {
+    name: "Try Pack",
+    credits: 20,
+    priceInr: 39,
+    isFeatured: false,
+    isActive: true,
+    sortOrder: 1,
+  },
+  {
+    name: "Starter",
+    credits: 60,
+    priceInr: 99,
+    isFeatured: false,
+    isActive: true,
+    sortOrder: 2,
+  },
+  {
+    name: "Popular",
+    credits: 150,
+    priceInr: 199,
+    isFeatured: true,
+    isActive: true,
+    sortOrder: 3,
+  },
+  {
+    name: "Pro",
+    credits: 400,
+    priceInr: 449,
+    isFeatured: false,
+    isActive: true,
+    sortOrder: 4,
+  },
+  {
+    name: "Enterprise",
+    credits: 1200,
+    priceInr: 999,
+    isFeatured: false,
+    isActive: true,
+    sortOrder: 5,
+  },
 ];
 
 // ── SiteConfig seed ─────────────────────────────────────────────────────────
@@ -409,7 +556,7 @@ async function seed() {
     await ToolConfig.updateOne(
       { toolSlug: config.toolSlug },
       { $set: config },
-      { upsert: true }
+      { upsert: true },
     );
     configsUpserted++;
   }
@@ -419,7 +566,11 @@ async function seed() {
   console.log("💳 Seeding CreditPacks…");
   let packsUpserted = 0;
   for (const pack of CREDIT_PACKS) {
-    await CreditPack.updateOne({ name: pack.name }, { $set: pack }, { upsert: true });
+    await CreditPack.updateOne(
+      { name: pack.name },
+      { $set: pack },
+      { upsert: true },
+    );
     packsUpserted++;
   }
   console.log(`   ✅ ${packsUpserted} credit packs upserted\n`);
