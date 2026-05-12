@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { legalNoticeSchema, type LegalNoticeInput } from "./schema";
 import { legalNoticeConfig } from "./config";
 import { Gavel, Coins, Loader2, Copy, Download, AlertTriangle } from "lucide-react";
+import { SmartInput } from "@/components/ui/SmartInput";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { useAuthStore } from "@/store/auth-store";
@@ -57,6 +58,7 @@ export default function LegalNoticeTool({ creditCost: creditCostProp }: { credit
     handleSubmit,
     watch,
     setValue,
+    control,
     formState: { errors },
   } = useForm<LegalNoticeInput>({
     resolver: zodResolver(legalNoticeSchema),
@@ -156,14 +158,28 @@ export default function LegalNoticeTool({ creditCost: creditCostProp }: { credit
             <p className="text-sm font-semibold text-foreground">Sender (Your Details)</p>
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Name <span className="text-destructive">*</span></label>
-              <input {...register("senderName")} placeholder="Your full name or company name"
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition" />
+              <Controller
+                name="senderName"
+                control={control}
+                render={({ field }) => (
+                  <SmartInput field="businessName" value={field.value || ""} onChange={field.onChange}
+                    placeholder="Your full name or company name"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition" />
+                )}
+              />
               {errors.senderName && <p className="text-xs text-destructive">{errors.senderName.message}</p>}
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Address <span className="text-destructive">*</span></label>
-              <textarea {...register("senderAddress")} rows={2} placeholder="Complete address"
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition resize-none" />
+              <Controller
+                name="senderAddress"
+                control={control}
+                render={({ field }) => (
+                  <SmartInput field="address" value={field.value || ""} onChange={field.onChange}
+                    placeholder="Complete address"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition" />
+                )}
+              />
               {errors.senderAddress && <p className="text-xs text-destructive">{errors.senderAddress.message}</p>}
             </div>
           </div>

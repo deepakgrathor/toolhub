@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { linkedinBioSchema, type LinkedinBioInput } from "./schema";
 import { linkedinBioConfig } from "./config";
 import { Linkedin, Coins, Loader2, Copy, Check } from "lucide-react";
+import { SmartInput } from "@/components/ui/SmartInput";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { useAuthStore } from "@/store/auth-store";
@@ -71,6 +72,7 @@ export default function LinkedinBioTool({ creditCost: creditCostProp }: { credit
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<LinkedinBioInput>({
     resolver: zodResolver(linkedinBioSchema),
@@ -148,7 +150,15 @@ export default function LinkedinBioTool({ creditCost: creditCostProp }: { credit
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Name <span className="text-destructive">*</span></label>
-              <input {...register("name")} placeholder="e.g. Priya Sharma" className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition" />
+              <Controller
+                name="name"
+                control={control}
+                render={({ field }) => (
+                  <SmartInput field="ownerName" value={field.value || ""} onChange={field.onChange}
+                    placeholder="e.g. Priya Sharma"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition" />
+                )}
+              />
               {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
             <div className="space-y-1.5">

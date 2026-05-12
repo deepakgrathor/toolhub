@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { policyGeneratorSchema, type PolicyGeneratorInput } from "./schema";
 import { policyGeneratorConfig } from "./config";
 import { Shield, Coins, Loader2, Copy, Download } from "lucide-react";
+import { SmartInput } from "@/components/ui/SmartInput";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { useAuthStore } from "@/store/auth-store";
@@ -60,7 +61,7 @@ export default function PolicyGeneratorTool({ creditCost: creditCostProp }: { cr
   const [isGenerating, setIsGenerating] = useState(false);
   const [output, setOutput] = useState<PolicyOutput | null>(null);
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<PolicyGeneratorInput>({
+  const { register, handleSubmit, watch, setValue, control, formState: { errors } } = useForm<PolicyGeneratorInput>({
     resolver: zodResolver(policyGeneratorSchema),
     defaultValues: { policyType: "leave-policy", companySize: "small" },
   });
@@ -147,7 +148,15 @@ export default function PolicyGeneratorTool({ creditCost: creditCostProp }: { cr
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">Company Name <span className="text-destructive">*</span></label>
-            <input {...register("companyName")} placeholder="e.g. SetuLabsAI Pvt. Ltd." className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition" />
+            <Controller
+              name="companyName"
+              control={control}
+              render={({ field }) => (
+                <SmartInput field="businessName" value={field.value || ""} onChange={field.onChange}
+                  placeholder="e.g. SetuLabsAI Pvt. Ltd."
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition" />
+              )}
+            />
             {errors.companyName && <p className="text-xs text-destructive">{errors.companyName.message}</p>}
           </div>
 

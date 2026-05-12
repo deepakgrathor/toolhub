@@ -5,6 +5,7 @@ import { ClipboardList, Plus, Trash2, Download, RotateCcw, Info } from "lucide-r
 import { quotationGeneratorConfig } from "./config";
 import { amountToWords, fmtInr } from "@/lib/utils";
 import { printDocument } from "@/lib/print-pdf";
+import { SmartInput } from "@/components/ui/SmartInput";
 
 interface Party {
   name: string;
@@ -121,12 +122,12 @@ export default function QuotationGeneratorTool({ creditCost: _c }: { creditCost?
           <h2 className="text-sm font-semibold text-foreground border-b border-border pb-2">From (Your Details)</h2>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Your Name" required><input className={inputCls} placeholder="Rahul Sharma" value={from.name} onChange={e => updateFrom("name", e.target.value)} /></Field>
-            <Field label="Company"><input className={inputCls} placeholder="Your Company" value={from.company} onChange={e => updateFrom("company", e.target.value)} /></Field>
+            <Field label="Company"><SmartInput field="businessName" className={inputCls} placeholder="Your Company" value={from.company} onChange={v => updateFrom("company", v)} /></Field>
           </div>
-          <Field label="Address"><textarea className={inputCls + " resize-none"} rows={2} value={from.address} onChange={e => updateFrom("address", e.target.value)} /></Field>
+          <Field label="Address"><SmartInput field="address" className={inputCls} placeholder="Street, City, PIN" value={from.address} onChange={v => updateFrom("address", v)} /></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Phone"><input className={inputCls} placeholder="98XXXXXXXX" value={from.phone} onChange={e => updateFrom("phone", e.target.value)} /></Field>
-            <Field label="Email"><input className={inputCls} type="email" placeholder="you@company.com" value={from.email} onChange={e => updateFrom("email", e.target.value)} /></Field>
+            <Field label="Phone"><SmartInput field="phone" className={inputCls} placeholder="98XXXXXXXX" value={from.phone} onChange={v => updateFrom("phone", v)} /></Field>
+            <Field label="Email"><SmartInput field="email" className={inputCls} placeholder="you@company.com" value={from.email} onChange={v => updateFrom("email", v)} /></Field>
           </div>
         </section>
 

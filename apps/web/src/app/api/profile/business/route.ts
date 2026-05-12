@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectDB, User, BusinessProfile } from "@toolhub/db";
 import { calculateProfileScore } from "@/lib/profile-score";
+import { getRedis } from "@toolhub/shared";
 
 export async function PATCH(req: NextRequest) {
   const session = await auth();
@@ -34,6 +35,13 @@ export async function PATCH(req: NextRequest) {
 
   const score = calculateProfileScore(user, updatedBusiness);
   await User.findByIdAndUpdate(session.user.id, { profileScore: score });
+
+  try {
+    const redis = getRedis();
+    await redis.del(`autofill:${session.user.id}`);
+  } catch {
+    // silent
+  }
 
   return NextResponse.json({ ok: true, score });
 }

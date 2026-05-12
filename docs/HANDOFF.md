@@ -1,8 +1,63 @@
 # Handoff Note
-Updated: 2026-05-13 | Account: B | Session: #5 | Multi-profession + Recommendations + Sidebar redesign
+Updated: 2026-05-13 | Account: B | Session: B2 | Smart Autofill System
 
 ## Where We Are
-Session B5 done. **TypeScript: 0 errors.** Committed to main.
+Session B2 done. **TypeScript: 0 errors.** Committed to master.
+
+---
+
+## What Was Done (Session B2)
+
+### Smart Autofill System
+
+**New file** `apps/web/src/lib/autofill.ts`:
+- `AutofillData` type: `businessName, email, phone, address, gstNumber, gstState, ownerName` (all nullable strings).
+
+**New API** `apps/web/src/app/api/user/autofill/route.ts`:
+- GET, auth required.
+- Fetches User (name, email) + BusinessProfile for current user.
+- Merges into `AutofillData` shape (businessAddress → address).
+- Redis cache: key `autofill:{userId}`, TTL 30 minutes.
+- Returns `{ data: AutofillData }`.
+
+**New hook** `apps/web/src/hooks/useAutofill.ts`:
+- Module-level cache (`_cache`, `_fetching`, `_callbacks`) prevents multiple API calls per page.
+- Per-user cache invalidation when session userId changes.
+- Returns `{ data: AutofillData | null, isLoading: boolean }`.
+- If unauthenticated: returns `{ data: null, isLoading: false }` immediately.
+
+**New component** `apps/web/src/components/ui/SmartInput.tsx`:
+- `field: keyof AutofillData` — which autofill field to suggest.
+- On focus: if profile value exists → shows animated dropdown (Framer Motion).
+- Dropdown: Row 1 = profile suggestion (Building2 icon + click to fill), Row 2 = "Use a different value" (Plus icon), Row 3 = temp input with CheckCheck confirm.
+- Temp value is session-only, never written to DB.
+- Close on: outside click, Escape key, after selection.
+- No dropdown if no profile value (normal input behavior).
+
+**Cache invalidation** in profile PATCH routes:
+- `apps/web/src/app/api/profile/personal/route.ts` → deletes `autofill:{userId}` from Redis after update.
+- `apps/web/src/app/api/profile/business/route.ts` → same.
+
+**Applied SmartInput to 8 tools:**
+
+| Tool | Fields |
+|------|--------|
+| gst-invoice | seller.name→businessName, seller.gstin→gstNumber, seller.state→gstState, seller.address→address |
+| quotation-generator | from.company→businessName, from.address→address, from.phone→phone, from.email→email |
+| legal-notice | senderName→businessName, senderAddress→address (via Controller) |
+| nda-generator | partyAName→businessName, partyAAddress→address (via Controller) |
+| offer-letter | company.name→businessName, company.address→address |
+| salary-slip | company.name→businessName, company.address→address |
+| policy-generator | companyName→businessName (via Controller) |
+| linkedin-bio | name→ownerName (via Controller) |
+
+Notes:
+- appraisal-draft, whatsapp-bulk, jd-generator: no matching form fields for the specified autofill fields — skipped, forms unchanged.
+- RHF tools use `Controller` from react-hook-form for proper field registration + validation.
+- gst-invoice: gstState was a `<select>` — replaced with SmartInput text input.
+- address fields (was `<textarea>`) → SmartInput (text input). Form logic and submission unaffected.
+
+---
 
 ---
 

@@ -5,6 +5,7 @@ import { Receipt, Plus, Trash2, Download, RotateCcw, Info } from "lucide-react";
 import { gstInvoiceConfig } from "./config";
 import { amountToWords, fmtInr, INDIAN_STATES } from "@/lib/utils";
 import { printDocument } from "@/lib/print-pdf";
+import { SmartInput } from "@/components/ui/SmartInput";
 
 interface Party {
   name: string;
@@ -129,19 +130,17 @@ export default function GstInvoiceTool({ creditCost: _c }: { creditCost?: number
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground border-b border-border pb-2">Seller Details</h2>
           <Field label="Business Name" required>
-            <input className={inputCls} placeholder="Your Company Pvt Ltd" value={seller.name} onChange={e => updateSeller("name", e.target.value)} />
+            <SmartInput field="businessName" className={inputCls} placeholder="Your Company Pvt Ltd" value={seller.name} onChange={v => updateSeller("name", v)} />
           </Field>
           <Field label="GSTIN">
-            <input className={inputCls} placeholder="22AAAAA0000A1Z5" value={seller.gstin} onChange={e => updateSeller("gstin", e.target.value.toUpperCase())} maxLength={15} />
+            <SmartInput field="gstNumber" className={inputCls} placeholder="22AAAAA0000A1Z5" value={seller.gstin} onChange={v => updateSeller("gstin", v.toUpperCase())} maxLength={15} />
           </Field>
           <Field label="Address">
-            <textarea className={inputCls + " resize-none"} rows={2} placeholder="Street, City, PIN" value={seller.address} onChange={e => updateSeller("address", e.target.value)} />
+            <SmartInput field="address" className={inputCls} placeholder="Street, City, PIN" value={seller.address} onChange={v => updateSeller("address", v)} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="State">
-              <select className={selectCls} value={seller.state} onChange={e => updateSeller("state", e.target.value)}>
-                {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <SmartInput field="gstState" className={inputCls} placeholder="e.g. Maharashtra" value={seller.state} onChange={v => updateSeller("state", v)} />
             </Field>
             <Field label="Phone">
               <input className={inputCls} placeholder="98XXXXXXXX" value={seller.phone} onChange={e => updateSeller("phone", e.target.value)} />

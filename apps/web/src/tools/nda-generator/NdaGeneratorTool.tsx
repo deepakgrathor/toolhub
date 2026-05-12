@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ndaGeneratorSchema, type NdaGeneratorInput } from "./schema";
 import { ndaGeneratorConfig } from "./config";
 import { Lock, Coins, Loader2, Copy, Download, AlertTriangle } from "lucide-react";
+import { SmartInput } from "@/components/ui/SmartInput";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { useAuthStore } from "@/store/auth-store";
@@ -56,6 +57,7 @@ export default function NdaGeneratorTool({ creditCost: creditCostProp }: { credi
     handleSubmit,
     watch,
     setValue,
+    control,
     formState: { errors },
   } = useForm<NdaGeneratorInput>({
     resolver: zodResolver(ndaGeneratorSchema),
@@ -156,14 +158,28 @@ export default function NdaGeneratorTool({ creditCost: creditCostProp }: { credi
             </p>
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Name <span className="text-destructive">*</span></label>
-              <input {...register("partyAName")} placeholder="Full name or company name"
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition" />
+              <Controller
+                name="partyAName"
+                control={control}
+                render={({ field }) => (
+                  <SmartInput field="businessName" value={field.value || ""} onChange={field.onChange}
+                    placeholder="Full name or company name"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition" />
+                )}
+              />
               {errors.partyAName && <p className="text-xs text-destructive">{errors.partyAName.message}</p>}
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Address <span className="text-destructive">*</span></label>
-              <textarea {...register("partyAAddress")} rows={2} placeholder="Complete address"
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition resize-none" />
+              <Controller
+                name="partyAAddress"
+                control={control}
+                render={({ field }) => (
+                  <SmartInput field="address" value={field.value || ""} onChange={field.onChange}
+                    placeholder="Complete address"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition" />
+                )}
+              />
               {errors.partyAAddress && <p className="text-xs text-destructive">{errors.partyAAddress.message}</p>}
             </div>
           </div>

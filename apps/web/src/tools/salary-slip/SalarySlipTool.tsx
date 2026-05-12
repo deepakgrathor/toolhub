@@ -5,6 +5,7 @@ import { Banknote, Download, RotateCcw, Info } from "lucide-react";
 import { salarySlipConfig } from "./config";
 import { amountToWords, fmtInr } from "@/lib/utils";
 import { printDocument } from "@/lib/print-pdf";
+import { SmartInput } from "@/components/ui/SmartInput";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
@@ -94,8 +95,8 @@ export default function SalarySlipTool({ creditCost: _c }: { creditCost?: number
         {/* Company */}
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground border-b border-border pb-2">Company Info</h2>
-          <Field label="Company Name" required><input className={inputCls} placeholder="Acme Technologies Pvt Ltd" value={company.name} onChange={e => setCompany(p => ({ ...p, name: e.target.value }))} /></Field>
-          <Field label="Address"><textarea className={inputCls + " resize-none"} rows={2} placeholder="Company address" value={company.address} onChange={e => setCompany(p => ({ ...p, address: e.target.value }))} /></Field>
+          <Field label="Company Name" required><SmartInput field="businessName" className={inputCls} placeholder="Acme Technologies Pvt Ltd" value={company.name} onChange={v => setCompany(p => ({ ...p, name: v }))} /></Field>
+          <Field label="Address"><SmartInput field="address" className={inputCls} placeholder="Company address" value={company.address} onChange={v => setCompany(p => ({ ...p, address: v }))} /></Field>
         </section>
 
         {/* Employee */}

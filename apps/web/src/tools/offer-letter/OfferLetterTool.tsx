@@ -5,6 +5,7 @@ import { Mail, Download, RotateCcw, Info } from "lucide-react";
 import { offerLetterConfig } from "./config";
 import { fmtInr } from "@/lib/utils";
 import { printDocument } from "@/lib/print-pdf";
+import { SmartInput } from "@/components/ui/SmartInput";
 
 const WORK_TYPES = ["Full-time", "Part-time", "Contract"] as const;
 const PROBATIONS = ["None", "3 months", "6 months"] as const;
@@ -96,8 +97,8 @@ export default function OfferLetterTool({ creditCost: _c }: { creditCost?: numbe
         {/* Company */}
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground border-b border-border pb-2">Company Details</h2>
-          <Field label="Company Name" required><input className={inputCls} placeholder="Acme Technologies Pvt Ltd" value={company.name} onChange={e => setCompany(p => ({ ...p, name: e.target.value }))} /></Field>
-          <Field label="Address"><textarea className={inputCls + " resize-none"} rows={2} value={company.address} onChange={e => setCompany(p => ({ ...p, address: e.target.value }))} /></Field>
+          <Field label="Company Name" required><SmartInput field="businessName" className={inputCls} placeholder="Acme Technologies Pvt Ltd" value={company.name} onChange={v => setCompany(p => ({ ...p, name: v }))} /></Field>
+          <Field label="Address"><SmartInput field="address" className={inputCls} placeholder="Company address" value={company.address} onChange={v => setCompany(p => ({ ...p, address: v }))} /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="HR Name"><input className={inputCls} placeholder="Priya Verma" value={company.hrName} onChange={e => setCompany(p => ({ ...p, hrName: e.target.value }))} /></Field>
             <Field label="HR Designation"><input className={inputCls} value={company.hrDesignation} onChange={e => setCompany(p => ({ ...p, hrDesignation: e.target.value }))} /></Field>
