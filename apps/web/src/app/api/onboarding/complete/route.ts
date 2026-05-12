@@ -88,14 +88,17 @@ export async function POST(req: NextRequest) {
     { upsert: true, new: true }
   );
 
-  // Invalidate user cache
+  // Invalidate user + workspace cache
   try {
     const redis = getRedis();
-    await redis.del(`SetuLix:user:${session.user.id}`);
+    await Promise.all([
+      redis.del(`SetuLix:user:${session.user.id}`),
+      redis.del(`workspace:${session.user.id}`),
+    ]);
   } catch {
     // silent
   }
 
   void challenge; // stored on user model if needed in future
-  return NextResponse.json({ redirectTo: "/dashboard" });
+  return NextResponse.json({ success: true, updateSession: true });
 }

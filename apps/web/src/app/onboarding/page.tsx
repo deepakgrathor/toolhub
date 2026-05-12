@@ -135,7 +135,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
 
   const [step, setStep] = useState(1);
   const [profession, setProfession] = useState("");
@@ -198,8 +198,9 @@ export default function OnboardingPage() {
         body: JSON.stringify({ profession, teamSize, challenge, kitName }),
       });
       if (res.ok) {
-        // Force a full page reload so NextAuth JWT is refreshed with onboardingCompleted=true
-        window.location.href = "/dashboard";
+        // Update JWT in-place so middleware sees onboardingCompleted=true immediately
+        await update({ onboardingCompleted: true });
+        router.push("/dashboard");
       }
     } catch {
       setSubmitting(false);

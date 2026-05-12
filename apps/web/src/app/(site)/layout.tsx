@@ -1,4 +1,4 @@
-import { Sidebar } from "@/components/layout/sidebar";
+import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { connectDB, SiteConfig } from "@toolhub/db";

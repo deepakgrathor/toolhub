@@ -70,7 +70,7 @@ function PasswordStrength({ password }: { password: string }) {
             key={i}
             className={cn(
               "h-1 flex-1 rounded-full transition-colors duration-200",
-              i < passed ? color : "bg-white/10"
+              i < passed ? color : "bg-muted"
             )}
           />
         ))}
@@ -365,7 +365,7 @@ export function AuthModal() {
         <Dialog.Content
           className={cn(
             "fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2",
-            "rounded-xl border border-border bg-[#111111] p-6 shadow-2xl focus:outline-none",
+            "rounded-xl border border-border bg-card p-6 shadow-2xl focus:outline-none",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
             "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
@@ -399,7 +399,7 @@ export function AuthModal() {
 
           {/* Mode tabs — hidden during OTP step */}
           {signupStep === "form" && (
-            <div className="mb-5 flex rounded-lg bg-background p-1">
+            <div className="mb-5 flex rounded-lg bg-muted p-1">
               <button
                 type="button"
                 onClick={() => switchMode("login")}

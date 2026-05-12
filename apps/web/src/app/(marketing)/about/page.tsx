@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Logo } from "@/components/brand/Logo";
-import { Footer } from "@/components/brand/Footer";
 import { BRAND } from "@toolhub/shared";
+import { useAuthStore } from "@/store/auth-store";
+import AboutCTA from "./AboutCTA";
 
 export const metadata: Metadata = {
   title: `About ${BRAND.name} | ${BRAND.company}`,
@@ -27,26 +26,13 @@ export default function AboutPage() {
     <div className="min-h-screen bg-background">
       {/* Hero */}
       <section className="border-b border-border py-16 px-6 text-center">
-        <div className="flex justify-center mb-6">
-          <Logo size="lg" showSubtext href="/" />
-        </div>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+        <h1 className="text-4xl font-bold text-foreground mb-3">
+          About <span className="text-primary">SetuLix</span>
+        </h1>
+        <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-8">
           {BRAND.tagline}
         </p>
-        <div className="flex items-center justify-center gap-4 mt-8">
-          <Link
-            href="/dashboard"
-            className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
-          >
-            Try {BRAND.name} Free
-          </Link>
-          <Link
-            href="/pricing"
-            className="rounded-lg border border-border px-6 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
-          >
-            Buy Credits
-          </Link>
-        </div>
+        <AboutCTA />
       </section>
 
       <div className="max-w-4xl mx-auto px-6 py-16 space-y-16">
@@ -107,31 +93,7 @@ export default function AboutPage() {
             ))}
           </div>
         </section>
-
-        {/* CTA */}
-        <section className="rounded-2xl border border-border bg-card p-8 text-center">
-          <h2 className="text-xl font-bold text-foreground mb-2">Ready to get started?</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Join thousands of Indian businesses using {BRAND.name}.
-          </p>
-          <div className="flex items-center justify-center gap-4">
-            <Link
-              href="/dashboard"
-              className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
-            >
-              Try Free →
-            </Link>
-            <Link
-              href="/pricing"
-              className="rounded-lg border border-border px-6 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
-            >
-              Buy Credits →
-            </Link>
-          </div>
-        </section>
       </div>
-
-      <Footer />
     </div>
   );
 }

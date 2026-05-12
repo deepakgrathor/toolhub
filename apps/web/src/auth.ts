@@ -48,7 +48,7 @@ const config: NextAuthConfig = {
   ],
 
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
       if (account && user) {
         if (account.provider === "google") {
           await connectDB();
@@ -98,6 +98,10 @@ const config: NextAuthConfig = {
           token.image = user.image ?? null;
           token.onboardingCompleted = user.onboardingCompleted ?? false;
         }
+      }
+      // Allow onboarding page to update session without re-login
+      if (trigger === "update" && (session as { onboardingCompleted?: boolean })?.onboardingCompleted !== undefined) {
+        token.onboardingCompleted = (session as { onboardingCompleted: boolean }).onboardingCompleted;
       }
       return token;
     },
