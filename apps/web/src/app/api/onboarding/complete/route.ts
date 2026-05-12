@@ -57,6 +57,14 @@ export async function POST(req: NextRequest) {
   // ── Credit release on onboarding complete ──────────────────────────────────
   await releaseOnboardingCredits(session.user.id, session.user.name ?? "");
 
+  // TODO(B5-B): Once Razorpay/Cashfree webhook route is created at
+  // apps/web/src/app/api/payments/webhook/route.ts, call createNotification
+  // there on successful purchase:
+  //   createNotification({ userId, type: 'purchase_success',
+  //     title: 'Purchase Successful',
+  //     message: `${credits} credits added to your account`,
+  //     meta: { credits, orderId } })
+
   // Invalidate user + workspace cache
   try {
     const redis = getRedis();

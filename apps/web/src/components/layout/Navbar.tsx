@@ -11,6 +11,7 @@ import { useSidebarStore } from "@/store/sidebar-store";
 import { useSearchStore } from "@/store/search-store";
 import { useCreditStore } from "@/store/credits-store";
 import { UserDropdown } from "./UserDropdown";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -104,6 +105,8 @@ export function Navbar() {
                 {balance}
               </span>
             </Link>
+
+            <NotificationBell />
 
             <ThemeToggle />
 

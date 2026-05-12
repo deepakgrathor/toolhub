@@ -1,8 +1,8 @@
 # Handoff Note
-Updated: 2026-05-13 | Account: B | Session: B5-A | Refer & Earn System
+Updated: 2026-05-13 | Account: B | Session: B5-B | Notification Center + Admin Push
 
 ## Where We Are
-Session B5-A done. **TypeScript: 0 errors.** Committed to master.
+Session B5-B done. **TypeScript: 0 errors.** Committed to master.
 
 ---
 
@@ -59,6 +59,52 @@ Session B5-A done. **TypeScript: 0 errors.** Committed to master.
 **Middleware** updated: `/refer` added to APP_ROUTES, `/api/referral` added to always-public prefixes
 
 ---
+
+---
+
+## What Was Done (Session B5-B)
+
+### Notification Center + Admin Push System
+
+**Notifications API (User):**
+- `GET /api/user/notifications` — fetch 10 newest, returns `{ notifications, unreadCount }`
+- `PATCH /api/user/notifications` — mark all as read
+- `PATCH /api/user/notifications/[id]` — mark single as read
+
+**Zustand Notification Store** (`apps/web/src/store/notification-store.ts`):
+- `useNotificationStore` — `notifications`, `unreadCount`, `setNotifications`, `markRead`, `markAllRead`, `addNotification`
+
+**NotificationBell Component** (`apps/web/src/components/ui/NotificationBell.tsx`):
+- Polls `GET /api/user/notifications` on mount + every 30s
+- Bell icon with purple badge (count ≤9 shows number, >9 shows "9+")
+- Framer Motion animated dropdown (320px wide, max-h 400px scrollable)
+- Header: "Notifications" + "Mark all read" (visible when unread > 0)
+- Each item: type icon + title + message (2-line clamp) + relative time
+- Unread: `bg-accent/5 border-l-2 border-primary` highlight
+- Icon map: `referral_joined`→UserPlus(green), `credit_added`→Coins(purple), `purchase_success`→ShoppingBag(blue), `admin_push`→Megaphone(orange)
+- Empty state: BellOff icon + "No notifications yet"
+- Click outside closes dropdown
+
+**Navbar** (`apps/web/src/components/layout/Navbar.tsx`):
+- `<NotificationBell />` added between credits badge and theme toggle (authenticated users only)
+
+**Purchase notification TODO:**
+- Payment webhook doesn't exist yet — TODO comment added in `api/onboarding/complete/route.ts`
+- When Razorpay/Cashfree webhook is built at `apps/web/src/app/api/payments/webhook/route.ts`, call `createNotification({ type: 'purchase_success', ... })` on successful payment
+
+**Admin Push Notification APIs:**
+- `POST /api/admin/notifications/push` — admin auth required
+  - `target: 'all'` → batch `insertMany` all user docs (best-effort, ordered:false)
+  - `target: 'specific'` → lookup by email, create single notification
+  - Returns `{ success: true, sent: number }`
+- `GET /api/admin/notifications/recent` — last 20 `admin_push` notifications
+
+**Admin Notifications Page** (`apps/web/src/app/admin/notifications/page.tsx`):
+- Section 1: Send form — target radio (All Users / Specific User), email input (conditional), title (max 60), message textarea (max 200), send button with loading state + success/error feedback
+- Section 2: Recent Pushes table — Target (userId suffix), Title, Message, Sent At columns
+
+**Admin Sidebar** (`apps/web/src/app/admin/layout.tsx`):
+- Added "Notifications" link (Megaphone icon) between Referrals and Audit Log
 
 ---
 
