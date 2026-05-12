@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   ChevronLeft, ChevronRight,
@@ -154,7 +154,6 @@ function SidebarContent({
   onClose?: () => void;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { data: session } = useSession();
   const { kitName, kitTools, addedTools, initialized } = useWorkspaceStore();
 
@@ -296,20 +295,18 @@ function SidebarContent({
         <div className="border-t border-border px-2 py-3 space-y-0.5 shrink-0">
           <CreditsWidget isCollapsed={isCollapsed} />
 
-          <button
-            onClick={() => {
-              onClose?.();
-              router.push("/dashboard#referral");
-            }}
+          <Link
+            href="/refer"
+            onClick={onClose}
             title={isCollapsed ? "Refer & Earn" : undefined}
             className={cn(
-              "sidebar-link w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
+              "sidebar-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
               isCollapsed && "justify-center"
             )}
           >
             <Gift className="h-[18px] w-[18px] shrink-0" />
             {!isCollapsed && <span>Refer &amp; Earn</span>}
-          </button>
+          </Link>
 
           <button
             onClick={() => signOut({ callbackUrl: "/" })}

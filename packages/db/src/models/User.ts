@@ -32,6 +32,8 @@ export interface IUser extends Document {
   selectedTools: string[];
   // Profile completion
   profileScore: number;
+  // Referral
+  welcomeCreditGiven: boolean;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -76,6 +78,8 @@ const UserSchema = new Schema<IUser>(
     selectedTools: [{ type: String }],
     // Profile completion
     profileScore: { type: Number, default: 0 },
+    // Referral
+    welcomeCreditGiven: { type: Boolean, default: false },
     authProvider: {
       type: String,
       enum: ["google", "email"],

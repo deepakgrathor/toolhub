@@ -66,7 +66,7 @@ export class CreditService {
   static async addCredits(
     userId: string,
     amount: number,
-    type: "purchase" | "referral_bonus" | "refund" | "manual_admin",
+    type: "purchase" | "referral_bonus" | "referral_reward" | "welcome_bonus" | "refund" | "manual_admin",
     meta?: object
   ): Promise<{ newBalance: number; transaction: ICreditTransaction }> {
     const session = await mongoose.startSession();

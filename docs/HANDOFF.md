@@ -1,8 +1,64 @@
 # Handoff Note
-Updated: 2026-05-13 | Account: B | Session: B2 | Smart Autofill System
+Updated: 2026-05-13 | Account: B | Session: B5-A | Refer & Earn System
 
 ## Where We Are
-Session B2 done. **TypeScript: 0 errors.** Committed to master.
+Session B5-A done. **TypeScript: 0 errors.** Committed to master.
+
+---
+
+## What Was Done (Session B5-A)
+
+### Refer & Earn System (B5-A)
+
+**New DB Models:**
+- `packages/db/src/models/Referral.ts` — `referrals` collection: referrerId, referredId, refCode, status (pending/completed/suspicious), referrerCredit, referredCredit, signupIP, completedAt
+- `packages/db/src/models/Notification.ts` — `notifications` collection: userId, type, title, message, isRead, meta; max 10 per user (oldest pruned)
+
+**User model** (`packages/db/src/models/User.ts`):
+- Added `welcomeCreditGiven: Boolean default false`
+
+**CreditTransaction** enum extended with: `referral_reward`, `welcome_bonus`
+
+**Signup flow** (`apps/web/src/app/api/auth/signup/route.ts`):
+- New users start with 0 credits (credits given at onboarding complete)
+- If `ref` cookie present: creates Referral doc with status=pending instead of immediately crediting
+- Self-referral block (referrer._id === newUserId → silently ignored)
+- Anti-spam: 5+ signups from same IP with same refCode in 1 hour → status='suspicious'
+
+**Onboarding complete** (`apps/web/src/app/api/onboarding/complete/route.ts`):
+- If pending Referral exists: credits both referred user (+10) and referrer (+10), marks referral completed, sends notifications to both
+- If no referral: gives welcome bonus (+10) once (welcomeCreditGiven guard)
+- Invalidates `balance:{userId}` Redis cache for both users
+
+**Notification helper** (`apps/web/src/lib/notifications.ts`):
+- `createNotification({ userId, type, title, message, meta? })`
+- Prunes to max 10 notifications per user after each insert
+
+**Referral cookie capture** (`apps/web/src/app/api/referral/capture/route.ts`):
+- GET /api/referral/capture?ref=CODE → sets `ref` httpOnly cookie, 30-day TTL
+- Middleware also sets this cookie directly for ?ref= URLs
+
+**Refer page** (`apps/web/src/app/(site)/refer/page.tsx`):
+- Shows refLink (setulix.com?ref=CODE), copy button
+- Stats: Total Referrals | Successful | Credits Earned
+- Recent referrals list with partial names + status badge
+- Data from GET /api/user/referrals
+
+**Admin referrals panel** (`apps/web/src/app/admin/referrals/page.tsx`):
+- Table: Referrer | Referred User | Status | Date | Actions
+- Filter by: all / pending / completed / suspicious
+- Suspicious rows highlighted in amber
+- Approve action: releases credits to both + marks completed
+- Reject action: deletes referral doc
+- APIs: GET /api/admin/referrals, POST /api/admin/referrals/[id]/approve, POST /api/admin/referrals/[id]/reject
+
+**Admin sidebar** updated with Referrals link (Gift icon)
+
+**App sidebar** Refer & Earn button now navigates to `/refer` page
+
+**Middleware** updated: `/refer` added to APP_ROUTES, `/api/referral` added to always-public prefixes
+
+---
 
 ---
 

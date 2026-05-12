@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { createHash } from "crypto";
-import { connectDB, User, OtpToken, applyReferral } from "@toolhub/db";
+import { connectDB, User, OtpToken, Referral } from "@toolhub/db";
 import { generateReferralCode } from "@toolhub/shared";
 import { z } from "zod";
-import { FREE_CREDITS_ON_SIGNUP } from "@toolhub/shared";
 import { createRateLimit } from "@/lib/rate-limit";
 
 const signupLimiter = createRateLimit({ windowMs: 3_600_000, max: 5 });
@@ -86,22 +85,59 @@ export async function POST(req: NextRequest) {
         password: hashed,
         authProvider: "email",
         role: "user",
-        credits: FREE_CREDITS_ON_SIGNUP,
+        credits: 0,
         referralCode,
         lastSeen: new Date(),
       }),
       OtpToken.deleteMany({ email }),
     ]);
 
-    // Apply referral bonus if ref cookie present
+    // Handle referral cookie — create pending Referral doc (credits release on onboarding complete)
     const refCode = req.cookies.get("ref")?.value;
     if (refCode) {
-      await applyReferral(newUser._id.toString(), refCode);
+      await createPendingReferral(newUser._id.toString(), refCode, ip);
     }
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (err) {
     console.error("[signup]", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+async function createPendingReferral(
+  newUserId: string,
+  refCode: string,
+  signupIP: string
+): Promise<void> {
+  try {
+    const referrer = await User.findOne({ referralCode: refCode }).select("_id referralCode");
+    if (!referrer) return;
+
+    // Self-referral block
+    if (referrer._id.toString() === newUserId) return;
+
+    // Anti-spam: 5+ signups from same IP in last hour → suspicious
+    const oneHourAgo = new Date(Date.now() - 3_600_000);
+    const recentFromIP = await Referral.countDocuments({
+      refCode,
+      signupIP,
+      createdAt: { $gte: oneHourAgo },
+    });
+
+    const isSuspicious = recentFromIP >= 4; // this new one will be the 5th+
+
+    await User.findByIdAndUpdate(newUserId, { referredBy: referrer._id });
+
+    await Referral.create({
+      referrerId: referrer._id,
+      referredId: newUserId,
+      refCode,
+      status: isSuspicious ? "suspicious" : "pending",
+      signupIP,
+    });
+  } catch (err) {
+    // Silent fail — never break signup on referral error
+    console.error("[createPendingReferral]", err);
   }
 }

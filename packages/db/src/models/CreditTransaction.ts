@@ -3,7 +3,7 @@ import type { Types } from "mongoose";
 
 export interface ICreditTransaction extends Document {
   userId: Types.ObjectId;
-  type: "purchase" | "use" | "refund" | "referral_bonus" | "manual_admin";
+  type: "purchase" | "use" | "refund" | "referral_bonus" | "referral_reward" | "welcome_bonus" | "manual_admin";
   amount: number;
   balanceAfter: number;
   toolSlug?: string;
@@ -16,7 +16,7 @@ const CreditTransactionSchema = new Schema<ICreditTransaction>(
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     type: {
       type: String,
-      enum: ["purchase", "use", "refund", "referral_bonus", "manual_admin"],
+      enum: ["purchase", "use", "refund", "referral_bonus", "referral_reward", "welcome_bonus", "manual_admin"],
       required: true,
     },
     amount: { type: Number, required: true },

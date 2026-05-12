@@ -11,6 +11,7 @@ const ALWAYS_PUBLIC_PREFIXES = [
   "/api/onboarding",
   "/api/public",
   "/api/auth",
+  "/api/referral",
   "/api/admin-auth",
   "/maintenance",
   "/_next",
@@ -20,7 +21,7 @@ const ALWAYS_PUBLIC_PREFIXES = [
 ];
 
 // App routes that require an authenticated session
-const APP_ROUTES = ["/dashboard", "/profile", "/explore", "/history"];
+const APP_ROUTES = ["/dashboard", "/profile", "/explore", "/history", "/refer"];
 
 async function verifyAdminCookie(req: NextRequest): Promise<boolean> {
   try {

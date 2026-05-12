@@ -13,4 +13,6 @@ export * from "./credit-service";
 export * from "./models/ToolOutput";
 export * from "./models/BusinessProfile";
 export * from "./models/OnboardingConfig";
+export * from "./models/Referral";
+export * from "./models/Notification";
 export * from "./referral-service";

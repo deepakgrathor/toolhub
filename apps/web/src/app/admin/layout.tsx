@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Wrench, Users, CreditCard, Settings,
-  ArrowLeft, ClipboardList, LogOut,
+  ArrowLeft, ClipboardList, LogOut, Gift,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/admin/tools", label: "Tools", icon: Wrench, exact: false },
   { href: "/admin/users", label: "Users", icon: Users, exact: false },
   { href: "/admin/pricing", label: "Pricing", icon: CreditCard, exact: false },
+  { href: "/admin/referrals", label: "Referrals", icon: Gift, exact: false },
   { href: "/admin/audit", label: "Audit Log", icon: ClipboardList, exact: false },
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },
 ];
