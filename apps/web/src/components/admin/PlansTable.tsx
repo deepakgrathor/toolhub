@@ -8,7 +8,7 @@ import { toast } from "sonner";
 export interface PlanFeatureRow {
   text: string;
   included: boolean;
-  highlight: boolean;
+  highlight: string; // empty = no tag, non-empty = tag label e.g. "Coming Soon"
 }
 
 export interface PlanRow {
@@ -22,12 +22,8 @@ export interface PlanRow {
   order: number;
   monthlyBase: number;
   monthlyBaseCredits: number;
-  monthlyPricePerCredit: number;
-  monthlyMaxCredits: number;
   yearlyBase: number;
   yearlyBaseCredits: number;
-  yearlyPricePerCredit: number;
-  yearlyDiscountPercent: number;
   features: PlanFeatureRow[];
 }
 
@@ -38,12 +34,8 @@ interface EditState {
   isPopular: boolean;
   monthlyBase: string;
   monthlyBaseCredits: string;
-  monthlyPricePerCredit: string;
-  monthlyMaxCredits: string;
   yearlyBase: string;
   yearlyBaseCredits: string;
-  yearlyPricePerCredit: string;
-  yearlyDiscountPercent: string;
   features: PlanFeatureRow[];
 }
 
@@ -55,12 +47,8 @@ function planToEdit(p: PlanRow): EditState {
     isPopular: p.isPopular,
     monthlyBase: String(p.monthlyBase),
     monthlyBaseCredits: String(p.monthlyBaseCredits),
-    monthlyPricePerCredit: String(p.monthlyPricePerCredit),
-    monthlyMaxCredits: String(p.monthlyMaxCredits),
     yearlyBase: String(p.yearlyBase),
     yearlyBaseCredits: String(p.yearlyBaseCredits),
-    yearlyPricePerCredit: String(p.yearlyPricePerCredit),
-    yearlyDiscountPercent: String(p.yearlyDiscountPercent),
     features: p.features.map((f) => ({ ...f })),
   };
 }
@@ -169,7 +157,7 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
       if (!f) return f;
       return {
         ...f,
-        features: [...f.features, { text: "", included: true, highlight: false }],
+        features: [...f.features, { text: "", included: true, highlight: "" }],
       };
     });
   }
@@ -188,14 +176,14 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
         monthly: {
           basePrice: parseFloat(form.monthlyBase) || 0,
           baseCredits: parseInt(form.monthlyBaseCredits, 10) || 0,
-          pricePerCredit: parseFloat(form.monthlyPricePerCredit) || 0,
-          maxCredits: parseInt(form.monthlyMaxCredits, 10) || 0,
+          pricePerCredit: 0,
+          maxCredits: parseInt(form.monthlyBaseCredits, 10) || 0,
         },
         yearly: {
           basePrice: parseFloat(form.yearlyBase) || 0,
           baseCredits: parseInt(form.yearlyBaseCredits, 10) || 0,
-          pricePerCredit: parseFloat(form.yearlyPricePerCredit) || 0,
-          discountPercent: parseInt(form.yearlyDiscountPercent, 10) || 30,
+          pricePerCredit: 0,
+          discountPercent: 20,
         },
       },
       features: form.features.filter((f) => f.text.trim()),
@@ -219,12 +207,8 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
                 isPopular: payload.isPopular,
                 monthlyBase: payload.pricing.monthly.basePrice,
                 monthlyBaseCredits: payload.pricing.monthly.baseCredits,
-                monthlyPricePerCredit: payload.pricing.monthly.pricePerCredit,
-                monthlyMaxCredits: payload.pricing.monthly.maxCredits,
                 yearlyBase: payload.pricing.yearly.basePrice,
                 yearlyBaseCredits: payload.pricing.yearly.baseCredits,
-                yearlyPricePerCredit: payload.pricing.yearly.pricePerCredit,
-                yearlyDiscountPercent: payload.pricing.yearly.discountPercent,
                 features: payload.features,
               }
             : p
@@ -262,8 +246,9 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
             <tr className="border-b border-border bg-[#111]">
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Plan</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Monthly Base</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Yearly Base</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Monthly</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Yearly</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Credits</th>
               <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active</th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
             </tr>
@@ -275,7 +260,7 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
                   <div className="font-medium text-foreground flex items-center gap-2">
                     {plan.name}
                     {plan.isPopular && (
-                      <span className="rounded-full bg-amber-400/10 text-amber-400 text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wide">
+                      <span className="rounded-full bg-[#7c3aed]/10 text-[#7c3aed] text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wide">
                         Popular
                       </span>
                     )}
@@ -292,6 +277,9 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-foreground">
                   {plan.type === "free" ? "₹0" : plan.type === "enterprise" ? "—" : `₹${plan.yearlyBase}`}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                  {plan.type === "free" ? "10 welcome" : plan.type === "enterprise" ? "∞" : `${plan.monthlyBaseCredits}/mo`}
                 </td>
                 <td className="px-4 py-3 text-center">
                   {plan.isActive ? (
@@ -345,8 +333,8 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
                     <span className="text-sm text-foreground">Active</span>
                   </label>
                   <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                    <Toggle value={form.isPopular} onChange={(v) => setField("isPopular", v)} color="bg-amber-400" />
-                    <span className="text-sm text-foreground">Popular (Best Value badge)</span>
+                    <Toggle value={form.isPopular} onChange={(v) => setField("isPopular", v)} color="bg-[#7c3aed]" />
+                    <span className="text-sm text-foreground">Most Popular badge</span>
                   </label>
                 </div>
               </div>
@@ -355,22 +343,19 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
               <div className="space-y-3">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Monthly Pricing</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <Input label="Base Price (₹/mo)" type="number" value={form.monthlyBase} onChange={(v) => setField("monthlyBase", v)} placeholder="299" />
-                  <Input label="Base Credits" type="number" value={form.monthlyBaseCredits} onChange={(v) => setField("monthlyBaseCredits", v)} placeholder="100" />
-                  <Input label="₹/Extra Credit" type="number" value={form.monthlyPricePerCredit} onChange={(v) => setField("monthlyPricePerCredit", v)} placeholder="2.50" />
-                  <Input label="Max Credits" type="number" value={form.monthlyMaxCredits} onChange={(v) => setField("monthlyMaxCredits", v)} placeholder="500" />
+                  <Input label="Base Price (₹/mo)" type="number" value={form.monthlyBase} onChange={(v) => setField("monthlyBase", v)} placeholder="399" />
+                  <Input label="Credits/month" type="number" value={form.monthlyBaseCredits} onChange={(v) => setField("monthlyBaseCredits", v)} placeholder="200" />
                 </div>
               </div>
 
               {/* Yearly pricing */}
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Yearly Pricing</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Yearly Pricing (per month equivalent)</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <Input label="Base Price (₹/yr)" type="number" value={form.yearlyBase} onChange={(v) => setField("yearlyBase", v)} placeholder="2990" />
-                  <Input label="Base Credits" type="number" value={form.yearlyBaseCredits} onChange={(v) => setField("yearlyBaseCredits", v)} placeholder="100" />
-                  <Input label="₹/Extra Credit" type="number" value={form.yearlyPricePerCredit} onChange={(v) => setField("yearlyPricePerCredit", v)} placeholder="2.00" />
-                  <Input label="Discount %" type="number" value={form.yearlyDiscountPercent} onChange={(v) => setField("yearlyDiscountPercent", v)} placeholder="30" />
+                  <Input label="Base Price (₹/mo, billed annually)" type="number" value={form.yearlyBase} onChange={(v) => setField("yearlyBase", v)} placeholder="319" />
+                  <Input label="Credits/month" type="number" value={form.yearlyBaseCredits} onChange={(v) => setField("yearlyBaseCredits", v)} placeholder="200" />
                 </div>
+                <p className="text-xs text-muted-foreground">Annual total = yearly base × 12. Discount auto-set to 20%.</p>
               </div>
 
               {/* Features */}
@@ -384,7 +369,7 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
                     <Plus className="h-3 w-3" /> Add
                   </button>
                 </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
+                <div className="space-y-2 max-h-64 overflow-y-auto">
                   {form.features.map((feat, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <input
@@ -394,7 +379,14 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
                         placeholder="Feature text..."
                         className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
                       />
-                      <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer">
+                      <input
+                        type="text"
+                        value={feat.highlight}
+                        onChange={(e) => updateFeature(i, { highlight: e.target.value })}
+                        placeholder="Tag (e.g. Coming Soon)"
+                        className="w-32 rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-[#7c3aed] focus:outline-none"
+                      />
+                      <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer shrink-0">
                         <input
                           type="checkbox"
                           checked={feat.included}
@@ -403,18 +395,9 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
                         />
                         Incl.
                       </label>
-                      <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={feat.highlight}
-                          onChange={(e) => updateFeature(i, { highlight: e.target.checked })}
-                          className="accent-[#7c3aed]"
-                        />
-                        Bold
-                      </label>
                       <button
                         onClick={() => removeFeature(i)}
-                        className="rounded p-1 text-muted-foreground hover:text-red-400 transition-colors"
+                        className="rounded p-1 text-muted-foreground hover:text-red-400 transition-colors shrink-0"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

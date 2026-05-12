@@ -1,145 +1,192 @@
 # Handoff Note
-Updated: 2026-05-13 | Account: B | Session: B4 | Dynamic Pricing + Subscription Plans
+Updated: 2026-05-13 | Account: B | Session: B6 | Production Pricing + Abuse Protection
 
 ## Where We Are
-Session B4 done. **TypeScript: 0 errors.** Committed to master.
+Session B6 done. **TypeScript: 0 errors.** Committed to master.
 
 ---
 
-## What Was Done (Session B4)
+## What Was Done (Session B6)
 
-### Dynamic Pricing + Subscription Plans System
+### Production Pricing System + Abuse Protection
 
-**New DB Models:**
-- `packages/db/src/models/Plan.ts` — `plans` collection: name, slug, tagline, isActive, isPopular, order, type (free/credit/enterprise), pricing.monthly/yearly (basePrice, pricePerCredit, baseCredits, maxCredits), features[], creditRollover, limits
-- `packages/db/src/models/UserSubscription.ts` — `usersubscriptions` collection: userId, planSlug, billingCycle, creditsSelected, status, currentPeriodStart/End, cashfreeOrderId/SubId, autoRenew
+**DB Models Updated:**
+- `packages/db/src/models/Plan.ts`
+  - `IPlanFeature.highlight`: `boolean` → `string` (empty = no tag, non-empty = tag label e.g. "Coming Soon")
+  - Added `usageExamples: string[]` field
+  - Added `PlanSlug` type export: `"free" | "lite" | "pro" | "business" | "enterprise"`
+  - `slug` enum updated to match new 5-plan set
+- `packages/db/src/models/User.ts`
+  - `plan` enum extended: added `"lite"` and `"business"` alongside existing free/pro/enterprise
 
-**Updated DB Models:**
-- `packages/db/src/models/CreditPack.ts` — renamed fields: priceInr→price, isFeatured→isPopular, sortOrder→order; added pricePerCredit field
-- `packages/db/src/index.ts` — exports Plan + UserSubscription
+**Seed Scripts:**
+- `apps/web/src/scripts/seed-plans.ts` — fully rewritten with B6 plans
+  - Plans: FREE (₹0), LITE (₹399/mo, 200cr), PRO (₹999/mo, 700cr, isPopular), BUSINESS (₹2999/mo, 1500cr), ENTERPRISE (custom)
+  - Yearly prices: LITE ₹319, PRO ₹799, BUSINESS ₹2399 (all ~20% off monthly)
+  - Removes stale `starter` plan
+  - Credit packs: Starter 50cr/₹149, Growth 150cr/₹349, Pro Pack 400cr/₹799 (isPopular), Power 1000cr/₹1799
+  - Removes old 3-pack set
+- `apps/web/src/scripts/seed-tools.ts` — NEW; upserts creditCost for all 27 tools
+  - 0cr: client-side tools (qr, gst-calc, gst-invoice, expense-tracker, quotation, salary-slip, offer-letter, tds-sheet)
+  - 1cr: hook-writer, caption-generator, title-generator, email-subject, whatsapp-bulk
+  - 2cr: jd-generator
+  - 3cr: blog-generator, resume-screener, appraisal-draft, policy-generator, ad-copy, linkedin-bio, legal-disclaimer
+  - 4cr: yt-script
+  - 8cr: seo-auditor, legal-notice
+  - 10cr: thumbnail-ai, nda-generator
+  - 25cr: website-generator
 
-**Updated shared types (`packages/shared/src/types/index.ts`):**
-- CreditPack interface: priceInr→price, isFeatured→isPopular, sortOrder→order, added pricePerCredit
+**Both seeds were run and confirmed successful.**
 
-**Updated seed (`packages/db/src/seed.ts`):**
-- CreditPack seed updated to use new field names (3 packs: Basic 100cr ₹149, Popular 300cr ₹399, Pro 700cr ₹899)
+**Plan Access Control:**
+- `apps/web/src/lib/plan-access.ts` — NEW
+  - `PLAN_TOOL_ACCESS`: blocked tool lists per plan slug
+  - Free: blocks all heavy AI tools (blog, yt-script, thumbnail-ai, jd, resume, appraisal, policy, legal, nda, disclaimer, ad-copy, linkedin, seo, website, whatsapp)
+  - Lite: blocks website-generator, legal-notice, nda-generator, thumbnail-ai, seo-auditor
+  - Pro/Business/Enterprise: nothing blocked
+  - `isPlanBlocked(planSlug, toolSlug): boolean`
+  - `getUpgradeMessage(planSlug, toolSlug): string` → "Website Generator requires Pro plan. Upgrade to unlock."
+  - `getRequiredPlan(toolSlug): PlanSlug | null`
 
-**New seed script:** `apps/web/src/scripts/seed-plans.ts`
-- Run: `MONGODB_URI="..." npx tsx apps/web/src/scripts/seed-plans.ts`
-- Upserts 4 plans (FREE, STARTER, PRO, ENTERPRISE) + 3 credit packs
-- Uses upsert by slug / name so safe to re-run
+**Abuse Protection:**
+- `apps/web/src/lib/abuse-protection.ts` — NEW
+  - Daily caps via Redis key `abuse:daily:{userId}:{toolSlug}:{YYYY-MM-DD}`
+    - website-generator: LITE→3/day, PRO+→10/day
+    - thumbnail-ai: 5/day all plans
+  - 30-second cooldown via `abuse:cooldown:{userId}:{toolSlug}` for heavy tools (website-generator, legal-notice, nda-generator, seo-auditor, thumbnail-ai)
+  - Fails open on Redis unavailable (never blocks users due to infra issues)
+  - `checkAbuseLimit({ userId, toolSlug, planSlug }): Promise<{ allowed, reason?, retryAfter? }>`
 
-**Public API Routes (no auth):**
-- `GET /api/public/plans` — replaced: now queries Plan model, returns plans sorted by order, includes computed yearlySavings; Redis cache key=plans:public TTL=10min
-- `GET /api/public/credit-packs` — new; returns active CreditPack docs sorted by order; Redis cache key=credit-packs:public TTL=10min
-- `GET /api/public/site-config/rollover` — new; returns {enabled, maxDays}; reads SiteConfig keys credit_rollover_enabled/credit_rollover_days; Redis cache key=site-config:rollover TTL=5min
+**Tool Guard (shared helper):**
+- `apps/web/src/lib/tool-guard.ts` — NEW
+  - `runToolGuard(userId, toolSlug)` — connectDB + user plan lookup + isPlanBlocked + checkAbuseLimit
+  - Returns `NextResponse` error on fail, `null` on pass
+  - `getUserPlanSlug(userId)` — used by both the guard and the API route
+  - HTTP 403 on plan-blocked, 429 on abuse with `Retry-After` header
 
-**Admin Plan APIs:**
-- `PATCH /api/admin/plans/[slug]` — updates plan in DB, invalidates plans:public Redis key, writes audit_log
+**All 20 AI Tool Routes Updated** (added guard after auth check):
+  blog-generator, blog-generator/stream, caption-generator, hook-writer, title-generator,
+  email-subject, whatsapp-bulk, yt-script, jd-generator, linkedin-bio, legal-notice,
+  nda-generator, legal-disclaimer, ad-copy, resume-screener, appraisal-draft,
+  policy-generator, website-generator, seo-auditor, thumbnail-ai
 
-**Admin Credit Pack APIs (new routes, replaces old pricing routes functionally):**
-- `POST /api/admin/credit-packs` — create pack
-- `PATCH /api/admin/credit-packs/[id]` — update pack, invalidates credit-packs:public
-- `DELETE /api/admin/credit-packs/[id]` — delete pack
+**New API Route:**
+- `GET /api/user/plan` — returns `{ planSlug }` for logged-in user, defaults to "free" if unauthenticated
 
-**Updated existing APIs (CreditPack field name changes):**
-- `apps/web/src/app/api/admin/pricing/route.ts` — field names updated
-- `apps/web/src/app/api/admin/pricing/[id]/route.ts` — field names updated
-- `apps/web/src/app/api/credits/packs/route.ts` — sortOrder→order
-- `apps/web/src/app/api/credits/purchase/route.ts` — priceInr→price
-- `apps/web/src/components/credits/BuyCreditsButton.tsx` — interface updated
+**UpgradePrompt Component:**
+- `apps/web/src/components/ui/UpgradePrompt.tsx` — NEW
+  - Lock icon, tool name, message, "Upgrade to {Plan}" CTA → /pricing, "View all plans" link
+  - Full dark + light theme support
 
-**Admin Settings:**
-- `PATCH /api/admin/settings` — now also accepts credit_rollover_enabled (Boolean) + credit_rollover_days (Number); invalidates site-config:rollover Redis key on change
-- `apps/web/src/components/admin/SettingsForm.tsx` — added Credit Rollover section: toggle + days input (visible when enabled)
-- `apps/web/src/app/admin/settings/page.tsx` — fetches and passes rollover settings to form
+**Tool Page Plan Gate:**
+- `apps/web/src/app/(site)/tools/[slug]/page.tsx` — updated
+  - Server-side plan check: fetches session + user plan from DB
+  - If logged-in user's plan blocks the tool → renders `<UpgradePrompt>` instead of tool component
+  - Unauthenticated users see the tool normally (auth check fires on submit)
 
-**Admin Pages:**
-- `apps/web/src/app/admin/plans/page.tsx` — table of 4 plans with Edit modal (all pricing fields + features add/remove/toggle)
-- `apps/web/src/components/admin/PlansTable.tsx` — edit modal with monthly/yearly pricing fields, features list management
-- `apps/web/src/app/admin/credit-packs/page.tsx` — credit packs CRUD using updated PricingTable component
-- `apps/web/src/components/admin/PricingTable.tsx` — updated field names (price, isPopular, order, pricePerCredit)
-- `apps/web/src/app/admin/pricing/page.tsx` — now redirects to /admin/credit-packs
+**Pricing Page Redesign:**
+- `apps/web/src/components/pricing/PricingPage.tsx` — fully rewritten
+  - Credit slider removed (plans now have fixed credits)
+  - Annual toggle: shows "Save 20%" green badge + crossed monthly price on yearly
+  - "Most Popular" badge on PRO card (purple gradient, elevated with scale)
+  - `usageExamples` rendered as pill chips below features
+  - Feature `highlight` string rendered as accent-colored tag (not bold text)
+  - Active CTAs: Free→/register, Lite→/register?plan=lite, Pro→/register?plan=pro, Business→/register?plan=business, Enterprise→mailto
+  - "Fair usage applies" footnote with Lock icon
+  - Credit packs: 4 packs (Starter/Growth/Pro Pack/Power), "Best Value" badge on Pro Pack
+  - Save 20% shown per card when yearly selected; annual total shown beneath price
 
-**Admin Sidebar (`apps/web/src/app/admin/layout.tsx`):**
-- Removed: "Pricing" → /admin/pricing
-- Added: "Plans" (CreditCard icon) → /admin/plans
-- Added: "Credit Packs" (Package icon) → /admin/credit-packs
+**Admin Plans Table:**
+- `apps/web/src/components/admin/PlansTable.tsx` — updated
+  - Removed: pricePerCredit field, maxCredits slider, yearlyDiscountPercent field, dynamic price calculation
+  - Kept: basePrice (monthly + yearly), baseCredits, isActive, isPopular, features management
+  - Feature `highlight` is now a text input (tag label) instead of a checkbox
+  - Table now shows credits/mo column
+  - Admin page updated to map new PlanRow shape (removed removed fields)
 
-**Shared PricingPage Component (`apps/web/src/components/pricing/PricingPage.tsx`):**
-- Monthly/Yearly toggle pill
-- Yearly savings banner (shown when yearly selected)
-- 4 plan cards: FREE (₹0/forever), STARTER (slider), PRO (slider, Best Value badge), ENTERPRISE (contact sales mailto)
-- Credit slider for STARTER + PRO: min=baseCredits, max=maxCredits, step=50; real-time price calculation
-- Crossed-out monthly price + green Save badge when yearly selected
-- Feature list per plan (included: Check/X icon; highlight: bold accent text)
-- Credit rollover info line (shown only when rollover.enabled)
-- Credit packs section (3 pack cards with "Coming Soon" buy buttons)
-- All subscription buttons disabled with tooltip "Payments coming soon"
-- Both dark + light theme supported
-
-**Pricing Pages:**
-- `apps/web/src/app/(marketing)/pricing/page.tsx` — server component, fetches from public APIs, passes to PricingPage component (replaces old hardcoded page)
-- `apps/web/src/app/(site)/pricing/page.tsx` — new; same server component pattern for app users with sidebar
+**Public Plans API fix:**
+- `apps/web/src/app/api/public/plans/route.ts` — yearly savings calculation fixed
+  - Was: `monthly*12 - yearly` (wrong: yearly was monthly equivalent, not total)
+  - Now: `(monthly - yearly) * 12` (correct: both are per-month values)
 
 ---
 
 ## What Was Done (Session B5-B)
 
 ### Notification Center + Admin Push System
-
 [See previous HANDOFF for B5-B details]
 
 ---
 
 ## What Was Done (Session B5-A)
-
 ### Refer & Earn System (B5-A)
-
 [See previous HANDOFF for B5-A details]
 
 ---
 
+## What Was Done (Session B4)
+### Dynamic Pricing + Subscription Plans System
+[See previous HANDOFF for B4 details]
+
+---
+
 ## What Was Done (Session B2)
-
 ### Smart Autofill System
-
 [See previous HANDOFF for B2 details]
 
 ---
 
 ## Architecture Notes
 
-### Pricing Data Flow
+### Plan Slugs (B6 final set)
+free → lite → pro → business → enterprise
+
+### Plan Access Flow
+```
+Tool page load (server component)
+  → auth() → getUserPlanSlug(userId)
+  → isPlanBlocked(planSlug, toolSlug)
+  → YES: render <UpgradePrompt>
+  → NO:  render <ToolComponent>
+
+Tool API call (POST /api/tools/[tool])
+  → auth check
+  → runToolGuard(userId, toolSlug)
+      → connectDB + User.findById (plan)
+      → isPlanBlocked → 403 if blocked
+      → checkAbuseLimit → 429 if over limit
+  → existing credit check (InsufficientCreditsError)
+  → AI call + credit deduction
+```
+
+### Redis Keys (B6 additions)
+```
+abuse:daily:{userId}:{toolSlug}:{YYYY-MM-DD}   TTL = seconds until midnight
+abuse:cooldown:{userId}:{toolSlug}              TTL = 30s
+```
+
+### Pricing Data Flow (unchanged from B4)
 ```
 Admin edits plan → PATCH /api/admin/plans/[slug]
-                 → DB updated
-                 → Redis key plans:public deleted
-                 → Next fetch from /api/public/plans hits DB, re-caches
+                 → DB updated → Redis plans:public invalidated
 
-Marketing /pricing → GET /api/public/plans (server)
-                   → GET /api/public/credit-packs (server)
-                   → GET /api/public/site-config/rollover (server)
-                   → PricingPage component (client, handles toggle/slider)
-
-App /pricing → same 3 API calls → same PricingPage component
+/pricing page → GET /api/public/plans (plans + yearlySavings)
+              → GET /api/public/credit-packs
+              → GET /api/public/site-config/rollover
+              → PricingPage client component (handles toggle)
 ```
 
-### Credit Rollover
-- Stored in SiteConfig as two keys: `credit_rollover_enabled` and `credit_rollover_days`
-- Shown on /pricing page only when enabled
-- Admin controls via /admin/settings → Credit Rollover section
-
-### CreditPack Field Mapping (OLD → NEW)
-- priceInr → price
-- isFeatured → isPopular
-- sortOrder → order
-- razorpayPlanId → (removed)
-- (new) pricePerCredit
-
-### Payments
-- No Cashfree checkout in B4. All subscription + pack buy buttons show "Coming Soon".
-- Cashfree integration planned for B6/B7.
+### Credit Costs (B6 final)
+| Tool | Credits |
+|------|---------|
+| Client-side tools | 0 |
+| hook-writer, caption, title, email-subject, whatsapp-bulk | 1 |
+| jd-generator | 2 |
+| blog, resume, appraisal, policy, ad-copy, linkedin, disclaimer | 3 |
+| yt-script | 4 |
+| seo-auditor, legal-notice | 8 |
+| thumbnail-ai, nda-generator | 10 |
+| website-generator | 25 |
 
 ---
 

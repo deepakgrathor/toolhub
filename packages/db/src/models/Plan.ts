@@ -3,8 +3,10 @@ import { Schema, Document, Model, getOrCreateModel } from "../lib/mongoose-shim"
 export interface IPlanFeature {
   text: string;
   included: boolean;
-  highlight: boolean;
+  highlight: string; // empty string = no tag, non-empty = tag label e.g. "Coming Soon"
 }
+
+export type PlanSlug = "free" | "lite" | "pro" | "business" | "enterprise";
 
 export interface IPlanPricing {
   basePrice: number;
@@ -17,7 +19,7 @@ export interface IPlanPricing {
 
 export interface IPlan extends Document {
   name: string;
-  slug: string;
+  slug: PlanSlug;
   tagline: string;
   isActive: boolean;
   isPopular: boolean;
@@ -28,6 +30,7 @@ export interface IPlan extends Document {
     yearly: IPlanPricing;
   };
   features: IPlanFeature[];
+  usageExamples: string[];
   creditRollover: {
     enabled: boolean;
     maxDays: number;
@@ -57,7 +60,7 @@ const PlanFeatureSchema = new Schema<IPlanFeature>(
   {
     text: { type: String, required: true },
     included: { type: Boolean, default: true },
-    highlight: { type: Boolean, default: false },
+    highlight: { type: String, default: "" },
   },
   { _id: false }
 );
@@ -65,7 +68,7 @@ const PlanFeatureSchema = new Schema<IPlanFeature>(
 const PlanSchema = new Schema<IPlan>(
   {
     name: { type: String, required: true, trim: true },
-    slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    slug: { type: String, required: true, unique: true, lowercase: true, trim: true, enum: ["free", "lite", "pro", "business", "enterprise"] },
     tagline: { type: String, required: true, default: "" },
     isActive: { type: Boolean, default: true },
     isPopular: { type: Boolean, default: false },
@@ -76,6 +79,7 @@ const PlanSchema = new Schema<IPlan>(
       yearly: { type: PlanPricingSchema, required: true },
     },
     features: { type: [PlanFeatureSchema], default: [] },
+    usageExamples: { type: [String], default: [] },
     creditRollover: {
       enabled: { type: Boolean, default: false },
       maxDays: { type: Number, default: 30 },

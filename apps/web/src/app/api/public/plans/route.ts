@@ -22,11 +22,10 @@ export async function GET() {
       .sort({ order: 1 })
       .lean();
 
-    // Compute yearly savings per plan
+    // Compute yearly savings per plan (both prices are monthly equivalents)
     const plansWithSavings = plans.map((plan) => {
-      const monthlyCost = plan.pricing.monthly.basePrice * 12;
-      const yearlyCost = plan.pricing.yearly.basePrice;
-      const yearlySavings = monthlyCost - yearlyCost;
+      const yearlySavings =
+        (plan.pricing.monthly.basePrice - plan.pricing.yearly.basePrice) * 12;
       return { ...plan, yearlySavings };
     });
 

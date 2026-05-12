@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { InsufficientCreditsError } from "@toolhub/db";
 import { websiteGeneratorSchema } from "@/tools/website-generator/schema";
 import { execute } from "@/tools/website-generator/engine";
+import { runToolGuard } from "@/lib/tool-guard";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -12,6 +13,10 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+
+  const guard = await runToolGuard(session.user.id, "website-generator");
+  if (guard) return guard;
+
 
   let body: unknown;
   try {

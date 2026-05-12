@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { connectDB, CreditService, ToolConfig, ToolOutput, InsufficientCreditsError } from "@toolhub/db";
 import { blogGeneratorSchema } from "@/tools/blog-generator/schema";
+import { runToolGuard } from "@/lib/tool-guard";
 import { callAIStream } from "@/lib/ai-stream";
 import type { BlogGeneratorInput } from "@/tools/blog-generator/schema";
 
@@ -53,6 +54,9 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) {
     return new Response("Unauthorized", { status: 401 });
   }
+
+  const guard = await runToolGuard(session.user.id, "blog-generator");
+  if (guard) return guard;
 
   let body: unknown;
   try {

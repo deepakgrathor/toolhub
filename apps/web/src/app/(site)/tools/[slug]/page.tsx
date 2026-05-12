@@ -3,11 +3,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ChevronRight, Wrench, Sparkles, WifiOff } from "lucide-react";
+import { auth } from "@/auth";
 import { getToolBySlug } from "@/lib/tool-registry";
 import { LoginBanner } from "@/components/tools/LoginBanner";
 import { getToolIcon } from "@/lib/tool-icons";
 import { ToolPageSkeleton } from "@/components/ui/skeletons";
 import { ToolErrorBoundary } from "@/components/tools/ToolErrorBoundary";
+import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
+import { getUserPlanSlug } from "@/lib/tool-guard";
+import { isPlanBlocked, getUpgradeMessage, getRequiredPlan } from "@/lib/plan-access";
 
 // ── Dynamic tool component map ────────────────────────────────────────────────
 // Add new tools here as they are built. Each entry is code-split automatically.
@@ -170,6 +174,20 @@ export default async function ToolPage({ params }: Props) {
   // isVisible=false → hidden by admin, redirect to dashboard
   if (tool.config.isVisible === false) redirect("/dashboard");
 
+  // Plan access check (server-side, only for logged-in users)
+  const session = await auth();
+  let planBlocked = false;
+  let upgradeMessage = "";
+  let requiredPlan = "";
+  if (session?.user?.id) {
+    const planSlug = await getUserPlanSlug(session.user.id);
+    if (isPlanBlocked(planSlug, params.slug)) {
+      planBlocked = true;
+      upgradeMessage = getUpgradeMessage(planSlug, params.slug);
+      requiredPlan = getRequiredPlan(params.slug) ?? "lite";
+    }
+  }
+
   const Icon = getToolIcon(tool.slug);
   const ToolComponent = toolComponents[params.slug];
 
@@ -191,6 +209,12 @@ export default async function ToolPage({ params }: Props) {
       {/* Tool disabled — show unavailable card */}
       {!tool.config.isActive ? (
         <ToolUnavailableCard name={tool.name} />
+      ) : planBlocked ? (
+        <UpgradePrompt
+          toolName={tool.name}
+          requiredPlan={requiredPlan}
+          message={upgradeMessage}
+        />
       ) : ToolComponent ? (
         <ToolErrorBoundary toolName={tool.name}>
           <ToolComponent creditCost={tool.config.creditCost} />

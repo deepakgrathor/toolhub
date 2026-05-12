@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { InsufficientCreditsError } from "@toolhub/db";
 import { adCopySchema } from "@/tools/ad-copy/schema";
 import { execute } from "@/tools/ad-copy/engine";
+import { runToolGuard } from "@/lib/tool-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,10 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+
+  const guard = await runToolGuard(session.user.id, "ad-copy");
+  if (guard) return guard;
+
 
   let body: unknown;
   try {

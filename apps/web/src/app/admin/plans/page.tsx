@@ -21,13 +21,13 @@ async function getPlans(): Promise<PlanRow[]> {
       order: p.order,
       monthlyBase: p.pricing.monthly.basePrice,
       monthlyBaseCredits: p.pricing.monthly.baseCredits,
-      monthlyPricePerCredit: p.pricing.monthly.pricePerCredit,
-      monthlyMaxCredits: p.pricing.monthly.maxCredits,
       yearlyBase: p.pricing.yearly.basePrice,
       yearlyBaseCredits: p.pricing.yearly.baseCredits,
-      yearlyPricePerCredit: p.pricing.yearly.pricePerCredit,
-      yearlyDiscountPercent: p.pricing.yearly.discountPercent ?? 30,
-      features: p.features,
+      features: (p.features ?? []).map((f) => ({
+        text: f.text,
+        included: f.included,
+        highlight: typeof f.highlight === "string" ? f.highlight : "",
+      })),
     }));
   } catch {
     return [];

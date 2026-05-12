@@ -9,7 +9,7 @@ export interface IUser extends Document {
   mobile?: string | null;
   role: "user" | "admin";
   credits: number;
-  plan: "free" | "pro" | "enterprise";
+  plan: "free" | "lite" | "pro" | "business" | "enterprise";
   kitPreference?: string;
   authProvider: "google" | "email";
   referralCode?: string;
@@ -53,7 +53,7 @@ const UserSchema = new Schema<IUser>(
     credits: { type: Number, default: 0, min: 0 },
     plan: {
       type: String,
-      enum: ["free", "pro", "enterprise"],
+      enum: ["free", "lite", "pro", "business", "enterprise"],
       default: "free",
     },
     kitPreference: { type: String },

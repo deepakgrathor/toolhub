@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Check,
-  X,
-  Coins,
-  ChevronDown,
-  Mail,
-  Package,
-} from "lucide-react";
+import { Check, X, Mail, Package, Lock, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -16,7 +9,7 @@ import { cn } from "@/lib/utils";
 export interface PlanFeature {
   text: string;
   included: boolean;
-  highlight: boolean;
+  highlight: string; // empty = no tag, non-empty = tag label
 }
 
 export interface PlanPricing {
@@ -39,7 +32,7 @@ export interface Plan {
     yearly: PlanPricing;
   };
   features: PlanFeature[];
-  yearlySavings?: number;
+  usageExamples?: string[];
 }
 
 export interface CreditPackData {
@@ -62,7 +55,7 @@ interface Props {
   rollover: RolloverConfig;
 }
 
-// ── Toggle ────────────────────────────────────────────────────────────────────
+// ── Billing toggle ────────────────────────────────────────────────────────────
 
 function BillingToggle({
   cycle,
@@ -84,100 +77,42 @@ function BillingToggle({
               : "text-muted-foreground hover:text-foreground"
           )}
         >
-          {c === "monthly" ? "Monthly" : "Annually · Save 30%"}
+          {c === "monthly" ? "Monthly" : "Annually"}
         </button>
       ))}
     </div>
   );
 }
 
-// ── Credit Slider ─────────────────────────────────────────────────────────────
+// ── Plan card ─────────────────────────────────────────────────────────────────
 
-function CreditSlider({
-  min,
-  max,
-  value,
-  onChange,
-  pricePerCredit,
-}: {
-  min: number;
-  max: number;
-  value: number;
-  onChange: (v: number) => void;
-  pricePerCredit: number;
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center gap-1.5 text-foreground font-medium">
-          <Coins className="h-4 w-4 text-[#7c3aed]" />
-          <span>{value.toLocaleString()} credits / month</span>
-        </div>
-        <span className="text-xs text-muted-foreground">
-          ₹{pricePerCredit.toFixed(2)}/credit
-        </span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={50}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1.5 rounded-full accent-[#7c3aed] cursor-pointer"
-      />
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{min}</span>
-        <span>{max}</span>
-      </div>
-    </div>
-  );
-}
-
-// ── Plan Card ─────────────────────────────────────────────────────────────────
-
-function PlanCard({
-  plan,
-  cycle,
-}: {
-  plan: Plan;
-  cycle: "monthly" | "yearly";
-}) {
+function PlanCard({ plan, cycle }: { plan: Plan; cycle: "monthly" | "yearly" }) {
   const pricing = plan.pricing[cycle];
-  const [selectedCredits, setSelectedCredits] = useState(pricing.baseCredits);
-
-  const extraCredits = Math.max(0, selectedCredits - pricing.baseCredits);
-  const extraCost = extraCredits * pricing.pricePerCredit;
-  const totalMonthly = pricing.basePrice + extraCost;
-  const totalYearly = totalMonthly * 12 * 0.7;
-
   const monthlyPricing = plan.pricing.monthly;
-  const monthlyBase = monthlyPricing.basePrice + Math.max(0, selectedCredits - monthlyPricing.baseCredits) * monthlyPricing.pricePerCredit;
-  const yearlySavings = cycle === "yearly" ? Math.round(monthlyBase * 12 - totalYearly) : 0;
 
-  const featureHeader =
-    plan.slug === "free"
-      ? "Includes:"
-      : plan.slug === "starter"
-      ? "Everything in Free, plus:"
-      : plan.slug === "pro"
-      ? "Everything in Starter, plus:"
-      : "Everything in Pro, plus:";
+  const ctaMap: Record<string, { label: string; href: string }> = {
+    free:       { label: "Get Started Free",        href: "/register" },
+    lite:       { label: "Start Creating",           href: "/register?plan=lite" },
+    pro:        { label: "Upgrade to Pro",            href: "/register?plan=pro" },
+    business:   { label: "Start Business Plan",      href: "/register?plan=business" },
+    enterprise: { label: "Contact Sales",            href: "mailto:talk.enterprise@toolspire.io" },
+  };
+  const cta = ctaMap[plan.slug] ?? { label: "Get Started", href: "/register" };
 
   return (
     <div
       className={cn(
         "relative flex flex-col rounded-2xl border p-6 gap-5 transition-shadow",
         plan.isPopular
-          ? "border-[#7c3aed] bg-[#7c3aed]/5 shadow-lg shadow-[#7c3aed]/10 ring-1 ring-[#7c3aed]/30"
+          ? "border-[#7c3aed] bg-[#7c3aed]/5 shadow-xl shadow-[#7c3aed]/15 ring-1 ring-[#7c3aed]/30 scale-[1.02]"
           : "border-border bg-card hover:shadow-md"
       )}
     >
-      {/* Popular badge */}
+      {/* Most Popular badge */}
       {plan.isPopular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="inline-block rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-black shadow-sm">
-            Best Value
+        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10">
+          <span className="inline-block rounded-full bg-gradient-to-r from-[#7c3aed] to-purple-400 px-3.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white shadow-sm">
+            Most Popular
           </span>
         </div>
       )}
@@ -200,26 +135,29 @@ function PlanCard({
         {plan.type === "credit" && (
           <div>
             {cycle === "yearly" && (
-              <div className="text-sm text-muted-foreground line-through">
-                ₹{Math.round(monthlyBase)}/mo
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm text-muted-foreground line-through">
+                  ₹{monthlyPricing.basePrice}/mo
+                </span>
+                <span className="rounded-full bg-[#10b981]/10 text-[#10b981] text-xs font-semibold px-2 py-0.5">
+                  Save 20%
+                </span>
               </div>
             )}
             <div className="flex items-end gap-1">
               <span className="text-3xl font-extrabold text-foreground">
-                ₹{Math.round(cycle === "yearly" ? totalYearly / 12 : totalMonthly)}
+                ₹{pricing.basePrice}
               </span>
               <span className="text-sm text-muted-foreground mb-1">/mo</span>
             </div>
             {cycle === "yearly" && (
-              <span className="inline-block rounded-full bg-[#10b981]/10 text-[#10b981] text-xs font-semibold px-2 py-0.5 mt-1">
-                Save ₹{Math.round(yearlySavings).toLocaleString()}/year
-              </span>
-            )}
-            {cycle === "monthly" && (
               <p className="text-xs text-muted-foreground mt-1">
-                ₹{pricing.pricePerCredit.toFixed(2)}/credit
+                Billed annually (₹{pricing.basePrice * 12}/year)
               </p>
             )}
+            <p className="text-sm font-medium text-muted-foreground mt-2">
+              {pricing.baseCredits.toLocaleString()} credits/month
+            </p>
           </div>
         )}
 
@@ -228,51 +166,43 @@ function PlanCard({
         )}
       </div>
 
-      {/* Slider */}
-      {plan.type === "credit" && (
-        <CreditSlider
-          min={pricing.baseCredits}
-          max={pricing.maxCredits}
-          value={selectedCredits}
-          onChange={setSelectedCredits}
-          pricePerCredit={pricing.pricePerCredit}
-        />
-      )}
-
-      {/* CTA Button */}
-      {plan.type === "free" && (
+      {/* CTA */}
+      {plan.type === "enterprise" ? (
         <a
-          href="/dashboard"
-          className="w-full rounded-xl border border-border py-2.5 text-sm font-semibold text-center text-foreground hover:bg-muted/50 transition-colors"
-        >
-          Get Started Free
-        </a>
-      )}
-
-      {plan.type === "credit" && (
-        <button
-          disabled
-          title="Payments coming soon"
-          className="w-full rounded-xl py-2.5 text-sm font-semibold text-center cursor-not-allowed opacity-60 bg-[#7c3aed] text-white"
-        >
-          Coming Soon
-        </button>
-      )}
-
-      {plan.type === "enterprise" && (
-        <a
-          href="mailto:talk.enterprise@toolspire.io"
-          className="w-full rounded-xl border border-border py-2.5 text-sm font-semibold text-center text-foreground hover:bg-muted/50 transition-colors flex items-center justify-center gap-2"
+          href={cta.href}
+          className="flex items-center justify-center gap-2 w-full rounded-xl border border-border py-2.5 text-sm font-semibold text-foreground hover:bg-muted/40 transition-colors"
         >
           <Mail className="h-4 w-4" />
-          Contact Sales
+          {cta.label}
+        </a>
+      ) : (
+        <a
+          href={cta.href}
+          className={cn(
+            "w-full rounded-xl py-2.5 text-sm font-semibold text-center transition-colors",
+            plan.isPopular
+              ? "bg-[#7c3aed] text-white hover:bg-[#6d28d9]"
+              : plan.type === "free"
+              ? "border border-border text-foreground hover:bg-muted/40"
+              : "bg-[#7c3aed]/10 text-[#7c3aed] border border-[#7c3aed]/30 hover:bg-[#7c3aed]/20"
+          )}
+        >
+          {cta.label}
         </a>
       )}
 
-      {/* Feature list */}
+      {/* Features */}
       <div>
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-          {featureHeader}
+          {plan.slug === "free"
+            ? "Includes:"
+            : plan.slug === "lite"
+            ? "Everything in Free, plus:"
+            : plan.slug === "pro"
+            ? "Everything in Lite, plus:"
+            : plan.slug === "business"
+            ? "Everything in Pro, plus:"
+            : "Everything in Business, plus:"}
         </p>
         <ul className="space-y-2">
           {plan.features.map((f, i) => (
@@ -280,25 +210,39 @@ function PlanCard({
               {f.included ? (
                 <Check className="h-4 w-4 text-[#10b981] shrink-0 mt-0.5" />
               ) : (
-                <X className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-0.5" />
+                <X className="h-4 w-4 text-muted-foreground/40 shrink-0 mt-0.5" />
               )}
-              <span
-                className={cn(
-                  f.included ? "text-foreground" : "text-muted-foreground",
-                  f.highlight && "font-semibold text-[#7c3aed]"
-                )}
-              >
+              <span className={cn(f.included ? "text-foreground" : "text-muted-foreground")}>
                 {f.text}
               </span>
+              {f.highlight && (
+                <span className="shrink-0 rounded-full bg-[#7c3aed]/10 text-[#7c3aed] text-[10px] font-semibold px-1.5 py-0.5">
+                  {f.highlight}
+                </span>
+              )}
             </li>
           ))}
         </ul>
       </div>
+
+      {/* Usage examples */}
+      {plan.usageExamples && plan.usageExamples.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border">
+          {plan.usageExamples.map((ex, i) => (
+            <span
+              key={i}
+              className="rounded-full bg-muted/40 text-muted-foreground text-xs px-2.5 py-1"
+            >
+              {ex}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-// ── Credit Pack Card ──────────────────────────────────────────────────────────
+// ── Credit pack card ──────────────────────────────────────────────────────────
 
 function PackCard({ pack }: { pack: CreditPackData }) {
   return (
@@ -312,8 +256,8 @@ function PackCard({ pack }: { pack: CreditPackData }) {
     >
       {pack.isPopular && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="inline-block rounded-full bg-[#7c3aed] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-            Popular
+          <span className="inline-block rounded-full bg-[#10b981] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+            Best Value
           </span>
         </div>
       )}
@@ -330,14 +274,14 @@ function PackCard({ pack }: { pack: CreditPackData }) {
         </div>
         <div className="text-xl font-bold text-foreground mt-1">₹{pack.price}</div>
         <p className="text-xs text-muted-foreground mt-0.5">
-          ₹{(pack.pricePerCredit ?? (pack.credits > 0 ? pack.price / pack.credits : 0)).toFixed(2)}/credit · One-time
+          ₹{(pack.credits > 0 ? pack.price / pack.credits : 0).toFixed(2)}/credit · One-time
         </p>
       </div>
 
       <button
         disabled
         title="Payments coming soon"
-        className="w-full rounded-xl py-2 text-sm font-semibold text-center cursor-not-allowed opacity-60 bg-[#7c3aed] text-white"
+        className="w-full rounded-xl py-2 text-sm font-semibold text-center cursor-not-allowed opacity-50 bg-[#7c3aed] text-white"
       >
         Coming Soon
       </button>
@@ -345,22 +289,36 @@ function PackCard({ pack }: { pack: CreditPackData }) {
   );
 }
 
+// ── Lock note ─────────────────────────────────────────────────────────────────
+
+function PlanLockNote() {
+  return (
+    <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground max-w-xl mx-auto">
+      <Lock className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+      <span>
+        Fair usage applies. Credits reset monthly on billing date. One-time pack credits never expire.
+      </span>
+    </div>
+  );
+}
+
 // ── FAQ ───────────────────────────────────────────────────────────────────────
 
 const FAQS = [
-  { q: "Do credits expire?", a: "Credits never expire — buy once, use whenever you want." },
+  { q: "Do monthly credits expire?", a: "Monthly plan credits reset on your billing date each month. One-time credit pack credits never expire." },
   { q: "What if the AI fails?", a: "Credits are automatically refunded for failed requests." },
   { q: "Can I switch plans?", a: "Yes, you can upgrade or downgrade your plan at any time." },
-  { q: "Is there a free trial?", a: "Yes — every new account starts with free credits for you to try the platform." },
+  { q: "Is there a free trial?", a: "Every new account starts with 10 free welcome credits — no card needed." },
+  { q: "What is the annual discount?", a: "Switching to annual billing saves you 20% vs. monthly. Billed once per year." },
 ];
 
-// ── Main Component ────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 
 export function PricingPage({ plans, packs, rollover }: Props) {
   const [cycle, setCycle] = useState<"monthly" | "yearly">("monthly");
 
   return (
-    <div className="min-h-screen px-4 py-16 max-w-6xl mx-auto">
+    <div className="min-h-screen px-4 py-16 max-w-7xl mx-auto">
       {/* Header */}
       <div className="text-center mb-12">
         <span className="inline-block rounded-full border border-[#7c3aed]/30 bg-[#7c3aed]/10 px-3 py-1 text-xs font-medium text-[#7c3aed] mb-4">
@@ -370,27 +328,32 @@ export function PricingPage({ plans, packs, rollover }: Props) {
           Simple, transparent pricing
         </h1>
         <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-          Start free. Scale as you grow. Only pay for what you use.
+          Start free. Scale as you grow. Only pay for what you need.
         </p>
       </div>
 
-      {/* Toggle */}
+      {/* Billing toggle */}
       <div className="mb-8">
         <BillingToggle cycle={cycle} onChange={setCycle} />
       </div>
 
-      {/* Yearly savings banner */}
+      {/* Annual savings banner */}
       {cycle === "yearly" && (
-        <div className="mb-8 rounded-xl bg-[#7c3aed]/10 border border-[#7c3aed]/20 text-[#7c3aed] text-sm font-medium text-center py-3 px-4">
-          Save up to 30% with yearly billing
+        <div className="mb-8 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20 text-[#10b981] text-sm font-medium text-center py-3 px-4">
+          Save 20% with annual billing — billed once per year
         </div>
       )}
 
       {/* Plan cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-6 items-start">
         {plans.map((plan) => (
           <PlanCard key={plan._id} plan={plan} cycle={cycle} />
         ))}
+      </div>
+
+      {/* Fair usage footnote */}
+      <div className="mb-4">
+        <PlanLockNote />
       </div>
 
       {/* Rollover info */}
@@ -410,9 +373,9 @@ export function PricingPage({ plans, packs, rollover }: Props) {
             <h2 className="text-2xl font-bold text-foreground mb-2">
               Need more credits? Buy a pack.
             </h2>
-            <p className="text-muted-foreground">One-time purchase. Never expires.</p>
+            <p className="text-muted-foreground">One-time purchase. Credits never expire.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-4xl mx-auto">
             {packs.map((pack) => (
               <PackCard key={pack._id} pack={pack} />
             ))}
