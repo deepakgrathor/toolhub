@@ -1,157 +1,48 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { AnimatePresence, motion } from "framer-motion";
 import {
-  ChevronLeft, ChevronRight, ChevronDown,
-  LayoutDashboard, Gift, LogOut, X, Coins, ExternalLink, Compass,
+  ChevronLeft, ChevronRight,
+  LayoutDashboard, Gift, LogOut, X, Coins, Compass,
   Sparkles, Plus,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { useCreditStore } from "@/store/credits-store";
-import { SIDEBAR_KITS, getKitForSlug, type KitConfig } from "@/lib/kit-config";
+import { useWorkspaceStore } from "@/store/workspace-store";
 import { getToolIcon } from "@/lib/tool-icons";
 
-interface WorkspaceTool { slug: string; name: string }
-interface Workspace {
-  kitName: string;
-  profession: string;
-  kitTools: WorkspaceTool[];
-  addedTools: WorkspaceTool[];
-}
+// ── Workspace initialiser (loads once per session) ────────────────────────────
 
-// Singleton promise so multiple sidebar instances share one fetch
-let activeSlugsCache: Set<string> | null = null;
-let activeSlugsExpiry = 0;
+function useWorkspaceInit() {
+  const { data: session } = useSession();
+  const { initialized, setWorkspace } = useWorkspaceStore();
 
-async function fetchActiveSlugs(): Promise<Set<string>> {
-  if (activeSlugsCache && Date.now() < activeSlugsExpiry) return activeSlugsCache;
-  try {
-    const res = await fetch("/api/tools/active-slugs", { cache: "no-store" });
-    const data = (await res.json()) as { slugs: string[] };
-    activeSlugsCache = new Set(data.slugs);
-    activeSlugsExpiry = Date.now() + 30_000; // 30 s
-    return activeSlugsCache;
-  } catch {
-    return new Set(SIDEBAR_KITS.flatMap((k) => k.tools.map((t) => t.slug)));
-  }
-}
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/user/workspace");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.kitTools) {
+        setWorkspace({
+          kitName:    data.kitName   ?? "My Workspace",
+          professions: data.professions ?? [],
+          kitTools:  data.kitTools  ?? [],
+          addedTools: data.addedTools ?? [],
+        });
+      }
+    } catch {
+      // silent
+    }
+  }, [setWorkspace]);
 
-function filterKits(kits: KitConfig[], activeSlugs: Set<string>): KitConfig[] {
-  return kits
-    .map((kit) => ({
-      ...kit,
-      tools: kit.tools.filter((t) => activeSlugs.has(t.slug)),
-    }))
-    .filter((kit) => kit.tools.length > 0);
-}
-
-// ── Kit accordion item ────────────────────────────────────────────────────────
-
-function KitItem({
-  kit,
-  isCollapsed,
-  isExpanded,
-  activeSlug,
-  onToggle,
-}: {
-  kit: (typeof SIDEBAR_KITS)[0];
-  isCollapsed: boolean;
-  isExpanded: boolean;
-  activeSlug: string | null;
-  onToggle: () => void;
-}) {
-  const KitIcon = kit.icon;
-  const isKitActive = kit.tools.some((t) => t.slug === activeSlug);
-
-  return (
-    <div>
-      <div className="group/kit flex items-center">
-        <button
-          onClick={onToggle}
-          title={isCollapsed ? kit.name : undefined}
-          className={cn(
-            "kit-header flex-1 min-w-0 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors duration-150",
-            isKitActive
-              ? "text-primary font-medium border-l-2 border-primary bg-primary/5"
-              : "text-muted-foreground hover:bg-accent/10 hover:text-foreground",
-            isCollapsed && "justify-center border-l-0"
-          )}
-        >
-          <KitIcon className="h-[18px] w-[18px] shrink-0" />
-          {!isCollapsed && (
-            <>
-              <span className="flex-1 truncate text-left">{kit.name}</span>
-              <span className="text-[10px] text-muted-foreground/60 font-normal">
-                {kit.tools.length}
-              </span>
-              <ChevronDown
-                className={cn(
-                  "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
-                  isExpanded && "rotate-180"
-                )}
-              />
-            </>
-          )}
-        </button>
-        {!isCollapsed && (
-          <Link
-            href={`/kits/${kit.pageSlug}`}
-            title={`${kit.name} page`}
-            onClick={(e) => e.stopPropagation()}
-            className="shrink-0 p-1 rounded opacity-0 group-hover/kit:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
-          >
-            <ExternalLink className="h-3 w-3" />
-          </Link>
-        )}
-      </div>
-
-      {!isCollapsed && (
-        <AnimatePresence initial={false}>
-          {isExpanded && (
-            <motion.div
-              key="tools"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="overflow-hidden"
-            >
-              <div className="pb-1 pl-3">
-                {kit.tools.map((tool) => {
-                  const ToolIcon = getToolIcon(tool.slug);
-                  const isActive = tool.slug === activeSlug;
-                  return (
-                    <Link
-                      key={tool.slug}
-                      href={`/tools/${tool.slug}`}
-                      className={cn(
-                        "sidebar-link relative flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors",
-                        isActive
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "text-muted-foreground hover:bg-accent/5 hover:text-accent"
-                      )}
-                    >
-                      {isActive && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-primary rounded-r-full" />
-                      )}
-                      <ToolIcon className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{tool.name}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      )}
-    </div>
-  );
+  useEffect(() => {
+    if (session?.user && !initialized) load();
+  }, [session?.user, initialized, load]);
 }
 
 // ── Credits widget ────────────────────────────────────────────────────────────
@@ -190,7 +81,70 @@ function CreditsWidget({ isCollapsed }: { isCollapsed: boolean }) {
   );
 }
 
-// ── Sidebar content (shared between desktop + mobile drawer) ──────────────────
+// ── Tool link (shared for kit tools and added tools) ──────────────────────────
+
+function ToolLink({
+  slug,
+  name,
+  activeSlug,
+  isCollapsed,
+}: {
+  slug: string;
+  name: string;
+  activeSlug: string | null;
+  isCollapsed: boolean;
+}) {
+  const Icon = getToolIcon(slug);
+  const isActive = slug === activeSlug;
+
+  return (
+    <Link
+      href={`/tools/${slug}`}
+      title={isCollapsed ? name : undefined}
+      className={cn(
+        "relative flex items-center gap-2 rounded-md py-1.5 text-sm transition-colors",
+        isCollapsed ? "justify-center px-2" : "pl-6 pr-3 border-l-2 ml-3",
+        isActive
+          ? "text-primary font-medium border-l-primary bg-primary/5"
+          : "text-muted-foreground hover:text-foreground hover:bg-accent/5 border-l-accent/20"
+      )}
+    >
+      {isActive && !isCollapsed && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-primary rounded-r-full" />
+      )}
+      <Icon className="h-3.5 w-3.5 shrink-0" />
+      {!isCollapsed && <span className="truncate">{name}</span>}
+    </Link>
+  );
+}
+
+// ── Section header (kit or added-tools block) ─────────────────────────────────
+
+function SectionHeader({
+  icon: Icon,
+  label,
+  variant = "kit",
+}: {
+  icon: React.ElementType;
+  label: string;
+  variant?: "kit" | "added";
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 rounded-lg px-3 py-2 mb-1",
+        variant === "kit"
+          ? "bg-accent/5 border border-accent/20"
+          : "bg-muted/50 border border-border"
+      )}
+    >
+      <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
+      <span className="flex-1 truncate text-sm font-semibold text-foreground">{label}</span>
+    </div>
+  );
+}
+
+// ── Sidebar content (shared between desktop + mobile) ─────────────────────────
 
 function SidebarContent({
   isCollapsed = false,
@@ -202,46 +156,13 @@ function SidebarContent({
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
-  const { expandedKit, setExpandedKit } = useSidebarStore();
-  const [visibleKits, setVisibleKits] = useState<KitConfig[]>(SIDEBAR_KITS);
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const { kitName, kitTools, addedTools, initialized } = useWorkspaceStore();
+
+  useWorkspaceInit();
 
   const activeSlug = pathname.startsWith("/tools/")
     ? pathname.split("/tools/")[1]?.split("/")[0] ?? null
     : null;
-
-  // Fetch active slugs once and filter sidebar kits
-  const refreshKits = useCallback(async () => {
-    const slugs = await fetchActiveSlugs();
-    setVisibleKits(filterKits(SIDEBAR_KITS, slugs));
-  }, []);
-
-  useEffect(() => {
-    refreshKits();
-  }, [refreshKits]);
-
-  // Fetch personalized workspace for logged-in users
-  useEffect(() => {
-    if (!session?.user) return;
-    fetch("/api/user/workspace")
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data?.kitTools) setWorkspace(data); })
-      .catch(() => {});
-  }, [session?.user]);
-
-  useEffect(() => {
-    if (activeSlug) {
-      const parentKit = getKitForSlug(activeSlug);
-      if (parentKit && expandedKit !== parentKit) {
-        setExpandedKit(parentKit);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSlug]);
-
-  function handleKitToggle(kitId: string) {
-    setExpandedKit(expandedKit === kitId ? null : kitId);
-  }
 
   const isDashboard = pathname === "/dashboard";
 
@@ -288,7 +209,7 @@ function SidebarContent({
       </div>
 
       {/* Explore link */}
-      <div className="px-2 pb-1 shrink-0">
+      <div className="px-2 pb-2 shrink-0">
         <Link
           href="/explore"
           title={isCollapsed ? "Explore Tools" : undefined}
@@ -305,111 +226,76 @@ function SidebarContent({
         </Link>
       </div>
 
-      {/* Kit navigation — personalized or full fallback */}
-      {workspace ? (
-        <nav className="flex-1 overflow-y-auto px-2 py-1 space-y-2">
-          {/* My Kit */}
-          {!isCollapsed && (
-            <div className="px-3 pt-3 pb-1">
-              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-                <Sparkles className="h-3 w-3" />
-                <span className="truncate">{workspace.kitName}</span>
-              </div>
-            </div>
-          )}
-          {workspace.kitTools.map((tool) => {
-            const ToolIcon = getToolIcon(tool.slug);
-            const isActive = tool.slug === activeSlug;
-            return (
-              <Link
-                key={tool.slug}
-                href={`/tools/${tool.slug}`}
-                title={isCollapsed ? tool.name : undefined}
-                className={cn(
-                  "relative flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors",
-                  isCollapsed && "justify-center",
-                  isActive
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-muted-foreground hover:bg-accent/5 hover:text-accent"
-                )}
-              >
-                {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-primary rounded-r-full" />
-                )}
-                <ToolIcon className="h-3.5 w-3.5 shrink-0" />
-                {!isCollapsed && <span className="truncate">{tool.name}</span>}
-              </Link>
-            );
-          })}
+      <div className="border-t border-border/50 shrink-0" />
 
-          {/* Added Tools */}
-          {workspace.addedTools.length > 0 && (
-            <>
-              {!isCollapsed && (
-                <div className="px-3 pt-3 pb-1">
-                  <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-                    <Plus className="h-3 w-3" />
-                    <span>My Added Tools</span>
-                  </div>
-                </div>
-              )}
-              {workspace.addedTools.map((tool) => {
-                const ToolIcon = getToolIcon(tool.slug);
-                const isActive = tool.slug === activeSlug;
-                return (
-                  <Link
-                    key={tool.slug}
-                    href={`/tools/${tool.slug}`}
-                    title={isCollapsed ? tool.name : undefined}
-                    className={cn(
-                      "relative flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors",
-                      isCollapsed && "justify-center",
-                      isActive
-                        ? "bg-primary/10 text-primary font-medium"
-                        : "text-muted-foreground hover:bg-accent/5 hover:text-accent"
-                    )}
-                  >
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-primary rounded-r-full" />
-                    )}
-                    <ToolIcon className="h-3.5 w-3.5 shrink-0" />
-                    {!isCollapsed && <span className="truncate">{tool.name}</span>}
-                  </Link>
-                );
-              })}
-            </>
-          )}
-        </nav>
-      ) : (
-        <>
-          {/* Kits label (fallback) */}
-          {!isCollapsed && (
-            <p className="px-5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 shrink-0">
-              Kits
-            </p>
-          )}
-          <nav className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
-            {visibleKits.map((kit) => (
-              <KitItem
-                key={kit.id}
-                kit={kit}
-                isCollapsed={isCollapsed}
-                isExpanded={expandedKit === kit.id}
+      {/* Kit + Added Tools navigation */}
+      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
+        {initialized && kitTools.length > 0 && (
+          <>
+            {/* ── Kit section label ── */}
+            {!isCollapsed && (
+              <p className="px-1 pb-1 text-[10px] font-semibold tracking-widest text-muted-foreground/60 uppercase">
+                My Kit
+              </p>
+            )}
+
+            {/* Kit header card */}
+            {!isCollapsed && (
+              <SectionHeader icon={Sparkles} label={kitName} variant="kit" />
+            )}
+
+            {/* Kit tools (indented) */}
+            {kitTools.map((tool) => (
+              <ToolLink
+                key={tool.slug}
+                slug={tool.slug}
+                name={tool.name}
                 activeSlug={activeSlug}
-                onToggle={() => handleKitToggle(kit.id)}
+                isCollapsed={isCollapsed}
               />
             ))}
-          </nav>
-        </>
-      )}
+
+            {/* ── Added tools section ── */}
+            {addedTools.length > 0 && (
+              <>
+                <div className="pt-3" />
+                {!isCollapsed && (
+                  <p className="px-1 pb-1 text-[10px] font-semibold tracking-widest text-muted-foreground/60 uppercase">
+                    My Tools
+                  </p>
+                )}
+                {!isCollapsed && (
+                  <SectionHeader icon={Plus} label="My Added Tools" variant="added" />
+                )}
+                {addedTools.map((tool) => (
+                  <ToolLink
+                    key={tool.slug}
+                    slug={tool.slug}
+                    name={tool.name}
+                    activeSlug={activeSlug}
+                    isCollapsed={isCollapsed}
+                  />
+                ))}
+              </>
+            )}
+          </>
+        )}
+
+        {/* Skeleton while loading */}
+        {!initialized && !isCollapsed && (
+          <div className="space-y-2 px-1 pt-1">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-7 rounded-md bg-muted/40 animate-pulse" />
+            ))}
+          </div>
+        )}
+      </nav>
 
       {/* Bottom section */}
       {session?.user && (
         <div className="border-t border-border px-2 py-3 space-y-0.5 shrink-0">
-          {/* Credits widget */}
           <CreditsWidget isCollapsed={isCollapsed} />
 
-          {/* Refer & Earn */}
           <button
             onClick={() => {
               onClose?.();
@@ -425,7 +311,6 @@ function SidebarContent({
             {!isCollapsed && <span>Refer &amp; Earn</span>}
           </button>
 
-          {/* Logout */}
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
             title={isCollapsed ? "Logout" : undefined}

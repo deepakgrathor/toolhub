@@ -7,6 +7,7 @@ import { Search, Plus, Check, Loader2, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getToolIcon, getKitIcon } from "@/lib/tool-icons";
 import type { ToolWithConfig } from "@/lib/tool-registry";
+import { useWorkspaceStore } from "@/store/workspace-store";
 
 const KIT_FILTERS = [
   { id: "all",       label: "All Tools",  icon: "LayoutGrid" },
@@ -75,6 +76,7 @@ function ToolCard({
 export default function ExplorePage() {
   const router = useRouter();
   const { status } = useSession();
+  const { addTool, removeTool } = useWorkspaceStore();
   const [data, setData] = useState<ExploreData | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -102,7 +104,7 @@ export default function ExplorePage() {
     if (status === "authenticated") loadTools();
   }, [status, loadTools]);
 
-  async function toggleTool(slug: string) {
+  async function toggleTool(slug: string, toolName: string) {
     if (!data) return;
     const isAdded = data.userAddedSlugs.includes(slug);
     setToggling((s) => new Set(s).add(slug));
@@ -115,6 +117,8 @@ export default function ExplorePage() {
           body: JSON.stringify({ slug }),
         });
         setData((d) => d ? { ...d, userAddedSlugs: d.userAddedSlugs.filter((s) => s !== slug) } : d);
+        // Instantly remove from sidebar
+        removeTool(slug);
       } else {
         await fetch("/api/explore/add", {
           method: "POST",
@@ -122,6 +126,8 @@ export default function ExplorePage() {
           body: JSON.stringify({ slug }),
         });
         setData((d) => d ? { ...d, userAddedSlugs: [...d.userAddedSlugs, slug] } : d);
+        // Instantly add to sidebar
+        addTool({ slug, name: toolName });
       }
     } catch {
       //
@@ -156,7 +162,6 @@ export default function ExplorePage() {
 
       {/* Sticky search + filter bar */}
       <div className="sticky top-14 z-20 bg-background/80 backdrop-blur-md pb-4 -mx-4 px-4 border-b border-border mb-4">
-        {/* Search */}
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
@@ -167,7 +172,6 @@ export default function ExplorePage() {
           />
         </div>
 
-        {/* Category filters */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {KIT_FILTERS.map(({ id, label }) => {
             const KitIcon = id === "all" ? LayoutGrid : getKitIcon(id);
@@ -190,12 +194,10 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      {/* Tool count */}
       <p className="text-xs text-muted-foreground mb-4">
         {filteredTools.length} tools · {data?.userAddedSlugs.length ?? 0} added to workspace
       </p>
 
-      {/* Tool grid */}
       {filteredTools.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
           <Search className="h-8 w-8 mb-2 opacity-40" />
@@ -208,7 +210,7 @@ export default function ExplorePage() {
               key={tool.slug}
               tool={tool}
               isAdded={data?.userAddedSlugs.includes(tool.slug) ?? false}
-              onToggle={() => toggleTool(tool.slug)}
+              onToggle={() => toggleTool(tool.slug, tool.name)}
               toggling={toggling.has(tool.slug)}
             />
           ))}

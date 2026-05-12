@@ -1,132 +1,128 @@
 # Handoff Note
-Updated: 2026-05-13 | Account: B | Session: #4 | HKDF Fix (Real Root Cause)
+Updated: 2026-05-13 | Account: B | Session: #5 | Multi-profession + Recommendations + Sidebar redesign
 
 ## Where We Are
-Session B4 done. **TypeScript: 0 errors.** Committed to main.
+Session B5 done. **TypeScript: 0 errors.** Committed to main.
 
 ---
 
-## What Was Fixed (Session B4)
+## What Was Done (Session B5)
 
-### FIX 8 — Infinite Reload Loop (Real Root Cause)
-**Problem:** After Google login, user still stuck in reload loop on production (`setulix.com`). Session B3 fix was incomplete.
+### FIX 1 — Onboarding Step 4 Redirect
+**Problem:** After clicking Launch, API returned success but page reloaded back to step 4 because `router.push('/dashboard')` issued a client-side navigation while the JWE cookie update from `await update()` hadn't propagated to the browser cookie store yet.
 
-**Root cause confirmed by reading `@auth/core/src/jwt.ts` (v5.0.0-beta.31):**
-Auth.js v5 `getDerivedEncryptionKey` for `A256CBC-HS512`:
-1. **Key length = 64 bytes (512 bits)** — B3 fix used 256 bits (32 bytes) ← WRONG
-2. **HKDF salt = cookie name** (`"__Secure-authjs.session-token"` on prod) — B3 used empty Uint8Array ← WRONG
-3. **HKDF info = `"Auth.js Generated Encryption Key (${cookieName})"`** — B3 used info string without cookie name ← WRONG
-
-All three parameters wrong → derived key never matched → `jwtDecrypt` always threw → middleware returned `null` → redirected to `/` → marketing homepage `auth()` properly decrypted JWE → saw valid session → redirected to `/dashboard` → middleware → loop.
-
-**Fix (`apps/web/src/middleware.ts`):**
-- `deriveAuthKey(secret, cookieName)` — now takes cookie name as second arg
-- HKDF salt: `te.encode(cookieName)` (cookie name string encoded as bytes)
-- HKDF info: `te.encode("Auth.js Generated Encryption Key (${cookieName})")`
-- `deriveBits(..., 512)` — 64 bytes for A256CBC-HS512
-- `getSessionPayload` determines correct cookie name (prefers `__Secure-authjs.session-token` on HTTPS)
-- `jwtDecrypt` now passes explicit `keyManagementAlgorithms: ["dir"]` + `contentEncryptionAlgorithms: ["A256CBC-HS512", "A256GCM"]`
+**Fix:** Replaced `router.push('/dashboard')` with `window.location.href = '/dashboard'`. The full page reload guarantees the browser sends the updated JWE cookie with the navigation request, so middleware sees `onboardingCompleted: true`.
 
 ---
 
+### IMPLEMENT 3 — Multi-select Profession
+
+**User model** (`packages/db/src/models/User.ts`):
+- Added `professions: [String]` field (enum, default `[]`).
+- Legacy `profession: String` kept for backwards compat.
+
+**Onboarding page** (`apps/web/src/app/onboarding/page.tsx`):
+- Step 1 now multi-select: clicking a card toggles it in/out of `professions[]` array.
+- Selected cards show purple border + checkmark (same visual style, now toggles).
+- Kit name auto-generated via `buildKitName()` from `recommendations.ts`.
+- Minimum 1 profession required to Continue.
+
+**API** (`api/onboarding/complete`):
+- Accepts `professions: string[]` (falls back to `[profession]` for legacy clients).
+- Saves both `professions` (array) and `profession` (first item) to user.
+
 ---
 
-## What Was Fixed (Session B2)
+### IMPLEMENT 4 — Smart Recommendation Engine
 
-### FIX 1 — Marketing Pages Routing
-**Problem:** Navbar links (Tools, Pricing, About, Kits) routed into `(site)` layout with sidebar — wrong for unauthenticated visitors.
+**New file** `apps/web/src/lib/recommendations.ts`:
+- `getRecommendedTools({ professions, teamSize, challenge })` — scores all 27 tools.
+  - +30 if tool kit matches any selected profession kit
+  - +20 if tool tags match challenge keyword
+  - +15 if tool is free (lower barrier)
+- `buildKitName(firstName, professions)` — generates kit name:
+  - 1 profession → "Deepak Creator Pro Kit"
+  - 2 professions → "Deepak Creator & Business Kit"
+  - 3+ → "Deepak All-In-One Kit"
 
-**Fix:** Moved all public pages from `(site)` to `(marketing)` route group (no sidebar):
-- Deleted: `(site)/about`, `(site)/pricing`, `(site)/tools`, `(site)/kits/*` (5 individual pages)
-- Created: `(marketing)/pricing/page.tsx` — client component, fetches from `/api/public/plans`
-- Created: `(marketing)/about/page.tsx` + `AboutCTA.tsx` client component
-- Created: `(marketing)/tools/page.tsx` — tools showcase with kit filter + search, auth modal on click
-- Created: `(marketing)/kits/[slug]/page.tsx` — dynamic kit page (all 5 kits in one route) + `KitCTAButtons.tsx`
+**API** (`api/onboarding/recommendations` — GET):
+- Query params: `professions` (repeatable), `teamSize`, `challenge`.
+- Returns scored tool list.
 
-**Marketing Navbar hrefs were already correct** (`/tools`, `/pricing`, `/about`) — just needed pages in right route group.
+**Onboarding complete API** uses recommendation engine instead of hardcoded `PROFESSION_TOOLS`.
 
-### FIX 2 — "Start Free" Button
-**Problem:** Hero CTA used `<Link href="/api/auth/signin">` — opened Google OAuth directly.
+---
 
-**Fix:** Created `components/marketing/HeroCTA.tsx` with `HeroCTA`, `FinalCTA`, `ToolCardClick` client components. All use `useAuthStore.openAuthModal("signup")`. Marketing homepage tool cards also open auth modal instead of linking to `/tools/[slug]`.
+### IMPLEMENT 5 — Workspace Zustand Store + Instant Explore Sync
 
-### FIX 3 — Onboarding After Google Signup
-**Problem:** JWT cookie retained `onboardingCompleted: false` even after onboarding complete — caused redirect loop. `window.location.href` reload didn't refresh JWT.
+**New file** `apps/web/src/store/workspace-store.ts`:
+- `useWorkspaceStore` — Zustand store: `kitName`, `professions`, `kitTools`, `addedTools`, `initialized`.
+- `setWorkspace(data)` — populate on mount.
+- `addTool(tool)` / `removeTool(slug)` — called from explore page on add/remove.
 
-**Fix:**
-- `auth.ts`: Added `trigger === 'update'` handling in JWT callback — session can be updated without re-login
-- `onboarding/page.tsx`: Uses `const { update } = useSession()` → calls `await update({ onboardingCompleted: true })` before `router.push('/dashboard')` — JWT cookie updated in-place
+**Explore page** (`apps/web/src/app/(site)/explore/page.tsx`):
+- On add: calls `addTool({ slug, name })` → sidebar updates instantly (no refresh).
+- On remove: calls `removeTool(slug)` → sidebar updates instantly.
 
-### FIX 4 — Sidebar Personalization
-**Problem:** Sidebar showed all 5 kits hardcoded, not personalized.
+**Sidebar** loads workspace once via `useWorkspaceInit()` hook and reads reactively from `useWorkspaceStore`.
 
-**Fix:**
-- Created `GET /api/user/workspace` — returns user's `kitName`, `profession`, `kitTools` (from their kit), `addedTools` (from selectedTools not in kit). Redis-cached 5min.
-- `Sidebar.tsx`: Fetches workspace on mount, shows personalized view with "My Kit" section + "My Added Tools" section. Falls back to full kits view while loading or if fetch fails.
-- Cache invalidated on onboarding complete.
+---
 
-### FIX 5 — Dashboard Accessible Without Login
-**Problem:** Middleware didn't protect `/dashboard`, `/profile`, `/explore`, `/history` from unauthenticated access.
+### IMPLEMENT 6 — Sidebar Redesign
 
-**Fix:** Replaced `middleware.ts` with clean version:
-- APP_ROUTES check: no session → redirect to `/`
-- Onboarding gate: only for app routes (not public pages)
-- `/about`, `/pricing`, `/tools`, `/kits` added to always-public list
-- Admin routes unchanged (separate `setulix_admin` cookie)
+New visual hierarchy in `Sidebar.tsx`:
 
-### FIX 6 — Auth Modal in Light Theme
-**Problem:** `AuthModal.tsx` used `bg-[#111111]` hardcoded dark background.
+```
+Dashboard
+Explore Tools
+────────────
+MY KIT               ← section label (10px uppercase)
+┌─ Deepak Creator Pro Kit ─┐  ← kit header (bg-accent/5, border-accent/20)
+└──────────────────────────┘
+  pl-6 indented tools with border-l-2
 
-**Fix:** 
-- `bg-[#111111]` → `bg-card`
-- Password strength bar `bg-white/10` → `bg-muted`
-- Mode tab container `bg-background` → `bg-muted`
+MY TOOLS             ← section label
+┌─ My Added Tools ──────────┐  ← added header (bg-muted/50, border-border)
+└──────────────────────────┘
+  pl-6 indented added tools
+```
 
-### Additional
-- Created `GET /api/public/plans` — returns active credit packs, Redis-cached 10min
-- Created `GET /api/public/tools` — returns visible tools, Redis-cached 5min
-- Fixed `(site)/layout.tsx` sidebar import casing (`sidebar` → `Sidebar`)
-- `api/onboarding/complete`: now returns `{ success: true, updateSession: true }`
+- Active tool: `text-primary font-medium border-l-primary` + left indicator bar.
+- Loading skeleton (4 pulse bars) while `initialized = false`.
+- Collapsed mode: icons only, no section headers.
 
 ---
 
 ## Architecture Notes (Updated)
 
-### Route Groups (final)
+### Workspace Data Flow
 ```
-app/
-  (marketing)/          ← public pages (no sidebar, MarketingNavbar)
-    layout.tsx          ← MarketingNavbar only
-    page.tsx            ← marketing homepage (redirects logged-in to /dashboard)
-    pricing/            ← public pricing (client component, fetches /api/public/plans)
-    about/              ← public about page
-    tools/              ← public tools showcase (client, auth modal on click)
-    kits/[slug]/        ← dynamic kit landing pages (creator/sme/hr/legal/marketing)
-  
-  (site)/               ← app pages (Sidebar + Navbar)
-    layout.tsx          ← Sidebar + Navbar + AnnouncementBanner
-    dashboard/          ← auth protected (middleware + server component)
-    tools/[slug]/       ← tool pages (preview without auth, paywall in-page)
-    profile/            ← auth protected
-    explore/            ← auth protected
-  
-  admin/                ← setulix_admin cookie auth (jose)
-  onboarding/           ← no sidebar, excluded from onboarding gate
+Mount → useWorkspaceInit() → GET /api/user/workspace
+                           → setWorkspace(data) → store initialized
+
+Explore Add → POST /api/explore/add
+           → addTool({ slug, name }) → sidebar re-renders instantly
+
+Explore Remove → DELETE /api/explore/remove
+              → removeTool(slug) → sidebar re-renders instantly
 ```
 
-### Middleware Auth Flow
-```
-/dashboard, /profile, /explore, /history:
-  → Read authjs.session-token cookie → jwtVerify
-  → No payload → redirect to /
-  → payload.onboardingCompleted === false → redirect to /onboarding
-  → else → proceed
+### Profession → Kit → Tools mapping
+- `professions[]` on user (new, multi-value)
+- `profession` on user (legacy, = professions[0])
+- Workspace API merges kit tools from ALL selected professions (de-duped)
 
-/about, /pricing, /tools, /kits, /onboarding, /api/public, /api/auth, /:
-  → Always public, no checks
-```
+---
+
+## Previous Sessions
+
+### Session B4 — HKDF Fix (Real Root Cause)
+Fixed Auth.js v5 JWE key derivation: 64-byte HKDF key, salt = cookie name, info = "Auth.js Generated Encryption Key (${cookieName})". Eliminated infinite reload loop on production.
+
+### Session B2 — Marketing Pages + Auth
+Moved public pages to `(marketing)` route group, fixed Start Free button, fixed sidebar personalization, fixed dashboard auth gate, fixed auth modal light theme.
 
 ---
 
 ## Issues
-None. TypeScript: 0 errors. Reload loop resolved.
+None. TypeScript: 0 errors.

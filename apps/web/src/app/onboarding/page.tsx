@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -11,16 +11,17 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getToolIcon } from "@/lib/tool-icons";
+import { buildKitName, getRecommendedTools } from "@/lib/recommendations";
 
-// ── Static config (fallback when DB is unreachable) ──────────────────────────
+// ── Static config ──────────────────────────────────────────────────────────────
 
 const PROFESSION_OPTIONS = [
-  { value: "creator",  label: "Content Creator",  icon: "Sparkles",   subtitle: "Scripts, thumbnails, hooks, captions", kitName: "{name} Creator Pro" },
-  { value: "sme",      label: "Business Owner",   icon: "Building2",  subtitle: "GST invoice, expense, quotation",      kitName: "{name} Business Hub" },
-  { value: "hr",       label: "HR Professional",  icon: "Users",      subtitle: "JD, offer letter, appraisal",          kitName: "{name} HR Suite" },
-  { value: "legal",    label: "CA / Legal Pro",   icon: "Scale",      subtitle: "Legal notices, NDAs, disclaimers",     kitName: "{name} Legal Pro" },
-  { value: "marketer", label: "Marketer",         icon: "Megaphone",  subtitle: "Ad copy, LinkedIn bio, email",         kitName: "{name} Marketing Pro" },
-  { value: "other",    label: "Something Else",   icon: "HelpCircle", subtitle: "Explore all 27 tools",                 kitName: "{name} AI Workspace" },
+  { value: "creator",  label: "Content Creator",  icon: "Sparkles",   subtitle: "Scripts, thumbnails, hooks, captions" },
+  { value: "sme",      label: "Business Owner",   icon: "Building2",  subtitle: "GST invoice, expense, quotation" },
+  { value: "hr",       label: "HR Professional",  icon: "Users",      subtitle: "JD, offer letter, appraisal" },
+  { value: "legal",    label: "CA / Legal Pro",   icon: "Scale",      subtitle: "Legal notices, NDAs, disclaimers" },
+  { value: "marketer", label: "Marketer",         icon: "Megaphone",  subtitle: "Ad copy, LinkedIn bio, email" },
+  { value: "other",    label: "Something Else",   icon: "HelpCircle", subtitle: "Explore all 27 tools" },
 ];
 
 const TEAM_OPTIONS = [
@@ -31,20 +32,11 @@ const TEAM_OPTIONS = [
 ];
 
 const CHALLENGE_OPTIONS = [
-  { value: "time",       label: "Time Saving",           icon: "Clock",       subtitle: "Automate repetitive tasks" },
-  { value: "quality",    label: "Quality Improvement",   icon: "Star",        subtitle: "Better output every time" },
-  { value: "cost",       label: "Cost Reduction",        icon: "DollarSign",  subtitle: "Do more with less" },
-  { value: "compliance", label: "Compliance & Legal",    icon: "ShieldCheck", subtitle: "Stay audit-ready" },
+  { value: "time",       label: "Time Saving",         icon: "Clock",       subtitle: "Automate repetitive tasks" },
+  { value: "quality",    label: "Quality Improvement", icon: "Star",        subtitle: "Better output every time" },
+  { value: "cost",       label: "Cost Reduction",      icon: "DollarSign",  subtitle: "Do more with less" },
+  { value: "compliance", label: "Compliance & Legal",  icon: "ShieldCheck", subtitle: "Stay audit-ready" },
 ];
-
-const PROFESSION_TOOLS: Record<string, string[]> = {
-  creator:  ["blog-generator", "yt-script", "hook-writer", "caption-generator", "thumbnail-ai", "title-generator"],
-  sme:      ["gst-invoice", "expense-tracker", "quotation-generator", "qr-generator", "website-generator", "gst-calculator"],
-  hr:       ["jd-generator", "resume-screener", "appraisal-draft", "policy-generator", "offer-letter", "salary-slip"],
-  legal:    ["legal-notice", "nda-generator", "legal-disclaimer", "gst-calculator", "tds-sheet", "whatsapp-bulk"],
-  marketer: ["ad-copy", "caption-generator", "email-subject", "linkedin-bio", "hook-writer", "seo-auditor"],
-  other:    ["blog-generator", "yt-script", "gst-invoice", "jd-generator", "ad-copy", "qr-generator"],
-};
 
 const TOOL_NAMES: Record<string, string> = {
   "blog-generator": "Blog Generator", "yt-script": "YT Script", "hook-writer": "Hook Writer",
@@ -72,9 +64,9 @@ function DynIcon({ name, className }: { name: string; className?: string }) {
   return <Icon className={className} />;
 }
 
-// ── Option card ───────────────────────────────────────────────────────────────
+// ── Multi-select profession card ───────────────────────────────────────────────
 
-interface OptionCardProps {
+interface ProfessionCardProps {
   value: string;
   label: string;
   icon: string;
@@ -83,7 +75,39 @@ interface OptionCardProps {
   onClick: () => void;
 }
 
-function OptionCard({ value: _value, label, icon, subtitle, selected, onClick }: OptionCardProps) {
+function ProfessionCard({ value: _value, label, icon, subtitle, selected, onClick }: ProfessionCardProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "relative flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all duration-150",
+        "hover:border-primary/50 hover:bg-primary/5",
+        selected
+          ? "border-primary bg-primary/10 ring-2 ring-primary/30"
+          : "border-border bg-card"
+      )}
+    >
+      {selected && (
+        <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
+          <Check className="h-3 w-3" />
+        </span>
+      )}
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+        <DynIcon name={icon} className="h-5 w-5 text-primary" />
+      </div>
+      <div>
+        <div className="text-sm font-semibold text-foreground">{label}</div>
+        {subtitle && <div className="text-xs text-muted-foreground mt-0.5">{subtitle}</div>}
+      </div>
+    </button>
+  );
+}
+
+// ── Single-select option card ──────────────────────────────────────────────────
+
+function OptionCard({
+  value: _value, label, icon, subtitle, selected, onClick,
+}: { value: string; label: string; icon: string; subtitle?: string; selected: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -138,7 +162,7 @@ export default function OnboardingPage() {
   const { data: session, status, update } = useSession();
 
   const [step, setStep] = useState(1);
-  const [profession, setProfession] = useState("");
+  const [professions, setProfessions] = useState<string[]>([]);
   const [teamSize, setTeamSize] = useState("");
   const [challenge, setChallenge] = useState("");
   const [kitName, setKitName] = useState("");
@@ -147,15 +171,14 @@ export default function OnboardingPage() {
 
   const firstName = session?.user?.name?.split(" ")[0] ?? "You";
 
-  // Generate kit name when profession selected
+  // Recompute kit name whenever professions or firstName changes
+  const refreshKitName = useCallback(() => {
+    setKitName(buildKitName(firstName, professions));
+  }, [firstName, professions]);
+
   useEffect(() => {
-    if (profession) {
-      const opt = PROFESSION_OPTIONS.find((o) => o.value === profession);
-      if (opt) {
-        setKitName(opt.kitName.replace("{name}", firstName));
-      }
-    }
-  }, [profession, firstName]);
+    refreshKitName();
+  }, [refreshKitName]);
 
   // Redirect to dashboard if already onboarded
   useEffect(() => {
@@ -179,6 +202,12 @@ export default function OnboardingPage() {
     }
   }
 
+  function toggleProfession(value: string) {
+    setProfessions((prev) =>
+      prev.includes(value) ? prev.filter((p) => p !== value) : [...prev, value]
+    );
+  }
+
   function goNext() {
     const next = step + 1;
     setStep(next);
@@ -195,12 +224,13 @@ export default function OnboardingPage() {
       const res = await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profession, teamSize, challenge, kitName }),
+        body: JSON.stringify({ professions, teamSize, challenge, kitName }),
       });
       if (res.ok) {
-        // Update JWT in-place so middleware sees onboardingCompleted=true immediately
+        // Update JWT cookie in-place so middleware sees onboardingCompleted=true
         await update({ onboardingCompleted: true });
-        router.push("/dashboard");
+        // Full page reload ensures updated cookie is sent with the navigation request
+        window.location.href = "/dashboard";
       }
     } catch {
       setSubmitting(false);
@@ -215,32 +245,37 @@ export default function OnboardingPage() {
     );
   }
 
-  const recommendedSlugs = PROFESSION_TOOLS[profession] ?? [];
+  const recommendedSlugs = getRecommendedTools({ professions, teamSize, challenge });
 
   return (
     <div className="w-full max-w-2xl">
       <ProgressBar step={step} total={4} />
 
-      {/* ── Step 1: Profession ── */}
+      {/* ── Step 1: Profession (multi-select) ── */}
       {step === 1 && (
         <div>
           <h1 className="text-2xl font-bold text-foreground mb-1">Aap mainly kya karte hain?</h1>
-          <p className="text-sm text-muted-foreground mb-6">
-            Hum aapka AI workspace personalise karenge.
+          <p className="text-sm text-muted-foreground mb-2">
+            Hum aapka AI workspace personalise karenge. <span className="text-primary font-medium">Ek ya zyada select karein.</span>
           </p>
+          {professions.length > 0 && (
+            <p className="text-xs text-primary mb-4">
+              {professions.length} selected
+            </p>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {PROFESSION_OPTIONS.map((opt) => (
-              <OptionCard
+              <ProfessionCard
                 key={opt.value}
                 {...opt}
-                selected={profession === opt.value}
-                onClick={() => setProfession(opt.value)}
+                selected={professions.includes(opt.value)}
+                onClick={() => toggleProfession(opt.value)}
               />
             ))}
           </div>
           <div className="mt-8 flex justify-end">
             <button
-              disabled={!profession}
+              disabled={professions.length === 0}
               onClick={goNext}
               className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
@@ -357,7 +392,7 @@ export default function OnboardingPage() {
             <p className="text-xs text-muted-foreground mt-1">Click to edit your workspace name.</p>
           </div>
 
-          {/* Recommended tools */}
+          {/* Recommended tools (scored) */}
           <div className="mb-8">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
               Recommended Tools ({recommendedSlugs.length})

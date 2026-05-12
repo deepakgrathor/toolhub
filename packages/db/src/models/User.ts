@@ -26,6 +26,7 @@ export interface IUser extends Document {
   avatar?: string | null;
   address?: string | null;
   profession?: "creator" | "sme" | "hr" | "legal" | "marketer" | "other" | null;
+  professions?: string[];
   // Workspace
   kitName?: string | null;
   selectedTools: string[];
@@ -64,6 +65,11 @@ const UserSchema = new Schema<IUser>(
       type: String,
       enum: ["creator", "sme", "hr", "legal", "marketer", "other", null],
       default: null,
+    },
+    professions: {
+      type: [String],
+      enum: ["creator", "sme", "hr", "legal", "marketer", "other"],
+      default: [],
     },
     // Workspace
     kitName: { type: String, default: null },
