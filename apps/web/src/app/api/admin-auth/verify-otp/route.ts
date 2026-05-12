@@ -6,7 +6,10 @@ import { z } from "zod";
 
 const schema = z.object({
   mobile: z.string().min(10).max(15).regex(/^\d+$/),
-  otp: z.string().length(6).regex(/^\d{6}$/),
+  otp: z
+    .string()
+    .length(6)
+    .regex(/^\d{6}$/),
 });
 
 export async function POST(req: NextRequest) {
@@ -16,7 +19,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Mobile and valid 6-digit OTP required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -35,7 +38,7 @@ export async function POST(req: NextRequest) {
     if (!otpRecord) {
       return NextResponse.json(
         { error: "OTP expired. Request a new one." },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -44,24 +47,28 @@ export async function POST(req: NextRequest) {
       await OtpToken.deleteOne({ _id: otpRecord._id });
       return NextResponse.json(
         { error: "Too many wrong attempts. Request a new OTP." },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     // Check OTP — compare against stored SHA-256 hash
     const otpHash = createHash("sha256").update(otp).digest("hex");
     if (otpRecord.otp !== otpHash) {
-      await OtpToken.updateOne({ _id: otpRecord._id }, { $inc: { attempts: 1 } });
+      await OtpToken.updateOne(
+        { _id: otpRecord._id },
+        { $inc: { attempts: 1 } },
+      );
       const remaining = 4 - (otpRecord.attempts ?? 0);
       return NextResponse.json(
-        { error: `Wrong OTP. ${remaining} attempt${remaining === 1 ? "" : "s"} left.` },
-        { status: 401 }
+        {
+          error: `Wrong OTP. ${remaining} attempt${remaining === 1 ? "" : "s"} left.`,
+        },
+        { status: 401 },
       );
     }
 
     // Mark used
     await OtpToken.updateOne({ _id: otpRecord._id }, { used: true });
-
     // Get admin user — must be active and not banned
     const user = await User.findOne({ mobile, role: "admin", isBanned: false });
     if (!user) {

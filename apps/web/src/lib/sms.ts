@@ -8,6 +8,7 @@ export async function sendOtpSMS(phoneNumber: string, otp: string): Promise<bool
     }
 
     const params = new URLSearchParams({
+      authorization : token,
       route: "dlt",
       sender_id: "BILBRO",
       message: "7655",
@@ -18,7 +19,6 @@ export async function sendOtpSMS(phoneNumber: string, otp: string): Promise<bool
 
     const res = await fetch(`https://bulk9.com/dev/api?${params.toString()}`, {
       method: "GET",
-      headers: { authorization: token },
       signal: AbortSignal.timeout(5000),
     });
 
