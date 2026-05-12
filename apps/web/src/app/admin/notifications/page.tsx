@@ -5,11 +5,11 @@ import { Megaphone, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RecentPush {
-  _id: string;
-  userId: string;
+  _id: unknown;
   title: string;
   message: string;
-  createdAt: string;
+  sentAt: string;
+  count: number;
 }
 
 function formatDate(dateStr: string) {
@@ -228,21 +228,23 @@ export default function AdminNotificationsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Target</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Recipients</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Title</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Message</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Sent At</th>
                 </tr>
               </thead>
               <tbody>
-                {recent.map((n) => (
-                  <tr key={n._id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 text-muted-foreground font-mono text-xs truncate max-w-[120px]">
-                      {String(n.userId).slice(-6)}…
+                {recent.map((n, i) => (
+                  <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                        {n.count} {n.count === 1 ? "user" : "users"}
+                      </span>
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground max-w-[160px] truncate">{n.title}</td>
                     <td className="px-4 py-3 text-muted-foreground max-w-[240px] truncate">{n.message}</td>
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{formatDate(n.createdAt)}</td>
+                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{formatDate(n.sentAt)}</td>
                   </tr>
                 ))}
               </tbody>
