@@ -1,19 +1,49 @@
 # Handoff Note
-Updated: 2026-05-10 | Account: A | Session: #25 | Security hardening + Admin dashboard features
+Updated: 2026-05-12 | Account: A | Session: #26 | Critical bug fixes — dashboard reload loop + admin login
 
 ## Where We Are
-Session A25 done. **TypeScript: 0 errors.** Deployed to Vercel.
+Session A26 done. **TypeScript: 0 errors.** Deployed to Vercel.
 
-**REQUIRED VERCEL ENV VARS (add before admin login works):**
+**⚠️ REQUIRED VERCEL ENV VARS — Admin login WILL NOT work without these:**
 1. `ADMIN_JWT_SECRET` = `lfc3tMXaG+rWRFmn+Pj6aBJ+LNZg4q63+LYBOVi177s=`
 2. `BULKSMS_TOKEN` = (from bulk9.com dashboard)
+
+**If admin login still loops after deploy:** Go to Vercel → Project → Settings → Environment Variables.
+Confirm `ADMIN_JWT_SECRET` exists for **Production** environment. If missing, add it with the value above and redeploy.
 
 **ONE-TIME SETUP (run once after deploying):**
 ```
 MONGODB_URI="mongodb+srv://..." ADMIN_MOBILE="917723970629" npx tsx apps/web/src/scripts/set-admin-mobile.ts
 ```
 
-**IMPORTANT — cookie renamed:** `setulix.admin` → `setulix_admin` (dots caused Edge Runtime parsing bugs). Clear old cookie in browser after deploying.
+**IMPORTANT — cookie name is `setulix_admin`** (underscore, not dot). Clear browser cookies if you see a stale `setulix.admin` cookie.
+
+---
+
+## What Was Fixed (Session A26)
+
+### BUG 1 — Dashboard Infinite Reload Loop
+
+**Root causes found and fixed:**
+
+1. **`apps/web/src/store/credits-store.ts`** — Added `isSyncing: boolean` field + concurrency guard to `syncFromServer()`. React StrictMode double-invokes effects; without the guard, two concurrent sync calls would race, both setting `balance`, causing unnecessary re-renders that could cascade. The guard (`if (get().isSyncing) return`) ensures only one in-flight fetch at a time.
+
+2. **`apps/web/src/middleware.ts`** — Removed `checkMaintenanceMode()` async `fetch()` from Edge middleware entirely. It was firing an outbound HTTP call to Upstash Redis on **every page request** inside the Edge Runtime. This adds latency and, combined with Next.js 14 Suspense streaming on `/dashboard`, caused request-timing issues that manifested as repeated reloads. Maintenance mode is now disabled in middleware; it must be re-implemented via Next.js rewrites + a separate Edge API route (never inline in middleware).
+
+**Already correct (no changes needed):**
+- `Navbar.tsx` — `useEffect` dep array was already `[status]` only ✅
+- `dashboard/page.tsx` — Pure server component, zero `useEffect` ✅
+
+### BUG 2 — Admin Cannot Login
+
+**Root cause: `ADMIN_JWT_SECRET` env var missing in Vercel production.**
+
+All code paths were already correct:
+- `admin/login/page.tsx` — No NextAuth. Uses `window.location.href = "/admin"` after OTP ✅
+- `verify-otp/route.ts` — Sets `setulix_admin` httpOnly cookie with `path: "/"` ✅
+- `middleware.ts` — Reads `setulix_admin` cookie and verifies with jose ✅
+
+Without `ADMIN_JWT_SECRET` in Vercel env vars, `verifyAdminCookie()` always returns `false` → every `/admin/*` request redirects to `/admin/login` in a loop, even after OTP succeeds. **Must be set manually in Vercel dashboard** (value documented above).
 
 ---
 
