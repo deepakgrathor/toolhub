@@ -20,7 +20,38 @@ MONGODB_URI="mongodb+srv://..." ADMIN_MOBILE="917723970629" npx tsx apps/web/src
 
 ---
 
-## What Was Fixed (Session A26)
+## What Was Fixed (Session A26 — Part 2)
+
+### BUG 1 ROOT CAUSE — Dashboard Infinite Reload (real fix)
+
+**Cookie name mismatch between NextAuth v5 and `getToken()` from `next-auth/jwt`:**
+
+| Code | Function | Cookie name it reads |
+|---|---|---|
+| `dashboard/page.tsx`, `page.tsx` (home) | `auth()` from next-auth v5 | `authjs.session-token` |
+| `middleware.ts` (old) | `getToken()` from `next-auth/jwt` | `next-auth.session-token` (v4 name) |
+
+The two functions disagreed on whether the user was logged in:
+1. User logs in → `authjs.session-token` cookie set (v5)
+2. `router.push("/dashboard")` fires
+3. Middleware: `getToken()` looked for v4 cookie → not found → `isLoggedIn = false` → `redirect("/")`
+4. Homepage server component: `auth()` read v5 cookie → user IS logged in → `redirect("/dashboard")`
+5. Back to step 3 → **infinite loop**
+
+**Fix applied (`apps/web/src/middleware.ts`):**
+- Removed `getToken()` import and all calls from middleware entirely
+- Removed the `/dashboard` protection from middleware
+- Web-app auth is now handled exclusively by server components via `auth()` (same function that set the cookie — no mismatch possible)
+- Admin cookie check (`setulix_admin` via jose) is unchanged
+
+**Why this is safe:**
+- `dashboard/page.tsx` already has `if (!session?.user?.id) redirect("/")` — protects itself
+- Homepage already has `if (session?.user) redirect("/dashboard")` — no loop since unauthenticated users see the homepage normally
+- Tool pages (`/tools/*`) intentionally show preview without auth — paywall is in-page
+
+---
+
+## What Was Fixed (Session A26 — Part 1)
 
 ### BUG 1 — Dashboard Infinite Reload Loop
 
