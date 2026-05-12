@@ -1,353 +1,175 @@
 # Handoff Note
-Updated: 2026-05-12 | Account: A | Session: #26 | Critical bug fixes — dashboard reload loop + admin login
+Updated: 2026-05-12 | Account: B | Session: #1 | Onboarding + Profile + Marketing + Nav fixes
 
 ## Where We Are
-Session A26 done. **TypeScript: 0 errors.** Deployed to Vercel.
+Session B1 done. **TypeScript: 0 errors.** Committed and pushed to main.
 
-**⚠️ REQUIRED VERCEL ENV VARS — Admin login WILL NOT work without these:**
-1. `ADMIN_JWT_SECRET` = `lfc3tMXaG+rWRFmn+Pj6aBJ+LNZg4q63+LYBOVi177s=`
-2. `BULKSMS_TOKEN` = (from bulk9.com dashboard)
-
-**If admin login still loops after deploy:** Go to Vercel → Project → Settings → Environment Variables.
-Confirm `ADMIN_JWT_SECRET` exists for **Production** environment. If missing, add it with the value above and redeploy.
-
-**ONE-TIME SETUP (run once after deploying):**
+**NEW ENV VARS REQUIRED (add to Vercel):**
 ```
-MONGODB_URI="mongodb+srv://..." ADMIN_MOBILE="917723970629" npx tsx apps/web/src/scripts/set-admin-mobile.ts
+CLOUDFLARE_ACCOUNT_ID=<your-cloudflare-account-id>
+R2_ACCESS_KEY_ID=<your-r2-access-key>
+R2_SECRET_ACCESS_KEY=<your-r2-secret-key>
+R2_BUCKET_NAME=<your-bucket-name>
+R2_PUBLIC_URL=<your-r2-public-url>   # e.g. https://pub-xxxxx.r2.dev
 ```
+Without these, avatar/logo uploads will fail (profile still works, just no photos).
 
-**IMPORTANT — cookie name is `setulix_admin`** (underscore, not dot). Clear browser cookies if you see a stale `setulix.admin` cookie.
-
----
-
-## What Was Fixed (Session A26 — Part 2)
-
-### BUG 1 ROOT CAUSE — Dashboard Infinite Reload (real fix)
-
-**Cookie name mismatch between NextAuth v5 and `getToken()` from `next-auth/jwt`:**
-
-| Code | Function | Cookie name it reads |
-|---|---|---|
-| `dashboard/page.tsx`, `page.tsx` (home) | `auth()` from next-auth v5 | `authjs.session-token` |
-| `middleware.ts` (old) | `getToken()` from `next-auth/jwt` | `next-auth.session-token` (v4 name) |
-
-The two functions disagreed on whether the user was logged in:
-1. User logs in → `authjs.session-token` cookie set (v5)
-2. `router.push("/dashboard")` fires
-3. Middleware: `getToken()` looked for v4 cookie → not found → `isLoggedIn = false` → `redirect("/")`
-4. Homepage server component: `auth()` read v5 cookie → user IS logged in → `redirect("/dashboard")`
-5. Back to step 3 → **infinite loop**
-
-**Fix applied (`apps/web/src/middleware.ts`):**
-- Removed `getToken()` import and all calls from middleware entirely
-- Removed the `/dashboard` protection from middleware
-- Web-app auth is now handled exclusively by server components via `auth()` (same function that set the cookie — no mismatch possible)
-- Admin cookie check (`setulix_admin` via jose) is unchanged
-
-**Why this is safe:**
-- `dashboard/page.tsx` already has `if (!session?.user?.id) redirect("/")` — protects itself
-- Homepage already has `if (session?.user) redirect("/dashboard")` — no loop since unauthenticated users see the homepage normally
-- Tool pages (`/tools/*`) intentionally show preview without auth — paywall is in-page
-
----
-
-## What Was Fixed (Session A26 — Part 1)
-
-### BUG 1 — Dashboard Infinite Reload Loop
-
-**Root causes found and fixed:**
-
-1. **`apps/web/src/store/credits-store.ts`** — Added `isSyncing: boolean` field + concurrency guard to `syncFromServer()`. React StrictMode double-invokes effects; without the guard, two concurrent sync calls would race, both setting `balance`, causing unnecessary re-renders that could cascade. The guard (`if (get().isSyncing) return`) ensures only one in-flight fetch at a time.
-
-2. **`apps/web/src/middleware.ts`** — Removed `checkMaintenanceMode()` async `fetch()` from Edge middleware entirely. It was firing an outbound HTTP call to Upstash Redis on **every page request** inside the Edge Runtime. This adds latency and, combined with Next.js 14 Suspense streaming on `/dashboard`, caused request-timing issues that manifested as repeated reloads. Maintenance mode is now disabled in middleware; it must be re-implemented via Next.js rewrites + a separate Edge API route (never inline in middleware).
-
-**Already correct (no changes needed):**
-- `Navbar.tsx` — `useEffect` dep array was already `[status]` only ✅
-- `dashboard/page.tsx` — Pure server component, zero `useEffect` ✅
-
-### BUG 2 — Admin Cannot Login
-
-**Root cause: `ADMIN_JWT_SECRET` env var missing in Vercel production.**
-
-All code paths were already correct:
-- `admin/login/page.tsx` — No NextAuth. Uses `window.location.href = "/admin"` after OTP ✅
-- `verify-otp/route.ts` — Sets `setulix_admin` httpOnly cookie with `path: "/"` ✅
-- `middleware.ts` — Reads `setulix_admin` cookie and verifies with jose ✅
-
-Without `ADMIN_JWT_SECRET` in Vercel env vars, `verifyAdminCookie()` always returns `false` → every `/admin/*` request redirects to `/admin/login` in a loop, even after OTP succeeds. **Must be set manually in Vercel dashboard** (value documented above).
-
----
-
-## What Was Built (Session A25)
-
-### Security Hardening (Auth)
-- `crypto.randomInt()` replaces `Math.random()` for OTP generation (both admin + signup flows)
-- OTPs now stored as SHA-256 hash in MongoDB (never plaintext)
-- `isBanned` check added to admin verify-otp and web credentials login
-- IP-based rate limiting added to admin send-otp (5/15min per IP)
-- BulkSMS token moved from GET query param to Authorization header
-- Cookie renamed `setulix.admin` → `setulix_admin` (Edge Runtime dot-parsing bug)
-- `window.location.href` replaces `router.push` for post-login redirect (cookie visibility)
-- All 7 `/api/admin/*` routes now use `requireAdmin()` cookie check instead of NextAuth session
-
-### Admin Dashboard Features
-- **Recent Signups** widget — last 8 users with auth provider badge
-- **Low Credits Alert** — orange banner when users have < 5 credits
-- **Announcement Toggle** — quick show/hide from dashboard (no need to open Settings)
-- **System Health** — MongoDB + Redis live ping status
-- **Date range tabs** on charts — 7d / 30d / 90d
-- **Tool Performance Table** — uses, credits consumed, avg per use (all-time)
-- **Export CSV** — download all users as CSV from Users page
-- **Empty states** on charts (no flat lines when data is zero)
-
-### New Files
-| File | Purpose |
-|------|---------|
-| `apps/web/src/app/api/admin/system-health/route.ts` | MongoDB + Redis health check |
-| `apps/web/src/app/api/admin/export/users/route.ts` | CSV export of all users |
-| `apps/web/src/components/admin/SystemHealth.tsx` | Health status client component |
-| `apps/web/src/components/admin/AnnouncementToggle.tsx` | Quick announcement toggle |
-
----
-
-## What Was Built (Session A24)
-
-### Admin Mobile OTP Login — Complete Rewrite
-
-**Architecture:** Admin session is now 100% independent of NextAuth.
-- Uses `setulix.admin` httpOnly cookie (HS256 JWT signed with `ADMIN_JWT_SECRET`, 8h TTL)
-- No email, no password, no Google OAuth for admin panel
-- Web-app NextAuth sessions completely unaffected
-
-#### New Files
-| File | Purpose |
-|------|---------|
-| `apps/web/src/lib/admin-auth.ts` | `createAdminToken` + `verifyAdminToken` using jose (Edge-compatible) |
-| `apps/web/src/lib/sms.ts` | `sendOtpSMS()` via bulk9.com DLT API; dev fallback: console.log |
-| `apps/web/src/app/api/admin-auth/send-otp/route.ts` | Verify mobile=admin, rate-limit 3/15min, send SMS OTP |
-| `apps/web/src/app/api/admin-auth/verify-otp/route.ts` | Verify OTP (5 attempt lockout), set setulix.admin cookie, audit log |
-| `apps/web/src/app/api/admin-auth/logout/route.ts` | Clear setulix.admin cookie |
-| `apps/web/src/scripts/set-admin-mobile.ts` | One-time: set mobile field on admin user in MongoDB |
-
-#### Modified Files
-| File | Change |
-|------|--------|
-| `packages/db/src/models/OtpToken.ts` | Added: identifier, type, used, attempts fields |
-| `packages/db/src/models/User.ts` | Added: mobile (sparse unique) field |
-| `apps/web/src/middleware.ts` | Admin routes: check setulix.admin cookie via jose; web routes: still NextAuth |
-| `apps/web/src/app/admin/login/page.tsx` | Rewritten: +91 mobile input → OTP boxes → setulix.admin cookie |
-| `apps/web/src/app/admin/layout.tsx` | Login: dark full-screen; Panel: added Logout button |
-| `apps/web/src/auth.ts` | Removed adminToken workaround; cleaned getRedis import |
-
-#### Deleted Files
-- `apps/web/src/app/api/admin/auth/send-otp/route.ts` (old email flow)
-- `apps/web/src/app/api/admin/auth/verify-otp/route.ts` (old email flow)
-
-### Admin Login Flow (after setup)
+**ONE-TIME SETUP — Seed OnboardingConfig:**
 ```
-1. Visit /admin/login
-2. Enter 10-digit mobile (India, +91 prefix shown)
-3. POST /api/admin-auth/send-otp → SMS sent via BulkSMS
-4. Enter 6-digit OTP in boxes
-5. POST /api/admin-auth/verify-otp → setulix.admin cookie set
-6. Redirected to /admin dashboard
-```
-
-### Middleware Change
-```
-/admin/* routes:
-  → check setulix.admin cookie (jose jwtVerify, Edge-safe)
-  → valid: allow through
-  → invalid/missing: redirect to /admin/login
-
-/dashboard, / routes:
-  → still use NextAuth JWT (getToken)
-  → no change from user's perspective
+MONGODB_URI="mongodb+srv://..." npx tsx apps/web/src/scripts/seed-onboarding.ts
 ```
 
 ---
 
-## Where We Were (Session A23)
+## What Was Built (Session B1)
 
----
+### SECTION 1 — DB Schemas
+- **`packages/db/src/models/User.ts`** — added: `onboardingCompleted`, `onboardingStep`, `avatar`, `address`, `profession`, `kitName`, `selectedTools[]`, `profileScore`
+- **`packages/db/src/models/BusinessProfile.ts`** — NEW: business profile collection (userId, businessName, industry, gstState, teamSize, logo, phone, website, gstNumber, etc.)
+- **`packages/db/src/models/OnboardingConfig.ts`** — NEW: DB-driven onboarding steps (admin can update questions/options without code change)
+- **`packages/db/src/index.ts`** — exports BusinessProfile + OnboardingConfig
 
-## What Was Built (Session A23)
+### SECTION 2 — Auth + Middleware
+- **`apps/web/src/auth.ts`** — `onboardingCompleted` added to JWT + session for Google + credentials providers
+- **`apps/web/src/types/next-auth.d.ts`** — `onboardingCompleted: boolean` added to Session + JWT
+- **`apps/web/src/middleware.ts`** — onboarding gate: reads `authjs.session-token` cookie → if `onboardingCompleted === false` → redirect to `/onboarding` (excludes /api/auth, /api/onboarding, /admin, /onboarding)
 
-### BUG-02 Fix — Admin Login Page (CRITICAL)
-- `apps/web/src/middleware.ts` — **fixed**: `/admin/*` now redirects to `/admin/login` (not `/`). `/admin/login` is allowed through without auth. Admins already logged in are auto-redirected from login → `/admin`.
-- `apps/web/src/app/api/admin/auth/send-otp/route.ts` — **new**: Verifies email+password, checks `role === "admin"`, sends OTP email via Resend. Generic error to prevent user enumeration.
-- `apps/web/src/app/api/admin/auth/verify-otp/route.ts` — **new**: Verifies OTP from DB, deletes it, generates a one-time `adminToken` UUID stored in Redis (`setulix:admin:login:{token}`, TTL 5 min). Returns `{ adminToken }`.
-- `apps/web/src/auth.ts` — **updated**: Credentials `authorize` now handles `adminToken` path: looks up Redis key, gets email, fetches admin user, returns user. One-time use token deleted from Redis immediately.
-- `apps/web/src/app/admin/layout.tsx` — **updated**: Pathname `/admin/login` gets a minimal centered layout (no sidebar, no sidebar nav). All other admin routes keep the existing panel layout.
-- `apps/web/src/app/admin/login/page.tsx` — **new**: Two-step admin login UI. Step 1: email+password → calls send-otp. Step 2: 6-digit OTP entry → calls verify-otp → gets adminToken → calls `signIn("credentials", { adminToken })` → redirects to `/admin`.
+### SECTION 3 — Onboarding API
+- `GET /api/onboarding/config` — returns active steps (Redis-cached, 1hr TTL)
+- `POST /api/onboarding/save-step` — saves progress (so user can resume)
+- `POST /api/onboarding/complete` — writes profession, kitName, selectedTools (recommended per profession), sets `onboardingCompleted: true`, creates BusinessProfile
 
-### BUG-01 Fix — Post-Login Redirect + Stable Selector
-- `apps/web/src/components/auth/AuthModal.tsx` — **fixed**: After successful login or signup, calls `router.push("/dashboard")` so user lands on dashboard. Google OAuth `callbackUrl` changed from `window.location.href` to `/dashboard`.
-- `apps/web/src/components/layout/Navbar.tsx` — **fixed**: Uses stable Zustand selectors (`useCreditStore((s) => s.balance)` and `useCreditStore((s) => s.syncFromServer)`). Effect dependency array is `[status]` only (not `[status, syncFromServer]`) to prevent any potential re-run on function reference changes.
+**Recommended tools per profession:**
+```
+creator  → blog-generator, yt-script, hook-writer, caption-generator, thumbnail-ai, title-generator
+sme      → gst-invoice, expense-tracker, quotation-generator, qr-generator, website-generator, gst-calculator
+hr       → jd-generator, resume-screener, appraisal-draft, policy-generator, offer-letter, salary-slip
+legal    → legal-notice, nda-generator, legal-disclaimer, gst-calculator, tds-sheet, whatsapp-bulk
+marketer → ad-copy, caption-generator, email-subject, linkedin-bio, hook-writer, seo-auditor
+```
 
-### TC Coverage After Session A23
-- TC-01 ✓ Signup → OTP → account → redirected to /dashboard
-- TC-02 ✓ Login → redirected to /dashboard (no reload loop)
-- TC-03 ✓ Google OAuth → callbackUrl /dashboard
-- TC-05 ✓ Admin login via /admin/login with OTP
-- TC-06 ✓ /admin (not logged in) → /admin/login
-- TC-07 ✓ Regular user visiting /admin → /admin/login
+### SECTION 4 — Onboarding UI
+- **`apps/web/src/app/onboarding/layout.tsx`** — no sidebar, no navbar, SetuLix logo + progress bar only
+- **`apps/web/src/app/onboarding/page.tsx`** — 4-step client flow:
+  - Step 1: Profession (6 cards with lucide icons)
+  - Step 2: Team Size (4 cards)
+  - Step 3: Biggest Challenge (4 cards)
+  - Step 4: Kit name (editable) + recommended tools chips + Launch button
 
-### Known Limitations
-- TC-08 (Admin/user session independence): Both admin and regular user share the same NextAuth JWT cookie. If admin and user are logged in in the same browser simultaneously (not incognito), the second login overwrites the first. This requires a completely separate session system (separate cookie name) to fully fix — out of scope for Phase 1.
+### SECTION 5 — Profile API + Score
+- `GET /api/profile` — user + business + score
+- `PATCH /api/profile/personal` — name, mobile, address, profession
+- `PATCH /api/profile/business` — businessName, industry, gstState, teamSize, phone, website, businessAddress, gstNumber
+- `POST /api/profile/avatar` — upload image to R2, update user.avatar
+- `POST /api/profile/logo` — upload image to R2, update businessProfile.logo
+- **`apps/web/src/lib/profile-score.ts`** — score 0-100 (personal 50pts, business 50pts)
+- **`apps/web/src/lib/r2-upload.ts`** — Cloudflare R2 upload via @aws-sdk/client-s3
 
----
+### SECTION 6 — Profile Page
+- **`apps/web/src/app/(site)/profile/page.tsx`** — two tabs: Personal + Business
+  - Avatar/logo upload with hover overlay
+  - All 28 Indian states + 8 UTs in dropdown
+  - 15 industry options
+  - Profile score ring (SVG) in header
 
-## Where We Were (Sessions A21+A22)
-Sessions A21+A22 done. **TypeScript: 0 errors.**
-Product rebranded from Toolspire → **SetuLix** (by **SetuLabsAI**, Founder: **Deepak Rathor**).
-All 20 implementation items complete across 3 sections: Critical Fixes, Branding, SEO+Kit Pages.
+### SECTION 7 — Navbar Profile Ring
+- **`apps/web/src/components/layout/UserDropdown.tsx`** — SVG circular progress ring replaces plain avatar
+  - Score badge (purple circle, bottom-right of avatar)
+  - Profile link added to dropdown
+- **`apps/web/src/hooks/useProfileScore.ts`** — fetches /api/profile on session load
 
----
+### SECTION 8 — Layout Restructuring
+- **`apps/web/src/app/(marketing)/layout.tsx`** — NEW route group: no sidebar, uses MarketingNavbar
+- **`apps/web/src/components/layout/MarketingNavbar.tsx`** — sticky glassmorphism navbar (Features, Tools, Pricing, About links + Login/Get Started)
+- **`apps/web/src/app/(site)/page.tsx`** — DELETED (replaced by marketing homepage)
+- Old (site)/ layout still serves: /dashboard, /tools, /about, /kits, /pricing, /profile, /explore
 
-## What Was Built (Session A21+A22)
+### SECTION 9 — NProgress Loading Bar
+- Installed: `nprogress` + `@types/nprogress`
+- **`apps/web/src/components/providers/ProgressBar.tsx`** — Suspense-wrapped, completes on pathname change
+- **`apps/web/src/components/ui/LoadingLink.tsx`** — Link wrapper that starts NProgress on click
+- `globals.css` — `#nprogress .bar { background: #7c3aed }` override
+- `layout.tsx` — ProgressBar added to root providers
 
-### SECTION 0 — Critical Fixes
+### SECTION 10 — Explore Page
+- `GET /api/explore/tools` — all tools + user's `selectedTools` slugs
+- `POST /api/explore/add` — `$addToSet` to selectedTools
+- `DELETE /api/explore/remove` — `$pull` from selectedTools
+- **`apps/web/src/app/(site)/explore/page.tsx`** — search + kit filter tabs + add/remove buttons
+- Sidebar: `Compass` icon + `/explore` link above Kits section
 
-#### 0A. Tool Hide/Disable — FIXED
-- `apps/web/src/lib/tool-registry.ts` — **fixed**: `getAllTools()` now fetches all ToolConfig docs (not just `isActive:true`) and filters by BOTH `isActive && isVisible`. Added `isVisible` to `ToolWithConfig` interface.
-- `apps/web/src/app/api/tools/active-slugs/route.ts` — **new**: Returns `{ slugs: string[] }` of all active+visible tools. Sidebar uses this to filter.
-- `apps/web/src/components/layout/sidebar.tsx` — **fixed**: Fetches active slugs on mount (30s client cache), filters `SIDEBAR_KITS` dynamically. Hidden tools disappear from sidebar.
-- `apps/web/src/app/(site)/tools/[slug]/page.tsx` — **fixed**: If `isVisible=false` → redirect to dashboard. If `isActive=false` → show `ToolUnavailableCard`.
+### SECTION 11 — Marketing Website
+- **`apps/web/src/app/(marketing)/page.tsx`** — full 12-section marketing homepage:
+  - Hero: badge + H1 + CTA + social proof
+  - Stats bar: 27+ tools, 5 kits, Free, 10hr+
+  - Who is it for: 5 kit cards
+  - Features: 3-column grid
+  - Tools showcase: all 27 tools in grid
+  - How it works: 3 steps
+  - Comparison table: SetuLix vs ChatGPT vs Jasper vs Copy.ai
+  - Pricing preview: 3 plans
+  - Testimonials: 3 cards
+  - FAQ accordion (6 questions)
+  - Final CTA (purple gradient banner)
+  - Footer with links + "Made in India"
 
-#### 0B. Google Profile Pic — FIXED
-- `apps/web/src/auth.ts` — **fixed**: JWT callback now sets `token.image = user.image` for both Google and credentials providers. Session callback sets `session.user.image = token.image`.
-- `apps/web/src/types/next-auth.d.ts` — **updated**: Added `image?: string | null` to JWT interface.
-
-#### 0C. Admin Tool Kit Change — ADDED
-- `apps/web/src/app/api/admin/tools/[slug]/route.ts` — **updated**: PATCH now accepts `kit` field, updates `Tool.kits = [kit]` in DB (alongside ToolConfig changes).
-- `apps/web/src/components/admin/ToolsTable.tsx` — **updated**: Kit column changed from read-only text to editable `<select>` dropdown. `RowState` includes `kits`. Optimistic UI update.
-
-### SECTION 1 — SetuLix Branding
-
-#### 1A. Brand Constants
-- `packages/shared/src/brand.ts` — **new**: `BRAND` object with name, tagline, company, founder, domain, emails.
-- `packages/shared/src/index.ts` — **updated**: Exports `brand`.
-
-#### 1B. Toolspire → SetuLix Replace
-- Global find+replace across 70+ files in `apps/web/src/**`:
-  - "Toolspire" → "SetuLix", "toolspire.io" → "setulix.com", "Gobeens Technology" → "SetuLabsAI"
-- `@toolhub/db` and `@toolhub/shared` package names **unchanged** (internal monorepo names).
-
-#### 1C. Logo Component
-- `apps/web/src/components/brand/Logo.tsx` — **new**: SetuLix wordmark with geometric S SVG icon. Sizes: sm/md/lg. Optional `showSubtext` for "by SetuLabsAI".
-- Sidebar and admin layout updated to use Logo component.
-
-#### 1D. Footer
-- `apps/web/src/components/brand/Footer.tsx` — **new**: Full footer with Logo+tagline, Pages+Kits links, contact emails, copyright, "Designed by SetuLabsAI" bar.
-
-#### 1E. /about Page
-- `apps/web/src/app/(site)/about/page.tsx` — **new**: About SetuLix, About SetuLabsAI, Team (Deepak Rathor), Tech Stack, CTA.
-
-#### 1F. OTP Email Branding
-- `apps/web/src/app/api/auth/send-otp/route.ts` — **updated**: HTML email template redesigned with SetuLix header, purple branding, monospace OTP display, SetuLabsAI footer.
-
-### SECTION 2 — Light Theme Fixes
-
-#### 2A. Navbar
-- Glassmorphism: `bg-background/80 backdrop-blur-md sticky top-0 z-30`.
-
-#### 2B-2F. Component Fixes
-- `apps/web/src/components/admin/ToolsTable.tsx` — hardcoded `bg-[#111111]`/`bg-[#1a1a1a]` → semantic tokens.
-- `apps/web/src/app/admin/layout.tsx` — `bg-[#0a0a0a]`/`bg-[#0d0d0d]` → `bg-background`/`bg-card`. `hover:bg-white/5` → `hover:bg-muted/50`.
-
-#### 2C. Dashboard Count-Up
-- `apps/web/src/hooks/useCountUp.ts` — **new**: `useCountUp(target, duration)` hook. easeOut cubic animation.
-- `apps/web/src/components/dashboard/StatsBar.tsx` — **updated**: `<StatValue>` component animates numbers 0→actual on mount.
-
-#### 2G. Final Polish
-- `apps/web/src/app/globals.css` — **updated**: Global focus ring (`*:focus-visible`), thin scrollbar (`scrollbar-width: thin`), webkit scrollbar 4px, sidebar custom scrollbar.
-- `apps/web/src/app/not-found.tsx` — **rewritten**: SetuLix logo + icon + "404 Page Not Found" + Dashboard + Home buttons.
-- `apps/web/src/app/maintenance/page.tsx` — **rewritten**: SetuLix logo + Wrench icon + "Back Shortly" message. All semantic tokens.
-
-### SECTION 3 — Kit Landing Pages + SEO
-
-#### 3C. robots.ts + sitemap.ts
-- `apps/web/src/app/robots.ts` — **new**: Allow all, disallow `/admin /api /dashboard`. Sitemap URL: `https://setulix.com/sitemap.xml`.
-- `apps/web/src/app/sitemap.ts` — **new**: Static routes + 27 tool routes. Domain: `https://setulix.com`.
-
-#### 3B. SEO Metadata
-- `apps/web/src/app/layout.tsx` — **updated**: Full metadata object with `metadataBase`, title template, OG tags, Twitter card.
-
-#### 3A. 5 Kit Landing Pages
-- `apps/web/src/components/brand/KitPage.tsx` — **new**: Shared kit page component. Hero, Tools Grid, How It Works (3 steps), Use Cases (4), FAQ (accordion), CTA Banner + Footer.
-- `/kits/creator` — Creator Kit (6 tools, content creator focus)
-- `/kits/sme` — SME Kit (7 free tools, Indian business focus)
-- `/kits/hr` — HR Kit (5 tools, Indian workplace)
-- `/kits/legal` — CA/Legal Kit (5 tools, Indian law)
-- `/kits/marketing` — Marketing Kit (6 tools, Indian brands)
-
-#### 3D. Sidebar + Homepage + next.config
-- `apps/web/src/lib/kit-config.ts` — **updated**: Added `pageSlug` field to `KitConfig`.
-- Sidebar `KitItem` — **updated**: Hover shows ExternalLink icon → navigates to `/kits/[pageSlug]`.
-- `apps/web/src/app/(site)/page.tsx` — **updated**: Kit cards now link to `/kits/[pageSlug]`. Section heading: "Explore Our Kits".
-- `apps/web/next.config.mjs` — **updated**: `compress: true`, `images.formats: ['image/avif','image/webp']`, X-Robots-Tag noindex for `/admin/*`.
-
----
-
-## New Files This Session
-
-| File | Purpose |
-|------|---------|
-| `packages/shared/src/brand.ts` | BRAND constants object |
-| `apps/web/src/app/api/tools/active-slugs/route.ts` | Active+visible tool slugs for sidebar |
-| `apps/web/src/components/brand/Logo.tsx` | SetuLix wordmark component |
-| `apps/web/src/components/brand/Footer.tsx` | Site footer with branding |
-| `apps/web/src/components/brand/KitPage.tsx` | Shared kit landing page template |
-| `apps/web/src/app/(site)/about/page.tsx` | About SetuLix + SetuLabsAI page |
-| `apps/web/src/app/(site)/kits/creator/page.tsx` | Creator Kit landing |
-| `apps/web/src/app/(site)/kits/sme/page.tsx` | SME Kit landing |
-| `apps/web/src/app/(site)/kits/hr/page.tsx` | HR Kit landing |
-| `apps/web/src/app/(site)/kits/legal/page.tsx` | CA/Legal Kit landing |
-| `apps/web/src/app/(site)/kits/marketing/page.tsx` | Marketing Kit landing |
-| `apps/web/src/hooks/useCountUp.ts` | Count-up animation hook |
-| `apps/web/src/app/robots.ts` | SEO robots.txt |
-| `apps/web/src/app/sitemap.ts` | SEO sitemap |
+### SECTION 12 — Seed Script
+- **`apps/web/src/scripts/seed-onboarding.ts`** — run once to seed 4 OnboardingConfig docs
 
 ---
 
 ## Architecture Notes
 
-### Brand
-- Product: **SetuLix** | Company: **SetuLabsAI** | Founder: **Deepak Rathor**
-- Domain: `setulix.com` | Email: `hello@setulix.com`
-- Logo: Geometric S SVG icon + "Setu" (text-foreground) + "Lix" (text-primary purple)
-- Monorepo package names stay `@toolhub/db` and `@toolhub/shared` (internal only, not user-visible)
-
-### Tool Visibility Flow
+### Route Groups (updated)
 ```
-Admin toggles isActive/isVisible in DB
-→ clearToolCache() called
-→ /api/tools/active-slugs re-fetches (30s cache)
-→ Sidebar refreshes visible tools on next hover/load
-→ Tool page: isVisible=false → redirect /dashboard; isActive=false → ToolUnavailableCard
-```
-
-### Kit Landing Page URLs
-```
-/kits/creator   → Creator Kit
-/kits/sme       → SME Kit
-/kits/hr        → HR Kit
-/kits/legal     → CA/Legal Kit (note: kit id is "ca-legal", page slug is "legal")
-/kits/marketing → Marketing Kit
+app/
+  (marketing)/          ← public marketing pages (no sidebar)
+    layout.tsx          ← MarketingNavbar only
+    page.tsx            ← full marketing homepage
+  
+  (site)/               ← app pages (sidebar + navbar)
+    layout.tsx          ← Sidebar + Navbar + AnnouncementBanner
+    dashboard/          ← auth protected (server component check)
+    tools/[slug]/       ← preview without auth, paywall in-page
+    profile/            ← auth protected (client-side redirect)
+    explore/            ← auth protected (client-side redirect)
+    about/              ← public
+    kits/               ← public
+    pricing/            ← public
+  
+  admin/                ← setulix_admin cookie auth (jose)
+  onboarding/           ← no sidebar, no navbar, onboarding gate excluded
 ```
 
-### Redis Cache Keys (unchanged)
+### Onboarding Gate Flow
 ```
-toolhub:credits:{userId}     TTL 5 min
-toolhub:dashboard:{userId}   TTL 2 min
-registry:all_tools           TTL 5 min
-registry:tool:{slug}         TTL 5 min
+User logs in (Google/credentials)
+→ JWT token has onboardingCompleted=false
+→ middleware reads authjs.session-token cookie
+→ if !onboardingCompleted AND route not excluded → redirect /onboarding
+→ User completes 4 steps
+→ POST /api/onboarding/complete
+→ window.location.href="/dashboard" (forces cookie refresh)
+→ New JWT has onboardingCompleted=true
+→ No more redirect
+```
+
+### Profile Score Calculation (0-100)
+```
+Personal (50 pts):  name=10, mobile=10, profession=10, address=10, avatar=10
+Business (50 pts):  businessName=15, industry=10, gstState=10, teamSize=10, logo=5
+```
+
+### Redis Cache Keys (new)
+```
+onboarding:config    TTL 1hr    (OnboardingConfig steps)
+SetuLix:user:{id}    TTL 5min   (user profile - invalidated on complete)
 ```
 
 ---
 
 ## Phase 1 Status: COMPLETE ✓
+## Phase B1 Status: COMPLETE ✓
 
 ## Issues
 None. TypeScript: 0 errors.
