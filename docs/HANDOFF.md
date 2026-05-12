@@ -1,8 +1,26 @@
 # Handoff Note
-Updated: 2026-05-12 | Account: B | Session: #2 | Critical Bug Fixes
+Updated: 2026-05-12 | Account: B | Session: #3 | Reload Loop Fix
 
 ## Where We Are
-Session B2 done. **TypeScript: 0 errors.** Committed and pushed to main.
+Session B3 done. **TypeScript: 0 errors.** Committed to main.
+
+---
+
+## What Was Fixed (Session B3)
+
+### FIX 7 — Login Reload Loop
+**Problem:** After Google login, user was stuck in an infinite redirect loop: `/dashboard` → `/` → `/dashboard` → ...
+
+**Root cause:** `middleware.ts` used `jwtVerify` (for JWS/signed tokens) to decode the Auth.js v5 session cookie. Auth.js v5 uses JWE (AES-encrypted, not signed) tokens. `jwtVerify` always threw, catch returned `null`, middleware redirected to `/`. Marketing homepage's `auth()` properly decrypted the session, saw a valid user, and redirected back to `/dashboard`. Loop.
+
+**Fix:** Replaced `jwtVerify` with `jwtDecrypt` + proper HKDF key derivation using Web Crypto API:
+- HKDF-SHA256 with salt=`""`, info=`"Auth.js Generated Encryption Key"`, 32-byte output
+- Matches exactly how Auth.js v5 derives the AES decryption key from `AUTH_SECRET`
+- No new dependencies — uses `crypto.subtle` (available in Edge runtime) + `jwtDecrypt` from existing `jose`
+
+**File:** `apps/web/src/middleware.ts` — `getSessionPayload()` + new `deriveAuthKey()`
+
+---
 
 ---
 
@@ -104,4 +122,4 @@ app/
 ---
 
 ## Issues
-None. TypeScript: 0 errors.
+None. TypeScript: 0 errors. Reload loop resolved.
