@@ -40,9 +40,7 @@ export function MarketingNavbar() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/">
-            <Logo size="sm" />
-          </Link>
+          <Logo size="sm" href="/" />
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-1">

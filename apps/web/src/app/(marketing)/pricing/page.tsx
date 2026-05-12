@@ -3,10 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
-import type { Metadata } from "next";
 
-// Note: metadata must be in a server component — this page is client-only
-// so SEO title comes from layout-level metadata
 
 interface Pack {
   _id: string;

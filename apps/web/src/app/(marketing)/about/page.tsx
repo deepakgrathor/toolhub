@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { BRAND } from "@toolhub/shared";
-import { useAuthStore } from "@/store/auth-store";
 import AboutCTA from "./AboutCTA";
 
 export const metadata: Metadata = {
