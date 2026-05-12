@@ -2,9 +2,9 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
 
 function getR2Client() {
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-  const accessKey = process.env.R2_ACCESS_KEY_ID;
-  const secretKey = process.env.R2_SECRET_ACCESS_KEY;
+  const accountId = process.env.CLOUDFLARE_R2_ACCOUNT_ID;
+  const accessKey = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
+  const secretKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;
 
   if (!accountId || !accessKey || !secretKey) {
     throw new Error("R2 credentials not configured");
@@ -21,8 +21,8 @@ export async function uploadToR2(
   file: File,
   folder: "avatars" | "logos"
 ): Promise<string> {
-  const bucket = process.env.R2_BUCKET_NAME;
-  const publicUrl = process.env.R2_PUBLIC_URL;
+  const bucket = process.env.CLOUDFLARE_R2_BUCKET_NAME;
+  const publicUrl = process.env.CLOUDFLARE_R2_PUBLIC_URL;
 
   if (!bucket || !publicUrl) {
     throw new Error("R2 bucket not configured");
