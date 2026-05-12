@@ -1,6 +1,18 @@
 import { jwtVerify } from "jose";
 import { NextResponse, type NextRequest } from "next/server";
 
+const ONBOARDING_EXCLUDED = [
+  "/onboarding",
+  "/api/onboarding",
+  "/api/auth",
+  "/api/admin",
+  "/api/admin-auth",
+  "/admin",
+  "/maintenance",
+  "/_next",
+  "/favicon.ico",
+];
+
 // ── WHY getToken() IS NOT USED HERE ──────────────────────────────────────────
 // NextAuth v5 sets cookie "authjs.session-token".
 // next-auth/jwt's getToken() defaults to reading "next-auth.session-token" (v4).
@@ -75,9 +87,36 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  // ── Step 3: All other routes — pass through ───────────────────────────────
-  // Web-app route protection (dashboard, tools) is handled by individual
-  // server components via auth() — not here. See notes at top of file.
+  // ── Step 3: Onboarding gate ───────────────────────────────────────────────
+  // Reads the NextAuth v5 JWT to check onboardingCompleted.
+  // We only gate authenticated users who haven't finished onboarding.
+  const isExcluded = ONBOARDING_EXCLUDED.some((prefix) =>
+    pathname.startsWith(prefix)
+  );
+
+  if (!isExcluded) {
+    // Try to read the NextAuth v5 session cookie directly
+    const sessionCookie =
+      req.cookies.get("authjs.session-token")?.value ??
+      req.cookies.get("__Secure-authjs.session-token")?.value;
+
+    if (sessionCookie) {
+      try {
+        const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
+        const { payload } = await jwtVerify(
+          sessionCookie,
+          new TextEncoder().encode(secret)
+        );
+        const onboardingCompleted = (payload as Record<string, unknown>).onboardingCompleted as boolean | undefined;
+        if (onboardingCompleted === false) {
+          return NextResponse.redirect(new URL("/onboarding", req.url));
+        }
+      } catch {
+        // Invalid/expired token — let server components handle auth
+      }
+    }
+  }
+
   return response;
 }
 

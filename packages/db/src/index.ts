@@ -11,4 +11,6 @@ export * from "./models/OtpToken";
 export * from "./credit-service";
 
 export * from "./models/ToolOutput";
+export * from "./models/BusinessProfile";
+export * from "./models/OnboardingConfig";
 export * from "./referral-service";

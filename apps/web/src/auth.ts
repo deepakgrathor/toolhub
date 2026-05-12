@@ -41,6 +41,7 @@ const config: NextAuthConfig = {
           image: user.image,
           role: user.role,
           credits: user.credits,
+          onboardingCompleted: user.onboardingCompleted ?? false,
         };
       },
     }),
@@ -64,6 +65,7 @@ const config: NextAuthConfig = {
               role: "user",
               credits: FREE_CREDITS_ON_SIGNUP,
               referralCode,
+              onboardingCompleted: false,
               lastSeen: new Date(),
             });
 
@@ -88,11 +90,13 @@ const config: NextAuthConfig = {
           token.role = dbUser.role;
           token.credits = dbUser.credits;
           token.image = user.image ?? dbUser.image ?? null;
+          token.onboardingCompleted = dbUser.onboardingCompleted ?? false;
         } else {
           token.id = user.id;
           token.role = user.role ?? "user";
           token.credits = user.credits ?? 0;
           token.image = user.image ?? null;
+          token.onboardingCompleted = user.onboardingCompleted ?? false;
         }
       }
       return token;
@@ -103,6 +107,7 @@ const config: NextAuthConfig = {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.credits = token.credits as number;
+        session.user.onboardingCompleted = (token.onboardingCompleted as boolean) ?? false;
         if (token.image) {
           session.user.image = token.image as string;
         }

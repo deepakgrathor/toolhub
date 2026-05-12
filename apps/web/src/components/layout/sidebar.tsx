@@ -7,7 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, ChevronDown,
-  LayoutDashboard, Gift, LogOut, X, Coins, ExternalLink,
+  LayoutDashboard, Gift, LogOut, X, Coins, ExternalLink, Compass,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
@@ -265,6 +265,24 @@ function SidebarContent({
         >
           <LayoutDashboard className="h-[18px] w-[18px] shrink-0" />
           {!isCollapsed && <span>Dashboard</span>}
+        </Link>
+      </div>
+
+      {/* Explore link */}
+      <div className="px-2 pb-1 shrink-0">
+        <Link
+          href="/explore"
+          title={isCollapsed ? "Explore Tools" : undefined}
+          className={cn(
+            "sidebar-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
+            pathname === "/explore"
+              ? "bg-primary/10 text-primary font-medium"
+              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            isCollapsed && "justify-center"
+          )}
+        >
+          <Compass className="h-[18px] w-[18px] shrink-0" />
+          {!isCollapsed && <span>Explore Tools</span>}
         </Link>
       </div>
 

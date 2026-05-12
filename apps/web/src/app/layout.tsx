@@ -8,6 +8,7 @@ import { CommandSearch } from "@/components/search/CommandSearch";
 import { PaywallModal } from "@/components/credits/PaywallModal";
 import { connectDB, SiteConfig } from "@toolhub/db";
 import { Toaster } from "sonner";
+import { ProgressBar } from "@/components/providers/ProgressBar";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -84,6 +85,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <SessionProvider>
+            <ProgressBar />
             {children}
             <AuthModal />
             <PaywallModal />

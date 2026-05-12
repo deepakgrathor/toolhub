@@ -3,6 +3,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* NProgress bar color override */
+#nprogress .bar { background: #7c3aed !important; }
+#nprogress .peg { box-shadow: 0 0 10px #7c3aed, 0 0 5px #7c3aed !important; }
+
 /*
   CSS variables for light/dark themes.
   Mapped into Tailwind utilities via @theme below.

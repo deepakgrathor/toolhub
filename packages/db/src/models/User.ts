@@ -19,6 +19,18 @@ export interface IUser extends Document {
   createdAt: Date;
   updatedAt: Date;
   lastSeen: Date;
+  // Onboarding
+  onboardingCompleted: boolean;
+  onboardingStep: number;
+  // Personal profile
+  avatar?: string | null;
+  address?: string | null;
+  profession?: "creator" | "sme" | "hr" | "legal" | "marketer" | "other" | null;
+  // Workspace
+  kitName?: string | null;
+  selectedTools: string[];
+  // Profile completion
+  profileScore: number;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -42,6 +54,22 @@ const UserSchema = new Schema<IUser>(
       default: "free",
     },
     kitPreference: { type: String },
+    // Onboarding
+    onboardingCompleted: { type: Boolean, default: false },
+    onboardingStep: { type: Number, default: 1 },
+    // Personal profile
+    avatar: { type: String, default: null },
+    address: { type: String, default: null },
+    profession: {
+      type: String,
+      enum: ["creator", "sme", "hr", "legal", "marketer", "other", null],
+      default: null,
+    },
+    // Workspace
+    kitName: { type: String, default: null },
+    selectedTools: [{ type: String }],
+    // Profile completion
+    profileScore: { type: Number, default: 0 },
     authProvider: {
       type: String,
       enum: ["google", "email"],

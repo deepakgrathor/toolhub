@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
-import { LayoutDashboard, History, Gift, LogOut } from "lucide-react";
+import { LayoutDashboard, History, Gift, LogOut, User } from "lucide-react";
+import { useProfileScore } from "@/hooks/useProfileScore";
 
 interface UserDropdownProps {
   name?: string | null;
@@ -11,13 +12,52 @@ interface UserDropdownProps {
   image?: string | null;
 }
 
+function ProfileRing({
+  score,
+  image,
+  name,
+}: {
+  score: number;
+  image?: string | null;
+  name?: string | null;
+}) {
+  const r = 15.9;
+  const circ = 2 * Math.PI * r;
+  const dash = (score / 100) * circ;
+  const initials = name ? name[0]?.toUpperCase() : "U";
+
+  return (
+    <div className="relative w-9 h-9 shrink-0">
+      <svg className="w-9 h-9 -rotate-90" viewBox="0 0 36 36">
+        <circle cx="18" cy="18" r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="2.5" />
+        <circle
+          cx="18" cy="18" r={r} fill="none" stroke="#7c3aed"
+          strokeWidth="2.5"
+          strokeDasharray={`${dash} ${circ - dash}`}
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className="absolute inset-[3px] rounded-full overflow-hidden bg-primary/20 flex items-center justify-center">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image} alt={name ?? "User"} className="h-full w-full object-cover" />
+        ) : (
+          <span className="text-[10px] font-bold text-primary">{initials}</span>
+        )}
+      </div>
+      {score > 0 && (
+        <div className="absolute -bottom-0.5 -right-0.5 bg-primary text-white text-[8px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold leading-none">
+          {score}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function UserDropdown({ name, email, image }: UserDropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  const initials = name
-    ? name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()
-    : "U";
+  const score = useProfileScore();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -35,15 +75,9 @@ export function UserDropdown({ name, email, image }: UserDropdownProps) {
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 rounded-lg p-1 hover:bg-muted/50 transition-colors"
         aria-label="User menu"
+        title={`Profile ${score}% complete`}
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 overflow-hidden shrink-0">
-          {image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={image} alt={name ?? "User"} className="h-full w-full object-cover" />
-          ) : (
-            <span className="text-xs font-semibold text-primary">{initials}</span>
-          )}
-        </div>
+        <ProfileRing score={score} image={image} name={name} />
         <span className="hidden md:block text-sm font-medium text-foreground max-w-[120px] truncate">
           {name}
         </span>
@@ -59,6 +93,14 @@ export function UserDropdown({ name, email, image }: UserDropdownProps) {
 
           {/* Links */}
           <div className="py-1">
+            <Link
+              href="/profile"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2 text-sm text-foreground hover:bg-muted/50 transition-colors"
+            >
+              <User className="h-4 w-4 text-muted-foreground" />
+              My Profile
+            </Link>
             <Link
               href="/dashboard"
               onClick={() => setOpen(false)}
