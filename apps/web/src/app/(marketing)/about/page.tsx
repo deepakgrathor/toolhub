@@ -72,7 +72,14 @@ export default function AboutPage() {
               <span className="text-lg font-bold text-primary">DR</span>
             </div>
             <div>
-              <p className="font-semibold text-foreground">{BRAND.founder}</p>
+              <a
+                href="https://www.linkedin.com/in/deepakgrathor/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-foreground hover:text-primary transition-colors underline underline-offset-2"
+              >
+                {BRAND.founder}
+              </a>
               <p className="text-sm text-muted-foreground">{BRAND.founderTitle}, {BRAND.company}</p>
             </div>
           </div>

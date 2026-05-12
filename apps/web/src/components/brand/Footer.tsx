@@ -78,7 +78,15 @@ export function Footer() {
         <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
           <p>© {year} {BRAND.company}. All rights reserved.</p>
           <p className="text-center">
-            {BRAND.name} is designed and developed by {BRAND.company} | {BRAND.founderTitle}: {BRAND.founder}
+            {BRAND.name} is designed and developed by {BRAND.company} | {BRAND.founderTitle}:{" "}
+            <a
+              href="https://www.linkedin.com/in/deepakgrathor/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors underline underline-offset-2"
+            >
+              {BRAND.founder}
+            </a>
           </p>
         </div>
       </div>

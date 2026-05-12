@@ -76,7 +76,7 @@ export function CommandSearch() {
               <Search className="h-4 w-4 text-muted-foreground shrink-0" />
               <Command.Input
                 placeholder="Search tools..."
-                className="flex-1 bg-transparent py-3.5 text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                className="flex-1 bg-transparent py-3.5 text-sm text-foreground placeholder:text-muted-foreground outline-none border-0 focus:outline-none focus:ring-0 focus:border-0"
               />
               <kbd className="hidden sm:flex items-center gap-0.5 rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground font-mono">
                 ESC

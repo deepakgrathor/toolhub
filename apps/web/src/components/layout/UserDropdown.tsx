@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
-import { LayoutDashboard, History, Gift, LogOut, User } from "lucide-react";
+import { History, LogOut, User } from "lucide-react";
 import { useProfileScore } from "@/hooks/useProfileScore";
 
 interface UserDropdownProps {
@@ -21,10 +21,27 @@ function ProfileRing({
   image?: string | null;
   name?: string | null;
 }) {
+  const initials = name ? name[0]?.toUpperCase() : "U";
+
+  // At 100% just show a clean avatar with accent ring — no progress SVG
+  if (score >= 100) {
+    return (
+      <div className="relative w-9 h-9 shrink-0">
+        <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-primary bg-primary/20 flex items-center justify-center">
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image} alt={name ?? "User"} className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-[10px] font-bold text-primary">{initials}</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   const r = 15.9;
   const circ = 2 * Math.PI * r;
   const dash = (score / 100) * circ;
-  const initials = name ? name[0]?.toUpperCase() : "U";
 
   return (
     <div className="relative w-9 h-9 shrink-0">
@@ -102,28 +119,12 @@ export function UserDropdown({ name, email, image }: UserDropdownProps) {
               My Profile
             </Link>
             <Link
-              href="/dashboard"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-2 text-sm text-foreground hover:bg-muted/50 transition-colors"
-            >
-              <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
-              Dashboard
-            </Link>
-            <Link
-              href="/dashboard/history"
+              href="/history"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 px-4 py-2 text-sm text-foreground hover:bg-muted/50 transition-colors"
             >
               <History className="h-4 w-4 text-muted-foreground" />
               History
-            </Link>
-            <Link
-              href="/dashboard#referral"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-2 text-sm text-foreground hover:bg-muted/50 transition-colors"
-            >
-              <Gift className="h-4 w-4 text-muted-foreground" />
-              Refer &amp; Earn
             </Link>
           </div>
 

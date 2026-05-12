@@ -585,7 +585,7 @@ export function AuthModal() {
                 type="button"
                 onClick={handleGoogle}
                 disabled={loading}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background py-2.5 text-sm font-medium text-foreground hover:bg-white/5 disabled:opacity-50 transition-colors"
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 transition-colors"
               >
                 <GoogleIcon />
                 Continue with Google
