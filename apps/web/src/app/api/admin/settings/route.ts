@@ -11,6 +11,8 @@ const settingsSchema = z.object({
   announcement_banner: z.string().max(500).optional(),
   announcement_visible: z.boolean().optional(),
   maintenance_mode: z.boolean().optional(),
+  credit_rollover_enabled: z.boolean().optional(),
+  credit_rollover_days: z.number().int().min(1).max(365).optional(),
 });
 
 export async function PATCH(req: NextRequest) {
@@ -33,7 +35,6 @@ export async function PATCH(req: NextRequest) {
   const updates = parsed.data;
   const keys = Object.keys(updates) as (keyof typeof updates)[];
 
-  // Fetch before-values for audit log
   const before: Record<string, unknown> = {};
   const after: Record<string, unknown> = {};
 
@@ -59,14 +60,22 @@ export async function PATCH(req: NextRequest) {
     after,
   });
 
-  // Sync maintenance_mode to Redis so middleware can read it without DB access
-  if ("maintenance_mode" in updates) {
-    try {
-      const redis = getRedis();
-      await redis.set("site:maintenance_mode", updates.maintenance_mode ? "1" : "0");
-    } catch {
-      // Redis unavailable — middleware falls back to false (non-blocking)
+  try {
+    const redis = getRedis();
+    const invalidations: Promise<unknown>[] = [];
+
+    if ("maintenance_mode" in updates) {
+      invalidations.push(
+        redis.set("site:maintenance_mode", updates.maintenance_mode ? "1" : "0")
+      );
     }
+    if ("credit_rollover_enabled" in updates || "credit_rollover_days" in updates) {
+      invalidations.push(redis.del("site-config:rollover"));
+    }
+
+    await Promise.allSettled(invalidations);
+  } catch {
+    // Redis unavailable — non-blocking
   }
 
   return NextResponse.json({ success: true });

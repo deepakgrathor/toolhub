@@ -50,7 +50,10 @@
       "Bash(Get-ChildItem -Path \"F:\\\\2026\\\\AI_Project\\\\toolhub\" -Directory)",
       "Bash(Select-Object Name)",
       "Bash(xargs grep -l \"search\" -i)",
-      "Bash(xargs grep -l \"cmdk\\\\|CommandMenu\\\\|CommandPalette\\\\|useSearchStore\")"
+      "Bash(xargs grep -l \"cmdk\\\\|CommandMenu\\\\|CommandPalette\\\\|useSearchStore\")",
+      "Bash(mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\admin\\\\referrals\\\\[id]\\\\approve\")",
+      "Bash(mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\admin\\\\referrals\\\\[id]\\\\reject\")",
+      "Bash(mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\admin\\\\plans\\\\[slug]\" 2>&1 && echo \"ok\")"
     ]
   }
 }

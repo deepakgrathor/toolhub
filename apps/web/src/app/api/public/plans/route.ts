@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { connectDB, CreditPack } from "@toolhub/db";
+import { connectDB, Plan } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 
-const CACHE_KEY = "public:plans";
+const CACHE_KEY = "plans:public";
 const CACHE_TTL = 600; // 10 min
 
 export async function GET() {
@@ -18,20 +18,32 @@ export async function GET() {
 
   try {
     await connectDB();
-    const plans = await CreditPack.find({ isActive: true })
-      .sort({ sortOrder: 1 })
-      .select("name credits priceInr isFeatured sortOrder")
+    const plans = await Plan.find({ isActive: true })
+      .sort({ order: 1 })
       .lean();
+
+    // Compute yearly savings per plan
+    const plansWithSavings = plans.map((plan) => {
+      const monthlyCost = plan.pricing.monthly.basePrice * 12;
+      const yearlyCost = plan.pricing.yearly.basePrice;
+      const yearlySavings = monthlyCost - yearlyCost;
+      return { ...plan, yearlySavings };
+    });
 
     try {
       const redis = getRedis();
-      await redis.set(CACHE_KEY, JSON.stringify(plans), { ex: CACHE_TTL });
+      await redis.set(CACHE_KEY, JSON.stringify(plansWithSavings), {
+        ex: CACHE_TTL,
+      });
     } catch {
       // silent
     }
 
-    return NextResponse.json({ plans });
-  } catch (err) {
-    return NextResponse.json({ plans: [], error: "DB unavailable" }, { status: 200 });
+    return NextResponse.json({ plans: plansWithSavings });
+  } catch {
+    return NextResponse.json(
+      { plans: [], error: "DB unavailable" },
+      { status: 200 }
+    );
   }
 }

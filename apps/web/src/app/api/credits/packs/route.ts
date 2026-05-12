@@ -7,7 +7,7 @@ export async function GET() {
   try {
     await connectDB();
     const packs = await CreditPack.find({ isActive: true })
-      .sort({ sortOrder: 1 })
+      .sort({ order: 1 })
       .lean();
     return NextResponse.json({ packs });
   } catch (err) {

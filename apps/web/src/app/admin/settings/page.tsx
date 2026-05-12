@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { connectDB, SiteConfig } from "@toolhub/db";
 import { SettingsForm, type SiteSettings } from "@/components/admin/SettingsForm";
 
-export const metadata: Metadata = { title: "Admin Settings — SetuLix" };
+export const metadata: Metadata = { title: "Admin Settings — ToolHub" };
 export const dynamic = "force-dynamic";
 
 const DEFAULTS: SiteSettings = {
@@ -10,6 +10,8 @@ const DEFAULTS: SiteSettings = {
   announcement_banner: "",
   announcement_visible: false,
   maintenance_mode: false,
+  credit_rollover_enabled: false,
+  credit_rollover_days: 30,
 };
 
 async function getSiteSettings(): Promise<SiteSettings> {
@@ -31,6 +33,12 @@ async function getSiteSettings(): Promise<SiteSettings> {
         DEFAULTS.announcement_visible,
       maintenance_mode:
         (map.get("maintenance_mode") as boolean) ?? DEFAULTS.maintenance_mode,
+      credit_rollover_enabled:
+        (map.get("credit_rollover_enabled") as boolean) ??
+        DEFAULTS.credit_rollover_enabled,
+      credit_rollover_days:
+        (map.get("credit_rollover_days") as number) ??
+        DEFAULTS.credit_rollover_days,
     };
   } catch {
     return DEFAULTS;

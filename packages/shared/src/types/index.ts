@@ -50,11 +50,11 @@ export interface CreditPack {
   id: string;
   name: string;
   credits: number;
-  priceInr: number;
-  razorpayPlanId: string;
-  isFeatured: boolean;
+  price: number;
+  pricePerCredit: number;
+  isPopular: boolean;
   isActive: boolean;
-  sortOrder: number;
+  order: number;
   createdAt: Date;
   updatedAt: Date;
 }

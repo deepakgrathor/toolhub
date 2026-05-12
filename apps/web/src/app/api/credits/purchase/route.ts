@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       Authorization: authHeader,
     },
     body: JSON.stringify({
-      amount: pack.priceInr * 100, // paise
+      amount: pack.price * 100, // paise
       currency: "INR",
       receipt,
       notes: {

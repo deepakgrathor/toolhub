@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, AlertTriangle, Megaphone } from "lucide-react";
+import { Loader2, AlertTriangle, Megaphone, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -10,6 +10,8 @@ export interface SiteSettings {
   announcement_banner: string;
   announcement_visible: boolean;
   maintenance_mode: boolean;
+  credit_rollover_enabled: boolean;
+  credit_rollover_days: number;
 }
 
 export function SettingsForm({ initial }: { initial: SiteSettings }) {
@@ -140,7 +142,6 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
           </div>
         </div>
 
-        {/* Preview */}
         {settings.announcement_banner && (
           <div className="mt-4">
             <p className="text-xs font-medium text-muted-foreground mb-2">
@@ -160,6 +161,62 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
                 Toggle "Show banner" to make this visible to users.
               </p>
             )}
+          </div>
+        )}
+      </section>
+
+      {/* ── Credit Rollover ───────────────────────────────────────────────── */}
+      <section className="rounded-xl border border-border bg-[#111] p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
+              <RotateCcw className="h-4 w-4 text-[#7c3aed]" />
+              Credit Rollover
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              When enabled, unused credits from the current billing period carry
+              over to the next period for the configured number of days.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={settings.credit_rollover_enabled}
+            onClick={() =>
+              set("credit_rollover_enabled", !settings.credit_rollover_enabled)
+            }
+            className={cn(
+              "relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors",
+              settings.credit_rollover_enabled ? "bg-[#7c3aed]" : "bg-muted/40"
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                settings.credit_rollover_enabled ? "translate-x-4" : "translate-x-0.5"
+              )}
+            />
+          </button>
+        </div>
+
+        {settings.credit_rollover_enabled && (
+          <div className="mt-2">
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              Max rollover days
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={365}
+              value={settings.credit_rollover_days}
+              onChange={(e) =>
+                set("credit_rollover_days", Math.max(1, parseInt(e.target.value, 10) || 30))
+              }
+              className="w-32 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+            />
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Unused credits roll over for up to {settings.credit_rollover_days} days.
+            </p>
           </div>
         )}
       </section>

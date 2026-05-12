@@ -16,3 +16,5 @@ export * from "./models/OnboardingConfig";
 export * from "./models/Referral";
 export * from "./models/Notification";
 export * from "./referral-service";
+export * from "./models/Plan";
+export * from "./models/UserSubscription";

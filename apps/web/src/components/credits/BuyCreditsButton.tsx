@@ -10,8 +10,8 @@ export interface PackData {
   _id: string;
   name: string;
   credits: number;
-  priceInr: number;
-  isFeatured: boolean;
+  price: number;
+  isPopular: boolean;
 }
 
 interface RazorpayOptions {
@@ -122,7 +122,7 @@ export function BuyCreditsButton({ pack }: Props) {
         "mt-auto w-full rounded-lg py-2 text-sm font-medium text-center transition-opacity",
         "flex items-center justify-center gap-2",
         "disabled:cursor-not-allowed disabled:opacity-70",
-        pack.isFeatured
+        pack.isPopular
           ? "bg-[#7c3aed] text-white hover:opacity-90"
           : "border border-border text-foreground hover:bg-white/5"
       )}
