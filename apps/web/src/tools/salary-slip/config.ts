@@ -3,6 +3,6 @@ export const salarySlipConfig = {
   name: "Salary Slip Generator",
   description: "Generate professional salary slips with all components — free tool.",
   creditCost: 0,
-  kits: ["sme"],
+  kits: ["hr"],
   isAI: false,
 } as const;
