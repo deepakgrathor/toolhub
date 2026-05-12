@@ -1,4 +1,4 @@
-import { jwtVerify } from "jose";
+import { jwtVerify, jwtDecrypt } from "jose";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Routes excluded from auth + onboarding gates
@@ -35,6 +35,30 @@ async function verifyAdminCookie(req: NextRequest): Promise<boolean> {
   }
 }
 
+// Auth.js v5 uses JWE (encrypted) tokens. Key is derived via HKDF-SHA256
+// with info string "Auth.js Generated Encryption Key" and 32-byte output.
+async function deriveAuthKey(secret: string): Promise<Uint8Array> {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HKDF" },
+    false,
+    ["deriveBits"]
+  );
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: new Uint8Array(0),
+      info: enc.encode("Auth.js Generated Encryption Key"),
+    },
+    keyMaterial,
+    256
+  );
+  return new Uint8Array(bits);
+}
+
 async function getSessionPayload(
   req: NextRequest
 ): Promise<Record<string, unknown> | null> {
@@ -45,10 +69,8 @@ async function getSessionPayload(
   try {
     const secret =
       process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
-    const { payload } = await jwtVerify(
-      sessionCookie,
-      new TextEncoder().encode(secret)
-    );
+    const key = await deriveAuthKey(secret);
+    const { payload } = await jwtDecrypt(sessionCookie, key);
     return payload as Record<string, unknown>;
   } catch {
     return null;
