@@ -1,13 +1,23 @@
-import { getToken } from "next-auth/jwt";
 import { jwtVerify } from "jose";
 import { NextResponse, type NextRequest } from "next/server";
 
-// ── MAINTENANCE MODE CHECK DISABLED ──────────────────────────────────────────
-// Async fetch() inside Edge middleware causes request-timing issues on
-// /dashboard (streaming + Suspense) that manifest as repeated reloads.
-// Maintenance mode is enforced via the admin panel only — not middleware.
-// To re-enable: use a Redis HTTP call in a standalone Edge API route and
-// pass the result via a request header using Next.js rewrites, never inline.
+// ── WHY getToken() IS NOT USED HERE ──────────────────────────────────────────
+// NextAuth v5 sets cookie "authjs.session-token".
+// next-auth/jwt's getToken() defaults to reading "next-auth.session-token" (v4).
+// Using getToken() on a v5 session always returns null → middleware thinks user
+// is unauthenticated → redirects /dashboard → / → homepage sees valid auth()
+// session → redirects back to /dashboard → INFINITE LOOP.
+//
+// Solution: remove getToken() from middleware entirely.
+// /dashboard is already protected by its own server component (auth() check).
+// /tools pages show preview without login (by design — paywall is in-page).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── MAINTENANCE MODE CHECK ALSO DISABLED ─────────────────────────────────────
+// Async fetch() inside Edge middleware adds latency on every request and
+// interferes with Next.js 14 Suspense streaming. Maintenance mode is managed
+// from the admin panel only. Re-enable via rewrites + a dedicated Edge API
+// route that sets a request header — never inline in middleware.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Verify the setulix_admin cookie (Edge-safe jose) ─────────────────────────
@@ -43,23 +53,21 @@ export async function middleware(req: NextRequest) {
     });
   }
 
-  // ── Step 2: Admin routes — use setulix_admin cookie (independent of NextAuth)
+  // ── Step 2: Admin routes — setulix_admin cookie (completely separate from NextAuth)
   if (pathname.startsWith("/admin")) {
     const isAdminAuthed = await verifyAdminCookie(req);
 
-    // Allow login page; redirect if already logged in
     if (pathname === "/admin/login") {
+      // Already logged in → skip login page
       if (isAdminAuthed) {
         return NextResponse.redirect(new URL("/admin", req.url));
       }
       return response;
     }
 
-    // All other /admin/* — require valid admin cookie
+    // All other /admin/* require a valid admin cookie
     if (!isAdminAuthed) {
-      const loginUrl = new URL("/admin/login", req.url);
-      const res = NextResponse.redirect(loginUrl);
-      // Clear stale/invalid cookie if present
+      const res = NextResponse.redirect(new URL("/admin/login", req.url));
       res.cookies.set("setulix_admin", "", { maxAge: 0, path: "/" });
       return res;
     }
@@ -67,19 +75,9 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  // ── Step 3: Decode NextAuth JWT for web-app routes ────────────────────────
-  const token = await getToken({
-    req,
-    secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "",
-  });
-
-  const isLoggedIn = !!token;
-
-  // ── Step 4: Web-app protected routes ─────────────────────────────────────
-  if (pathname.startsWith("/dashboard") && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
+  // ── Step 3: All other routes — pass through ───────────────────────────────
+  // Web-app route protection (dashboard, tools) is handled by individual
+  // server components via auth() — not here. See notes at top of file.
   return response;
 }
 
