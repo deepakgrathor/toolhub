@@ -2,34 +2,13 @@ import { getToken } from "next-auth/jwt";
 import { jwtVerify } from "jose";
 import { NextResponse, type NextRequest } from "next/server";
 
-// ── Maintenance mode cache (60s TTL, Edge-compatible HTTP fetch) ──────────────
-
-let _maintenanceCache: { value: boolean; expiresAt: number } | null = null;
-
-async function checkMaintenanceMode(): Promise<boolean> {
-  const now = Date.now();
-  if (_maintenanceCache && now < _maintenanceCache.expiresAt) {
-    return _maintenanceCache.value;
-  }
-  try {
-    const url = process.env.UPSTASH_REDIS_URL;
-    const token = process.env.UPSTASH_REDIS_TOKEN;
-    if (!url || !token) return false;
-
-    const res = await fetch(`${url}/get/site:maintenance_mode`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
-    if (!res.ok) return false;
-
-    const data = await res.json();
-    const value = data?.result === "1" || data?.result === true;
-    _maintenanceCache = { value, expiresAt: now + 60_000 };
-    return value;
-  } catch {
-    return false;
-  }
-}
+// ── MAINTENANCE MODE CHECK DISABLED ──────────────────────────────────────────
+// Async fetch() inside Edge middleware causes request-timing issues on
+// /dashboard (streaming + Suspense) that manifest as repeated reloads.
+// Maintenance mode is enforced via the admin panel only — not middleware.
+// To re-enable: use a Redis HTTP call in a standalone Edge API route and
+// pass the result via a request header using Next.js rewrites, never inline.
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ── Verify the setulix_admin cookie (Edge-safe jose) ─────────────────────────
 
@@ -80,7 +59,7 @@ export async function middleware(req: NextRequest) {
     if (!isAdminAuthed) {
       const loginUrl = new URL("/admin/login", req.url);
       const res = NextResponse.redirect(loginUrl);
-      // Clear stale cookie if present
+      // Clear stale/invalid cookie if present
       res.cookies.set("setulix_admin", "", { maxAge: 0, path: "/" });
       return res;
     }
@@ -96,22 +75,7 @@ export async function middleware(req: NextRequest) {
 
   const isLoggedIn = !!token;
 
-  // ── Step 4: Maintenance mode ──────────────────────────────────────────────
-  const maintenance = await checkMaintenanceMode();
-  const isAdminForMaintenance = await verifyAdminCookie(req);
-
-  if (maintenance && !isAdminForMaintenance) {
-    if (pathname !== "/maintenance") {
-      return NextResponse.redirect(new URL("/maintenance", req.url));
-    }
-    return response;
-  }
-
-  if (!maintenance && pathname === "/maintenance") {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  // ── Step 5: Web-app protected routes ─────────────────────────────────────
+  // ── Step 4: Web-app protected routes ─────────────────────────────────────
   if (pathname.startsWith("/dashboard") && !isLoggedIn) {
     return NextResponse.redirect(new URL("/", req.url));
   }
