@@ -1,24 +1,31 @@
 # Handoff Note
-Updated: 2026-05-12 | Account: B | Session: #3 | Reload Loop Fix
+Updated: 2026-05-13 | Account: B | Session: #4 | HKDF Fix (Real Root Cause)
 
 ## Where We Are
-Session B3 done. **TypeScript: 0 errors.** Committed to main.
+Session B4 done. **TypeScript: 0 errors.** Committed to main.
 
 ---
 
-## What Was Fixed (Session B3)
+## What Was Fixed (Session B4)
 
-### FIX 7 — Login Reload Loop
-**Problem:** After Google login, user was stuck in an infinite redirect loop: `/dashboard` → `/` → `/dashboard` → ...
+### FIX 8 — Infinite Reload Loop (Real Root Cause)
+**Problem:** After Google login, user still stuck in reload loop on production (`setulix.com`). Session B3 fix was incomplete.
 
-**Root cause:** `middleware.ts` used `jwtVerify` (for JWS/signed tokens) to decode the Auth.js v5 session cookie. Auth.js v5 uses JWE (AES-encrypted, not signed) tokens. `jwtVerify` always threw, catch returned `null`, middleware redirected to `/`. Marketing homepage's `auth()` properly decrypted the session, saw a valid user, and redirected back to `/dashboard`. Loop.
+**Root cause confirmed by reading `@auth/core/src/jwt.ts` (v5.0.0-beta.31):**
+Auth.js v5 `getDerivedEncryptionKey` for `A256CBC-HS512`:
+1. **Key length = 64 bytes (512 bits)** — B3 fix used 256 bits (32 bytes) ← WRONG
+2. **HKDF salt = cookie name** (`"__Secure-authjs.session-token"` on prod) — B3 used empty Uint8Array ← WRONG
+3. **HKDF info = `"Auth.js Generated Encryption Key (${cookieName})"`** — B3 used info string without cookie name ← WRONG
 
-**Fix:** Replaced `jwtVerify` with `jwtDecrypt` + proper HKDF key derivation using Web Crypto API:
-- HKDF-SHA256 with salt=`""`, info=`"Auth.js Generated Encryption Key"`, 32-byte output
-- Matches exactly how Auth.js v5 derives the AES decryption key from `AUTH_SECRET`
-- No new dependencies — uses `crypto.subtle` (available in Edge runtime) + `jwtDecrypt` from existing `jose`
+All three parameters wrong → derived key never matched → `jwtDecrypt` always threw → middleware returned `null` → redirected to `/` → marketing homepage `auth()` properly decrypted JWE → saw valid session → redirected to `/dashboard` → middleware → loop.
 
-**File:** `apps/web/src/middleware.ts` — `getSessionPayload()` + new `deriveAuthKey()`
+**Fix (`apps/web/src/middleware.ts`):**
+- `deriveAuthKey(secret, cookieName)` — now takes cookie name as second arg
+- HKDF salt: `te.encode(cookieName)` (cookie name string encoded as bytes)
+- HKDF info: `te.encode("Auth.js Generated Encryption Key (${cookieName})")`
+- `deriveBits(..., 512)` — 64 bytes for A256CBC-HS512
+- `getSessionPayload` determines correct cookie name (prefers `__Secure-authjs.session-token` on HTTPS)
+- `jwtDecrypt` now passes explicit `keyManagementAlgorithms: ["dir"]` + `contentEncryptionAlgorithms: ["A256CBC-HS512", "A256GCM"]`
 
 ---
 

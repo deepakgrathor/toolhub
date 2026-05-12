@@ -35,13 +35,13 @@ async function verifyAdminCookie(req: NextRequest): Promise<boolean> {
   }
 }
 
-// Auth.js v5 uses JWE (encrypted) tokens. Key is derived via HKDF-SHA256
-// with info string "Auth.js Generated Encryption Key" and 32-byte output.
-async function deriveAuthKey(secret: string): Promise<Uint8Array> {
-  const enc = new TextEncoder();
+// Auth.js v5 uses JWE (A256CBC-HS512). Key derivation:
+//   HKDF-SHA256, salt = cookie name, info = "Auth.js Generated Encryption Key (${cookieName})", 64 bytes
+async function deriveAuthKey(secret: string, cookieName: string): Promise<Uint8Array> {
+  const te = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
-    enc.encode(secret),
+    te.encode(secret),
     { name: "HKDF" },
     false,
     ["deriveBits"]
@@ -50,11 +50,11 @@ async function deriveAuthKey(secret: string): Promise<Uint8Array> {
     {
       name: "HKDF",
       hash: "SHA-256",
-      salt: new Uint8Array(0),
-      info: enc.encode("Auth.js Generated Encryption Key"),
+      salt: te.encode(cookieName),
+      info: te.encode(`Auth.js Generated Encryption Key (${cookieName})`),
     },
     keyMaterial,
-    256
+    512  // 64 bytes — A256CBC-HS512 requires 512-bit key
   );
   return new Uint8Array(bits);
 }
@@ -62,15 +62,24 @@ async function deriveAuthKey(secret: string): Promise<Uint8Array> {
 async function getSessionPayload(
   req: NextRequest
 ): Promise<Record<string, unknown> | null> {
-  const sessionCookie =
-    req.cookies.get("authjs.session-token")?.value ??
-    req.cookies.get("__Secure-authjs.session-token")?.value;
+  const SECURE = "__Secure-authjs.session-token";
+  const PLAIN  = "authjs.session-token";
+
+  const secureCookieValue = req.cookies.get(SECURE)?.value;
+  const plainCookieValue  = req.cookies.get(PLAIN)?.value;
+
+  const sessionCookie = secureCookieValue ?? plainCookieValue;
+  const cookieName    = secureCookieValue ? SECURE : PLAIN;
+
   if (!sessionCookie) return null;
   try {
-    const secret =
-      process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
-    const key = await deriveAuthKey(secret);
-    const { payload } = await jwtDecrypt(sessionCookie, key);
+    const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
+    const key = await deriveAuthKey(secret, cookieName);
+    const { payload } = await jwtDecrypt(sessionCookie, key, {
+      clockTolerance: 15,
+      keyManagementAlgorithms: ["dir"],
+      contentEncryptionAlgorithms: ["A256CBC-HS512", "A256GCM"],
+    });
     return payload as Record<string, unknown>;
   } catch {
     return null;
