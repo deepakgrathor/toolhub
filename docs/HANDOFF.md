@@ -1,8 +1,57 @@
 # Handoff Note
-Updated: 2026-05-13 | Account: B | Session: B7-A | 10 Bug Fixes
+Updated: 2026-05-13 | Account: B | Session: B7-B | Features (Tasks 11–23)
 
 ## Where We Are
-Session B7-A done. **TypeScript: 0 errors.** Committed to main.
+Session B7-B done. **TypeScript: 0 errors.** Committed to main.
+
+---
+
+## What Was Done (Session B7-B)
+
+### TASK 11 — Explore Page Scroll Overlap
+- Already correct: `sticky top-14 z-20` in `explore/page.tsx` matches navbar `h-14`
+- No changes needed
+
+### TASK 12 — My Tools Pre-populated on Fresh Signup
+- `packages/db/src/models/User.ts`: changed `selectedTools: [{ type: String }]` → `selectedTools: { type: [String], default: [] }`
+- `apps/web/src/app/api/onboarding/complete/route.ts`: removed `selectedTools: recommendedTools` from `User.findByIdAndUpdate` call; removed unused `getRecommendedTools` import and `challenge` field from body type
+- **Result**: Fresh signup → MY TOOLS section is empty; kit tools derived from professions at runtime
+
+### TASK 13 — Remove Plan-based Tool Restrictions
+- `apps/web/src/lib/plan-access.ts`: `isPlanBlocked()` always returns `false`
+- `apps/web/src/lib/tool-guard.ts`: removed plan check entirely, kept only abuse protection
+- `apps/web/src/app/(site)/tools/[slug]/page.tsx`: removed UpgradePrompt, plan check logic, and auth import
+- `apps/web/src/components/credits/PaywallModal.tsx`: updated to show "Buy Credits" (→ /checkout?type=pack) AND "Upgrade Plan" (→ /pricing) buttons side by side
+
+### TASK 14 — Watermark System for FREE Outputs
+- `apps/web/src/lib/user-plan.ts` — NEW: `getUserPlan(userId)` with Redis cache (TTL 5min)
+- `apps/web/src/lib/watermark.ts` — NEW: `applyWatermark(output, planSlug, toolSlug)` — text watermark for text tools, HTML watermark for website-generator, no watermark for thumbnail-ai
+- `packages/shared/src/tool-types.ts`: added `planSlug?: string` to `ToolEngineContext`
+- All 17 JSON tool engines: added `applyWatermark` import + wrapped `outputText: JSON.stringify(parsed)` with watermark
+- `website-generator/engine.ts`: watermark applied to `finalHtml` before saving/returning
+- All 19 tool API routes: added `getUserPlan` import + pass `planSlug` in execute context
+
+### TASK 15 — Output History with Plan-based Limits
+- `apps/web/src/app/api/user/history/route.ts`: added `getUserPlan` call; free=0 days (returns upgradeRequired:true), lite=30, pro=90, business/enterprise=365 days cutoff filter
+- `apps/web/src/components/dashboard/HistoryTable.tsx`: shows upgrade prompt card (Clock icon + "Upgrade to LITE" CTA) for FREE users; shows "Showing last {days} days" badge for paid users
+
+### TASK 16-19, 22-23 — Verified Previously Completed
+- All files confirmed present and functional (credits ledger, sidebar widget, account delete, credit alerts, email system, checkout page)
+
+### TASK 20 — Admin Dynamic Bonus Settings
+- `apps/web/src/components/admin/SettingsForm.tsx`: added `SiteSettings` fields + "Bonus & Rewards" section with 3 number inputs (welcome_bonus_credits, referral_joining_bonus, referral_reward_credits)
+- `apps/web/src/app/admin/settings/page.tsx`: added defaults + fetch for bonus fields
+- `apps/web/src/app/api/admin/settings/route.ts`: added 3 bonus fields to Zod schema
+
+### TASK 21 — Credit Rollover Cron System
+- `apps/web/src/lib/credit-rollover.ts` — NEW: `processUserRollover(userId, planSlug)` — carries forward unused credits (max: lite=200, pro=700, business=1500), creates CreditTransaction type 'rollover', sends notification, invalidates Redis
+- `apps/web/src/app/api/cron/rollover/route.ts` — NEW: secured by `Authorization: Bearer {CRON_SECRET}`, processes subscribers in batches of 50
+- `vercel.json`: added cron schedule `0 18 1 * *` (1st of month 18:00 UTC = 00:00 IST)
+- `packages/db/src/models/CreditTransaction.ts`: added `rollover` to type enum
+- `apps/web/.env`: added `CRON_SECRET=dev-cron-secret-change-in-production`
+
+---
+
 
 ---
 
