@@ -10,7 +10,12 @@ export async function GET() {
     const redis = getRedis();
     const cached = await redis.get(CACHE_KEY);
     if (cached) {
-      return NextResponse.json({ plans: JSON.parse(cached as string) });
+      const parsed = JSON.parse(cached as string) as unknown[];
+      if (parsed.length > 0) {
+        return NextResponse.json({ plans: parsed });
+      }
+      // Empty cached array means seed hadn't run yet — fall through to DB
+      await redis.del(CACHE_KEY);
     }
   } catch {
     // Redis unavailable — fall through to DB

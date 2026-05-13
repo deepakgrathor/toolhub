@@ -21,7 +21,7 @@ const ALWAYS_PUBLIC_PREFIXES = [
 ];
 
 // App routes that require an authenticated session
-const APP_ROUTES = ["/dashboard", "/profile", "/explore", "/history", "/refer"];
+const APP_ROUTES = ["/dashboard", "/profile", "/explore", "/history", "/refer", "/credits", "/checkout"];
 
 async function verifyAdminCookie(req: NextRequest): Promise<boolean> {
   try {
@@ -143,6 +143,11 @@ export async function middleware(req: NextRequest) {
 
   // No session → back to marketing homepage
   if (!payload) {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
+  // Deleted account → back to marketing homepage
+  if (payload.isDeleted === true || !payload.id) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 

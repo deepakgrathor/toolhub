@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { connectDB, CreditService, InsufficientCreditsError } from "@toolhub/db";
+import { connectDB, CreditService, InsufficientCreditsError, User } from "@toolhub/db";
 import { z } from "zod";
 import { invalidateBalance, invalidateDashStats } from "@/lib/credit-cache";
+import { checkAndSendCreditAlert } from "@/lib/credit-alerts";
 
 const deductSchema = z.object({
   toolSlug: z.string().min(1),
@@ -35,6 +36,10 @@ export async function POST(req: NextRequest) {
       invalidateBalance(session.user.id),
       invalidateDashStats(session.user.id),
     ]);
+
+    // Fire-and-forget credit low alert (never blocks response)
+    const userPlan = await User.findById(session.user.id).select("plan").lean();
+    void checkAndSendCreditAlert(session.user.id, newBalance, userPlan?.plan ?? "free");
 
     return NextResponse.json({ success: true, newBalance });
   } catch (err) {

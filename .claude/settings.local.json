@@ -58,7 +58,8 @@
       "Bash(Get-Content apps/web/.env)",
       "Bash(Select-String \"MONGODB_URI\")",
       "Bash(MONGODB_URI=\"mongodb+srv://deepakg:UNSBqYcJKkIyvPlY@cluster0.wbok0wx.mongodb.net/toolhub?retryWrites=true&w=majority\" npx tsx apps/web/src/scripts/seed-plans.ts)",
-      "Bash(MONGODB_URI=\"mongodb+srv://deepakg:UNSBqYcJKkIyvPlY@cluster0.wbok0wx.mongodb.net/toolhub?retryWrites=true&w=majority\" npx tsx apps/web/src/scripts/seed-tools.ts)"
+      "Bash(MONGODB_URI=\"mongodb+srv://deepakg:UNSBqYcJKkIyvPlY@cluster0.wbok0wx.mongodb.net/toolhub?retryWrites=true&w=majority\" npx tsx apps/web/src/scripts/seed-tools.ts)",
+      "Bash(MONGODB_URI=\"mongodb+srv://deepakg:UNSBqYcJKkIyvPlY@cluster0.wbok0wx.mongodb.net/toolhub?retryWrites=true&w=majority\" npx tsx apps/web/src/scripts/fix-mobile-index.ts)"
     ]
   }
 }

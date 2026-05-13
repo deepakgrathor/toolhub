@@ -5,8 +5,9 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   User, Building2, Camera, Lock, Loader2, Check,
-  Globe, Phone, MapPin, Briefcase, FileText,
+  Globe, Phone, MapPin, Briefcase, FileText, AlertTriangle,
 } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +69,7 @@ function AvatarUploader({
 }) {
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { update } = useSession();
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -78,8 +80,11 @@ function AvatarUploader({
     try {
       const res = await fetch("/api/profile/avatar", { method: "POST", body: fd });
       const data = await res.json() as { url?: string; error?: string };
-      if (data.url) { onUpload(data.url); toast.success("Avatar updated"); }
-      else toast.error(data.error ?? "Upload failed");
+      if (data.url) {
+        onUpload(data.url);
+        await update({ image: data.url });
+        toast.success("Avatar updated");
+      } else toast.error(data.error ?? "Upload failed");
     } catch { toast.error("Upload failed"); }
     setUploading(false);
   }
@@ -204,6 +209,11 @@ export default function ProfilePage() {
   const [profession, setProfession] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
 
+  // Delete account
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
   // Business form
   const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("");
@@ -262,6 +272,18 @@ export default function ProfilePage() {
       else toast.error(d.error ?? "Save failed");
     } catch { toast.error("Save failed"); }
     setSaving(false);
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirm !== "DELETE") return;
+    setDeleting(true);
+    try {
+      await fetch("/api/user/delete-account", { method: "POST" });
+      await signOut({ callbackUrl: "/?deleted=true" });
+    } catch {
+      toast.error("Failed to delete account. Try again.");
+    }
+    setDeleting(false);
   }
 
   async function saveBusiness() {
@@ -333,7 +355,7 @@ export default function ProfilePage() {
           {/* Avatar */}
           <div className="flex items-center gap-4">
             <AvatarUploader
-              currentUrl={avatarUrl || session.user.image || ""}
+              currentUrl={avatarUrl || data?.user.avatar || session.user.image || ""}
               name={name || session.user.name || "U"}
               onUpload={(url) => setAvatarUrl(url)}
             />
@@ -534,6 +556,66 @@ export default function ProfilePage() {
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             Save Changes
           </button>
+        </div>
+      )}
+
+      {/* ── Danger Zone ──────────────────────────────────────────────────── */}
+      <div className="mt-10 rounded-xl border border-destructive/40 bg-destructive/5 p-5">
+        <div className="flex items-center gap-2 mb-2">
+          <AlertTriangle className="h-5 w-5 text-destructive" />
+          <h2 className="text-sm font-semibold text-destructive">Delete Account</h2>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Your account will be deactivated. Data is kept for 30 days, after which it is permanently deleted.
+          You will not be able to login.
+        </p>
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="rounded-lg border border-destructive px-4 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          Delete My Account
+        </button>
+      </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <h3 className="text-base font-semibold text-foreground">Delete Account</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              This action cannot be undone within 30 days. Your account will be deactivated immediately.
+            </p>
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                Type <span className="font-mono font-bold text-foreground">DELETE</span> to confirm
+              </label>
+              <input
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-mono text-foreground outline-none focus:border-destructive focus:ring-1 focus:ring-destructive/30"
+                placeholder="DELETE"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirm(""); }}
+                className="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirm !== "DELETE" || deleting}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Delete Account
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

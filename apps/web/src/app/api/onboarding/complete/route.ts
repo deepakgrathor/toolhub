@@ -4,6 +4,8 @@ import { connectDB, User, BusinessProfile, Referral, CreditTransaction } from "@
 import { getRedis } from "@toolhub/shared";
 import { getRecommendedTools } from "@/lib/recommendations";
 import { createNotification } from "@/lib/notifications";
+import { sendEmail } from "@/lib/email/sender";
+import { welcomeEmail } from "@/lib/email/templates";
 
 const REFERRAL_CREDIT = 10;
 const WELCOME_CREDIT = 10;
@@ -57,6 +59,12 @@ export async function POST(req: NextRequest) {
   // ── Credit release on onboarding complete ──────────────────────────────────
   await releaseOnboardingCredits(session.user.id, session.user.name ?? "");
 
+  // ── Welcome email ──────────────────────────────────────────────────────────
+  if (session.user.email) {
+    const { subject, html } = welcomeEmail({ name: session.user.name ?? "there" });
+    void sendEmail({ to: session.user.email, subject, html });
+  }
+
   // TODO(B5-B): Once Razorpay/Cashfree webhook route is created at
   // apps/web/src/app/api/payments/webhook/route.ts, call createNotification
   // there on successful purchase:
@@ -109,8 +117,8 @@ async function releaseOnboardingCredits(userId: string, userName: string): Promi
         await createNotification({
           userId,
           type: "credit_added",
-          title: "Welcome Credits",
-          message: `You got ${REFERRAL_CREDIT} credits for joining SetuLix`,
+          title: "Joining Bonus!",
+          message: `You got ${REFERRAL_CREDIT} credits for joining via referral link.`,
         });
 
         // Invalidate referred user balance cache
@@ -140,7 +148,7 @@ async function releaseOnboardingCredits(userId: string, userName: string): Promi
           userId: referrerId,
           type: "referral_joined",
           title: "Friend Joined!",
-          message: `${firstName} joined SetuLix using your referral link. You got ${REFERRAL_CREDIT} credits!`,
+          message: `Your referral joined SetuLix. You got ${REFERRAL_CREDIT} credits!`,
           meta: { referredUserId: userId },
         });
 
@@ -175,8 +183,8 @@ async function releaseOnboardingCredits(userId: string, userName: string): Promi
       await createNotification({
         userId,
         type: "credit_added",
-        title: "Welcome Credits",
-        message: `You got ${WELCOME_CREDIT} credits to get started!`,
+        title: "Welcome to SetuLix!",
+        message: `You got ${WELCOME_CREDIT} free credits to get started.`,
       });
     }
   } catch (err) {

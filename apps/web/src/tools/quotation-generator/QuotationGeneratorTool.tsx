@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ClipboardList, Plus, Trash2, Download, RotateCcw, Info } from "lucide-react";
+import { ClipboardList, Plus, Trash2, Download, RotateCcw } from "lucide-react";
 import { quotationGeneratorConfig } from "./config";
 import { amountToWords, fmtInr } from "@/lib/utils";
 import { printDocument } from "@/lib/print-pdf";
@@ -110,11 +110,6 @@ export default function QuotationGeneratorTool({ creditCost: _c }: { creditCost?
             </div>
             <p className="text-sm text-muted-foreground mt-1">{quotationGeneratorConfig.description}</p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2">
-          <Info className="h-4 w-4 text-blue-400 shrink-0" />
-          <p className="text-xs text-blue-400">Free tool — no login required. Login to save your work.</p>
         </div>
 
         {/* From */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Download, RotateCcw, Info } from "lucide-react";
+import { Mail, Download, RotateCcw } from "lucide-react";
 import { offerLetterConfig } from "./config";
 import { fmtInr } from "@/lib/utils";
 import { printDocument } from "@/lib/print-pdf";
@@ -87,11 +87,6 @@ export default function OfferLetterTool({ creditCost: _c }: { creditCost?: numbe
             </div>
             <p className="text-sm text-muted-foreground mt-1">{offerLetterConfig.description}</p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2">
-          <Info className="h-4 w-4 text-blue-400 shrink-0" />
-          <p className="text-xs text-blue-400">Free tool — no login required. Login to save your work.</p>
         </div>
 
         {/* Company */}

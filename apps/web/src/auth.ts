@@ -32,6 +32,10 @@ const config: NextAuthConfig = {
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return null;
 
+        if (user.isDeleted) {
+          throw new Error("This account has been deleted. Contact support@setulix.com to restore it.");
+        }
+
         await User.findByIdAndUpdate(user._id, { lastSeen: new Date() });
 
         return {
@@ -53,6 +57,13 @@ const config: NextAuthConfig = {
         if (account.provider === "google") {
           await connectDB();
           let dbUser = await User.findOne({ email: user.email });
+
+          if (dbUser?.isDeleted) {
+            // Block deleted users from signing in via Google
+            token.id = "";
+            token.isDeleted = true;
+            return token;
+          }
 
           if (!dbUser) {
             // First Google login — create user with referral code

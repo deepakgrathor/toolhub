@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import Link from "next/link";
 import { HeroCTA, FinalCTA, ToolsShowcaseSection } from "@/components/marketing/HeroCTA";
+import { DeletedAccountToast } from "@/components/marketing/DeletedAccountToast";
 import {
   Zap, ArrowRight, Check, X, ChevronDown,
   Sparkles, Building2, Users, Scale, Megaphone,
@@ -202,6 +203,7 @@ export default async function MarketingHomePage() {
 
   return (
     <div className="overflow-x-hidden">
+      <DeletedAccountToast />
 
       {/* ══ SECTION 1 — HERO ══════════════════════════════════════════════════ */}
       <section className="relative overflow-hidden px-4 py-20 md:py-32 text-center">

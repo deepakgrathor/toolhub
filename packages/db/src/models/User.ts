@@ -16,6 +16,9 @@ export interface IUser extends Document {
   referredBy?: Types.ObjectId | null;
   referralCount: number;
   isBanned: boolean;
+  status: "active" | "deleted" | "banned";
+  isDeleted: boolean;
+  deletedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   lastSeen: Date;
@@ -89,6 +92,9 @@ const UserSchema = new Schema<IUser>(
     referredBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     referralCount: { type: Number, default: 0 },
     isBanned: { type: Boolean, default: false },
+    status: { type: String, enum: ["active", "deleted", "banned"], default: "active" },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null },
     lastSeen: { type: Date, default: Date.now },
   },
   { timestamps: true }

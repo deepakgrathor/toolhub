@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   ChevronLeft, ChevronRight,
   LayoutDashboard, Gift, LogOut, X, Coins, Compass,
-  Sparkles, Plus,
+  Sparkles, Plus, History, TrendingUp,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
@@ -78,6 +78,106 @@ function CreditsWidget({ isCollapsed }: { isCollapsed: boolean }) {
         </span>
       )}
     </Link>
+  );
+}
+
+// ── Plan widget ───────────────────────────────────────────────────────────────
+
+interface SidebarStats {
+  planSlug: string;
+  planName: string;
+  currentCredits: number;
+  planCredits: number;
+  creditsUsed: number;
+}
+
+function PlanWidget({ isCollapsed }: { isCollapsed: boolean }) {
+  const [stats, setStats] = useState<SidebarStats | null>(null);
+
+  useEffect(() => {
+    fetch("/api/user/sidebar-stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setStats(d as SidebarStats | null))
+      .catch(() => null);
+  }, []);
+
+  if (!stats) return null;
+
+  const { planName, planSlug, currentCredits, planCredits, creditsUsed } = stats;
+  const pct = planCredits > 0 ? Math.min(100, (creditsUsed / planCredits) * 100) : 0;
+
+  const barColor =
+    pct >= 80 ? "bg-red-500" : pct >= 60 ? "bg-amber-500" : "bg-green-500";
+
+  const showUpgrade = planSlug !== "business" && planSlug !== "enterprise";
+  const upgradeLabel =
+    planSlug === "pro" ? "Go Business" : planSlug === "enterprise" ? "Enterprise" : "Upgrade";
+
+  if (isCollapsed) {
+    const donutSize = 28;
+    const r = 11;
+    const circ = 2 * Math.PI * r;
+    const filled = (pct / 100) * circ;
+
+    return (
+      <Link
+        href="/credits"
+        title={`${currentCredits} credits · ${planName}`}
+        className="flex justify-center rounded-lg px-3 py-2 hover:bg-muted/50 transition-colors"
+      >
+        <svg width={donutSize} height={donutSize} viewBox="0 0 28 28" className="-rotate-90">
+          <circle cx="14" cy="14" r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
+          <circle
+            cx="14" cy="14" r={r} fill="none"
+            stroke={pct >= 80 ? "#ef4444" : pct >= 60 ? "#f59e0b" : "#10b981"}
+            strokeWidth="3"
+            strokeDasharray={`${filled} ${circ - filled}`}
+            strokeLinecap="round"
+          />
+        </svg>
+      </Link>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+      {/* Plan badge + upgrade */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
+          {planName} Plan
+        </span>
+        {showUpgrade && (
+          <Link
+            href="/pricing"
+            className="flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
+          >
+            <TrendingUp className="h-3 w-3" /> {upgradeLabel}
+          </Link>
+        )}
+      </div>
+
+      {/* Progress bar */}
+      <div className="space-y-1">
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <div
+            className={cn("h-full rounded-full transition-all", barColor)}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <div className="flex justify-between text-[10px] text-muted-foreground">
+          <span>{currentCredits} left</span>
+          <span>{planCredits} total</span>
+        </div>
+      </div>
+
+      {/* Tagline */}
+      <Link
+        href="/pricing"
+        className="block text-[10px] text-muted-foreground/70 hover:text-primary transition-colors"
+      >
+        Unlock more AI features →
+      </Link>
+    </div>
   );
 }
 
@@ -208,7 +308,7 @@ function SidebarContent({
       </div>
 
       {/* Explore link */}
-      <div className="px-2 pb-2 shrink-0">
+      <div className="px-2 pb-1 shrink-0">
         <Link
           href="/explore"
           title={isCollapsed ? "Explore Tools" : undefined}
@@ -222,6 +322,24 @@ function SidebarContent({
         >
           <Compass className="h-[18px] w-[18px] shrink-0" />
           {!isCollapsed && <span>Explore Tools</span>}
+        </Link>
+      </div>
+
+      {/* Credits link */}
+      <div className="px-2 pb-2 shrink-0">
+        <Link
+          href="/credits"
+          title={isCollapsed ? "Credits" : undefined}
+          className={cn(
+            "sidebar-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
+            pathname === "/credits"
+              ? "bg-primary/10 text-primary font-medium"
+              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            isCollapsed && "justify-center"
+          )}
+        >
+          <Coins className="h-[18px] w-[18px] shrink-0" />
+          {!isCollapsed && <span>Credits</span>}
         </Link>
       </div>
 
@@ -292,8 +410,26 @@ function SidebarContent({
 
       {/* Bottom section */}
       {session?.user && (
-        <div className="border-t border-border px-2 py-3 space-y-0.5 shrink-0">
+        <div className="border-t border-border px-2 py-3 space-y-1 shrink-0">
+          {/* Plan widget */}
+          <div className="mb-1">
+            <PlanWidget isCollapsed={isCollapsed} />
+          </div>
+
           <CreditsWidget isCollapsed={isCollapsed} />
+
+          <Link
+            href="/history"
+            onClick={onClose}
+            title={isCollapsed ? "History" : undefined}
+            className={cn(
+              "sidebar-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
+              isCollapsed && "justify-center"
+            )}
+          >
+            <History className="h-[18px] w-[18px] shrink-0" />
+            {!isCollapsed && <span>History</span>}
+          </Link>
 
           <Link
             href="/refer"
