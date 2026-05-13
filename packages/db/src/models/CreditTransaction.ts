@@ -10,7 +10,8 @@ export type CreditTransactionType =
   | "welcome_bonus"
   | "manual_admin"
   | "plan_upgrade"
-  | "credit_purchase";
+  | "credit_purchase"
+  | "rollover";
 
 export interface ICreditTransaction extends Document {
   userId: Types.ObjectId;
@@ -38,6 +39,7 @@ const CreditTransactionSchema = new Schema<ICreditTransaction>(
         "manual_admin",
         "plan_upgrade",
         "credit_purchase",
+        "rollover",
       ],
       required: true,
     },

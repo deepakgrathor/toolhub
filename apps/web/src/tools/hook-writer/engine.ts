@@ -1,5 +1,6 @@
 import { connectDB, CreditService, ToolOutput, ToolConfig } from "@toolhub/db";
 import type { ToolEngineContext, ToolEngineResult } from "@toolhub/shared";
+import { applyWatermark } from "@/lib/watermark";
 import { callAI, extractJson } from "@/lib/ai";
 import type { HookWriterInput } from "./schema";
 
@@ -58,7 +59,7 @@ export async function execute(
     userId: context.userId,
     toolSlug: context.toolSlug,
     inputSnapshot: input,
-    outputText: JSON.stringify(parsed),
+    outputText: applyWatermark(JSON.stringify(parsed), context.planSlug ?? "free", context.toolSlug),
     creditsUsed: creditCost,
   });
 

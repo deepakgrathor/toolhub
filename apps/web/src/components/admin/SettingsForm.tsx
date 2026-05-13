@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, AlertTriangle, Megaphone, RotateCcw } from "lucide-react";
+import { Loader2, AlertTriangle, Megaphone, RotateCcw, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -12,6 +12,9 @@ export interface SiteSettings {
   maintenance_mode: boolean;
   credit_rollover_enabled: boolean;
   credit_rollover_days: number;
+  welcome_bonus_credits: number;
+  referral_joining_bonus: number;
+  referral_reward_credits: number;
 }
 
 export function SettingsForm({ initial }: { initial: SiteSettings }) {
@@ -260,6 +263,61 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
             </p>
           </div>
         )}
+      </section>
+
+      {/* ── Bonus & Rewards ──────────────────────────────────────────────── */}
+      <section className="rounded-xl border border-border bg-[#111] p-6">
+        <h2 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
+          <Gift className="h-4 w-4 text-[#7c3aed]" />
+          Bonus &amp; Rewards
+        </h2>
+        <p className="text-xs text-muted-foreground mb-5">
+          Credits awarded to users for signup and referrals.
+        </p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1">
+              Welcome Bonus (Direct Signup)
+            </label>
+            <p className="text-xs text-muted-foreground mb-2">Credits given to users who sign up directly</p>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={settings.welcome_bonus_credits}
+              onChange={(e) => set("welcome_bonus_credits", Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)))}
+              className="w-32 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1">
+              Joining Bonus (Referred User)
+            </label>
+            <p className="text-xs text-muted-foreground mb-2">Credits given to user who joins via referral link</p>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={settings.referral_joining_bonus}
+              onChange={(e) => set("referral_joining_bonus", Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)))}
+              className="w-32 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1">
+              Referrer Reward
+            </label>
+            <p className="text-xs text-muted-foreground mb-2">Credits given to referrer when friend completes onboarding</p>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={settings.referral_reward_credits}
+              onChange={(e) => set("referral_reward_credits", Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)))}
+              className="w-32 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+            />
+          </div>
+        </div>
       </section>
 
       {/* ── Save bar ─────────────────────────────────────────────────────── */}

@@ -3,11 +3,34 @@ import { auth } from "@/auth";
 import { connectDB, ToolOutput } from "@toolhub/db";
 import mongoose from "mongoose";
 import { TOOL_NAME_MAP } from "@/lib/tool-names";
+import { getUserPlan } from "@/lib/user-plan";
+
+const DAY_LIMITS: Record<string, number> = {
+  free: 0,
+  lite: 30,
+  pro: 90,
+  business: 365,
+  enterprise: 365,
+};
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userPlan = await getUserPlan(session.user.id);
+  const days = DAY_LIMITS[userPlan] ?? 0;
+
+  if (days === 0) {
+    return NextResponse.json({
+      outputs: [],
+      total: 0,
+      page: 1,
+      totalPages: 0,
+      planLimit: 0,
+      upgradeRequired: true,
+    });
   }
 
   const { searchParams } = req.nextUrl;
@@ -18,10 +41,12 @@ export async function GET(req: NextRequest) {
   await connectDB();
 
   const userId = new mongoose.Types.ObjectId(session.user.id);
+  const cutoff = new Date(Date.now() - days * 86400000);
+  const dateFilter = { userId, createdAt: { $gte: cutoff } };
 
   const [outputs, total] = await Promise.all([
-    ToolOutput.find({ userId }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-    ToolOutput.countDocuments({ userId }),
+    ToolOutput.find(dateFilter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    ToolOutput.countDocuments(dateFilter),
   ]);
 
   const enriched = outputs.map((o) => {
@@ -48,5 +73,7 @@ export async function GET(req: NextRequest) {
     total,
     page,
     totalPages: Math.ceil(total / limit),
+    planLimit: days,
+    upgradeRequired: false,
   });
 }

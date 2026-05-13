@@ -13,6 +13,9 @@ const settingsSchema = z.object({
   maintenance_mode: z.boolean().optional(),
   credit_rollover_enabled: z.boolean().optional(),
   credit_rollover_days: z.number().int().min(1).max(365).optional(),
+  welcome_bonus_credits: z.number().int().min(0).max(100).optional(),
+  referral_joining_bonus: z.number().int().min(0).max(100).optional(),
+  referral_reward_credits: z.number().int().min(0).max(100).optional(),
 });
 
 export async function PATCH(req: NextRequest) {

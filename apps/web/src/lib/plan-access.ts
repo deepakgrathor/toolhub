@@ -66,9 +66,8 @@ const PLAN_DISPLAY: Record<PlanSlug, string> = {
   enterprise: "Enterprise",
 };
 
-export function isPlanBlocked(planSlug: string, toolSlug: string): boolean {
-  const plan = (planSlug as PlanSlug) in PLAN_TOOL_ACCESS ? (planSlug as PlanSlug) : "free";
-  return PLAN_TOOL_ACCESS[plan].blocked.includes(toolSlug);
+export function isPlanBlocked(_planSlug: string, _toolSlug: string): boolean {
+  return false; // Credit-only access — no plan-based blocking
 }
 
 export function getUpgradeMessage(planSlug: string, toolSlug: string): string {

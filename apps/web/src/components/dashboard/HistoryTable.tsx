@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Eye, ExternalLink, History, Copy, X } from "lucide-react";
+import { Eye, ExternalLink, History, Copy, X, Clock, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -21,6 +21,8 @@ interface ApiResponse {
   total: number;
   page: number;
   totalPages: number;
+  planLimit: number;
+  upgradeRequired: boolean;
 }
 
 // Simple slug → display name map
@@ -93,8 +95,39 @@ export function HistoryTable() {
   const outputs = data?.outputs ?? [];
   const totalPages = data?.totalPages ?? 1;
 
+  if (!loading && data?.upgradeRequired) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-8 text-center space-y-4">
+        <div className="flex justify-center">
+          <Clock className="h-12 w-12 text-muted-foreground/40" />
+        </div>
+        <h3 className="text-lg font-semibold text-foreground">History is a LITE plan feature</h3>
+        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+          Upgrade to save and revisit all your AI generations.
+        </p>
+        <a
+          href="/pricing"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+        >
+          <TrendingUp className="h-4 w-4" />
+          Upgrade to LITE
+        </a>
+        <p className="text-xs text-muted-foreground mt-2">
+          On FREE plan, outputs are not saved. Copy your results before leaving the page.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <>
+      {!loading && data && !data.upgradeRequired && (
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-xs text-muted-foreground">
+            Showing last {data.planLimit} days
+          </span>
+        </div>
+      )}
       <div className="rounded-xl border border-border bg-surface overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
           <h2 className="font-semibold text-foreground">Generation History</h2>

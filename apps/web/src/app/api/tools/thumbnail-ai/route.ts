@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { getUserPlan } from "@/lib/user-plan";
 import { InsufficientCreditsError } from "@toolhub/db";
 import { thumbnailAISchema } from "@/tools/thumbnail-ai/schema";
 import { execute } from "@/tools/thumbnail-ai/engine";
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
   try {
     const result = await execute(parsed.data, {
       userId: session.user.id,
+      planSlug: await getUserPlan(session.user.id),
       toolSlug: "thumbnail-ai",
     });
     console.log(result, "result")

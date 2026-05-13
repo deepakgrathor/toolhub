@@ -6,7 +6,6 @@
 
 import { NextResponse } from "next/server";
 import { connectDB, User } from "@toolhub/db";
-import { isPlanBlocked, getUpgradeMessage } from "@/lib/plan-access";
 import { checkAbuseLimit } from "@/lib/abuse-protection";
 
 export async function runToolGuard(
@@ -18,15 +17,7 @@ export async function runToolGuard(
   const user = await User.findById(userId).select("plan").lean();
   const planSlug = user?.plan ?? "free";
 
-  // Plan access check
-  if (isPlanBlocked(planSlug, toolSlug)) {
-    return NextResponse.json(
-      { error: getUpgradeMessage(planSlug, toolSlug), code: "plan_blocked" },
-      { status: 403 }
-    );
-  }
-
-  // Abuse protection check
+  // Abuse protection check only — tools are credit-gated, not plan-gated
   const abuse = await checkAbuseLimit({ userId, toolSlug, planSlug });
   if (!abuse.allowed) {
     return NextResponse.json(

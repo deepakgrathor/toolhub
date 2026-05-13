@@ -1,5 +1,6 @@
 import { connectDB, CreditService, InsufficientCreditsError, ToolOutput, ToolConfig } from "@toolhub/db";
 import type { ToolEngineContext, ToolEngineResult } from "@toolhub/shared";
+import { applyWatermark } from "@/lib/watermark";
 import type { BlogGeneratorInput } from "./schema";
 
 const LENGTH_WORDS = { short: 500, medium: 1000, long: 1500 } as const;
@@ -225,7 +226,7 @@ export async function execute(
     userId: context.userId,
     toolSlug: context.toolSlug,
     inputSnapshot: input,
-    outputText: JSON.stringify(parsed),
+    outputText: applyWatermark(JSON.stringify(parsed), context.planSlug ?? "free", context.toolSlug),
     creditsUsed: creditCost,
   });
 

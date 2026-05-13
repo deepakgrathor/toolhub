@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectDB, User, BusinessProfile, Referral, CreditTransaction, SiteConfig } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
-import { getRecommendedTools } from "@/lib/recommendations";
 import { createNotification } from "@/lib/notifications";
 import { sendEmail } from "@/lib/email/sender";
 import { welcomeEmail } from "@/lib/email/templates";
@@ -25,11 +24,10 @@ export async function POST(req: NextRequest) {
     professions?: string[];
     profession?: string;
     teamSize?: string;
-    challenge?: string;
     kitName: string;
   };
 
-  const { teamSize, challenge, kitName } = body;
+  const { teamSize, kitName } = body;
 
   const professions: string[] =
     Array.isArray(body.professions) && body.professions.length > 0
@@ -44,15 +42,12 @@ export async function POST(req: NextRequest) {
 
   await connectDB();
 
-  const recommendedTools = getRecommendedTools({ professions, teamSize, challenge });
-
   await User.findByIdAndUpdate(session.user.id, {
     profession: professions[0],
     professions,
     kitName,
     onboardingCompleted: true,
     onboardingStep: 4,
-    selectedTools: recommendedTools,
   });
 
   await BusinessProfile.findOneAndUpdate(

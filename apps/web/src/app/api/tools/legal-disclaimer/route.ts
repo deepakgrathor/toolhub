@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { getUserPlan } from "@/lib/user-plan";
 import { InsufficientCreditsError } from "@toolhub/db";
 import { legalDisclaimerSchema } from "@/tools/legal-disclaimer/schema";
 import { execute } from "@/tools/legal-disclaimer/engine";
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
   try {
     const result = await execute(parsed.data, {
       userId: session.user.id,
+      planSlug: await getUserPlan(session.user.id),
       toolSlug: "legal-disclaimer",
     });
     return NextResponse.json({

@@ -8,4 +8,5 @@ export interface ToolEngineResult {
 export interface ToolEngineContext {
   userId: string;
   toolSlug: string;
+  planSlug?: string;
 }

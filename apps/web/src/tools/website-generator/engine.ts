@@ -1,6 +1,7 @@
 import { connectDB, CreditService, InsufficientCreditsError, ToolOutput, ToolConfig } from "@toolhub/db";
 import type { ToolEngineContext, ToolEngineResult } from "@toolhub/shared";
 import { callAI } from "@/lib/ai";
+import { applyWatermark } from "@/lib/watermark";
 import type { WebsiteGeneratorInput } from "./schema";
 
 const COLOR_PALETTES: Record<string, string> = {
@@ -92,7 +93,8 @@ export async function execute(
   }
   const sections = sectionIds.length > 0 ? [...new Set(sectionIds)] : ["Hero", "About", "Services"];
 
-  const parsed = { htmlContent, pageTitle, sections };
+  const finalHtml = applyWatermark(htmlContent, context.planSlug ?? "free", context.toolSlug);
+  const parsed = { htmlContent: finalHtml, pageTitle, sections };
 
   const { newBalance } = await CreditService.deductCredits(
     context.userId,
@@ -104,9 +106,9 @@ export async function execute(
     userId: context.userId,
     toolSlug: context.toolSlug,
     inputSnapshot: input,
-    outputText: htmlContent.slice(0, 500),
+    outputText: finalHtml.slice(0, 500),
     creditsUsed: creditCost,
   });
 
-  return { output: htmlContent, structured: parsed, creditsUsed: creditCost, newBalance };
+  return { output: finalHtml, structured: parsed, creditsUsed: creditCost, newBalance };
 }

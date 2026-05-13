@@ -36,21 +36,22 @@ export function PaywallModal() {
               You have <span className="font-semibold text-foreground">{balance} credits</span>.
             </Dialog.Description>
 
-            <div className="flex w-full flex-col gap-2 mt-1">
+            <div className="flex w-full gap-2 mt-1">
               <Link
-                href="/pricing"
+                href="/checkout?type=pack"
                 onClick={closePaywall}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#7c3aed] py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#7c3aed] py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
               >
                 <Coins className="h-4 w-4" />
                 Buy Credits
               </Link>
-              <button
+              <Link
+                href="/pricing"
                 onClick={closePaywall}
-                className="w-full rounded-lg border border-border py-2.5 text-sm font-medium text-foreground hover:bg-white/5 transition-colors"
+                className="flex flex-1 items-center justify-center rounded-lg border border-border py-2.5 text-sm font-medium text-foreground hover:bg-white/5 transition-colors"
               >
-                Cancel
-              </button>
+                Upgrade Plan
+              </Link>
             </div>
           </div>
         </Dialog.Content>

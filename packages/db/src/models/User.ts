@@ -78,7 +78,7 @@ const UserSchema = new Schema<IUser>(
     },
     // Workspace
     kitName: { type: String, default: null },
-    selectedTools: [{ type: String }],
+    selectedTools: { type: [String], default: [] },
     // Profile completion
     profileScore: { type: Number, default: 0 },
     // Referral

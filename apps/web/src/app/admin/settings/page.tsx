@@ -12,6 +12,9 @@ const DEFAULTS: SiteSettings = {
   maintenance_mode: false,
   credit_rollover_enabled: false,
   credit_rollover_days: 30,
+  welcome_bonus_credits: 10,
+  referral_joining_bonus: 10,
+  referral_reward_credits: 10,
 };
 
 async function getSiteSettings(): Promise<SiteSettings> {
@@ -39,6 +42,15 @@ async function getSiteSettings(): Promise<SiteSettings> {
       credit_rollover_days:
         (map.get("credit_rollover_days") as number) ??
         DEFAULTS.credit_rollover_days,
+      welcome_bonus_credits:
+        (map.get("welcome_bonus_credits") as number) ??
+        DEFAULTS.welcome_bonus_credits,
+      referral_joining_bonus:
+        (map.get("referral_joining_bonus") as number) ??
+        DEFAULTS.referral_joining_bonus,
+      referral_reward_credits:
+        (map.get("referral_reward_credits") as number) ??
+        DEFAULTS.referral_reward_credits,
     };
   } catch {
     return DEFAULTS;
