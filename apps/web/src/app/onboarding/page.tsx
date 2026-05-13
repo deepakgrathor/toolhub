@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  Sparkles, Building2, Users, Scale, Megaphone, HelpCircle,
+  Sparkles,
+  HelpCircle,
   User, Users2, Building, Briefcase,
   Clock, Star, DollarSign, ShieldCheck,
   ArrowRight, ArrowLeft, Pencil, Check, Loader2,
@@ -12,16 +13,25 @@ import {
 import { cn } from "@/lib/utils";
 import { getToolIcon } from "@/lib/tool-icons";
 import { buildKitName, getRecommendedTools } from "@/lib/recommendations";
+import { DynamicIcon } from "@/components/ui/DynamicIcon";
 
-// ── Static config ──────────────────────────────────────────────────────────────
+// ── Kit type (from DB) ─────────────────────────────────────────────────────────
 
-const PROFESSION_OPTIONS = [
-  { value: "creator",  label: "Content Creator",  icon: "Sparkles",   subtitle: "Scripts, thumbnails, hooks, captions" },
-  { value: "sme",      label: "Business Owner",   icon: "Building2",  subtitle: "GST invoice, expense, quotation" },
-  { value: "hr",       label: "HR Professional",  icon: "Users",      subtitle: "JD, offer letter, appraisal" },
-  { value: "legal",    label: "CA / Legal Pro",   icon: "Scale",      subtitle: "Legal notices, NDAs, disclaimers" },
-  { value: "marketer", label: "Marketer",         icon: "Megaphone",  subtitle: "Ad copy, LinkedIn bio, email" },
-  { value: "other",    label: "Something Else",   icon: "HelpCircle", subtitle: "Explore all 27 tools" },
+interface KitOption {
+  slug: string;
+  onboardingLabel: string;
+  onboardingDescription: string;
+  onboardingIcon: string;
+}
+
+// ── Fallback profession options (if DB fails) ─────────────────────────────────
+
+const FALLBACK_PROFESSION_OPTIONS: KitOption[] = [
+  { slug: "creator",   onboardingLabel: "Content Creator",  onboardingIcon: "Video",      onboardingDescription: "Scripts, thumbnails, hooks, captions" },
+  { slug: "sme",       onboardingLabel: "Business Owner",   onboardingIcon: "Briefcase",  onboardingDescription: "GST invoice, expense, quotation" },
+  { slug: "hr",        onboardingLabel: "HR Professional",  onboardingIcon: "Users",      onboardingDescription: "JD, offer letter, appraisal" },
+  { slug: "legal",     onboardingLabel: "CA / Legal Pro",   onboardingIcon: "Scale",      onboardingDescription: "Legal notices, NDAs, disclaimers" },
+  { slug: "marketing", onboardingLabel: "Marketer",         onboardingIcon: "TrendingUp", onboardingDescription: "Ad copy, LinkedIn bio, email" },
 ];
 
 const TEAM_OPTIONS = [
@@ -51,16 +61,16 @@ const TOOL_NAMES: Record<string, string> = {
   "seo-auditor": "SEO Auditor",
 };
 
-// ── Icon resolver ─────────────────────────────────────────────────────────────
+// ── Icon resolver (static fallback for non-kit icons) ────────────────────────
 
-const ICON_MAP: Record<string, React.ElementType> = {
-  Sparkles, Building2, Users, Scale, Megaphone, HelpCircle,
+const STATIC_ICON_MAP: Record<string, React.ElementType> = {
+  HelpCircle,
   User, Users2, Building, Briefcase,
   Clock, Star, DollarSign, ShieldCheck,
 };
 
 function DynIcon({ name, className }: { name: string; className?: string }) {
-  const Icon = ICON_MAP[name] ?? HelpCircle;
+  const Icon = STATIC_ICON_MAP[name] ?? HelpCircle;
   return <Icon className={className} />;
 }
 
@@ -93,7 +103,7 @@ function ProfessionCard({ value: _value, label, icon, subtitle, selected, onClic
         </span>
       )}
       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-        <DynIcon name={icon} className="h-5 w-5 text-primary" />
+        <DynamicIcon name={icon} size={20} className="text-primary" />
       </div>
       <div>
         <div className="text-sm font-semibold text-foreground">{label}</div>
@@ -169,6 +179,10 @@ export default function OnboardingPage() {
   const [editingKit, setEditingKit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // DB-loaded kit options
+  const [kitOptions, setKitOptions] = useState<KitOption[]>(FALLBACK_PROFESSION_OPTIONS);
+  const [kitsLoading, setKitsLoading] = useState(true);
+
   const firstName = session?.user?.name?.split(" ")[0] ?? "You";
 
   // Recompute kit name whenever professions or firstName changes
@@ -189,6 +203,28 @@ export default function OnboardingPage() {
       router.replace("/");
     }
   }, [status, session, router]);
+
+  // Fetch kits from DB
+  useEffect(() => {
+    fetch("/api/public/kits")
+      .then(r => r.json())
+      .then((data: { kits?: Array<{ slug: string; showInOnboarding?: boolean; onboardingLabel?: string; onboardingDescription?: string; onboardingIcon?: string; order?: number }> }) => {
+        const kits = (data.kits ?? [])
+          .filter(k => k.showInOnboarding !== false)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+          .map(k => ({
+            slug: k.slug,
+            onboardingLabel: k.onboardingLabel ?? k.slug,
+            onboardingDescription: k.onboardingDescription ?? "",
+            onboardingIcon: k.onboardingIcon ?? "LayoutGrid",
+          }));
+        if (kits.length > 0) setKitOptions(kits);
+      })
+      .catch(() => {
+        // Keep fallback options
+      })
+      .finally(() => setKitsLoading(false));
+  }, []);
 
   async function saveStep(nextStep: number) {
     try {
@@ -263,16 +299,27 @@ export default function OnboardingPage() {
               {professions.length} selected
             </p>
           )}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {PROFESSION_OPTIONS.map((opt) => (
-              <ProfessionCard
-                key={opt.value}
-                {...opt}
-                selected={professions.includes(opt.value)}
-                onClick={() => toggleProfession(opt.value)}
-              />
-            ))}
-          </div>
+          {kitsLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-pulse">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="h-[100px] rounded-xl border border-border bg-muted" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {kitOptions.map((kit) => (
+                <ProfessionCard
+                  key={kit.slug}
+                  value={kit.slug}
+                  label={kit.onboardingLabel}
+                  icon={kit.onboardingIcon}
+                  subtitle={kit.onboardingDescription}
+                  selected={professions.includes(kit.slug)}
+                  onClick={() => toggleProfession(kit.slug)}
+                />
+              ))}
+            </div>
+          )}
           <div className="mt-8 flex justify-end">
             <button
               disabled={professions.length === 0}

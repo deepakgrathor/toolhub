@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { connectDB, Tool, ToolConfig } from "@toolhub/db";
-import { ToolsTable } from "@/components/admin/ToolsTable";
+import { AdminToolsClient } from "@/components/admin/AdminToolsClient";
 
 export const metadata: Metadata = { title: "Admin Tools — SetuLix" };
 export const dynamic = "force-dynamic";
@@ -52,11 +52,7 @@ export default async function AdminToolsPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-xl font-bold text-foreground mb-1">Tools</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        {tools.length} tools — edit inline, changes save automatically
-      </p>
-      <ToolsTable initialTools={tools} />
+      <AdminToolsClient initialTools={tools} />
     </div>
   );
 }

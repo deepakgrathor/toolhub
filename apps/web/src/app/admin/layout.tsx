@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Wrench, Users, CreditCard, Settings,
-  ArrowLeft, ClipboardList, LogOut, Gift, Megaphone, Package, Receipt,
+  ArrowLeft, ClipboardList, LogOut, Gift, Megaphone, Package, Receipt, LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/tools", label: "Tools", icon: Wrench, exact: false },
+  { href: "/admin/kits",  label: "Kits",  icon: LayoutGrid, exact: false },
   { href: "/admin/users", label: "Users", icon: Users, exact: false },
   { href: "/admin/plans", label: "Plans", icon: CreditCard, exact: false },
   { href: "/admin/credit-packs", label: "Credit Packs", icon: Package, exact: false },

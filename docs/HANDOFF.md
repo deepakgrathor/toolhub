@@ -1,8 +1,101 @@
 # Handoff Note
-Updated: 2026-05-14 | Account: B | Session: B8-A | Features: Cashfree Payment Integration
+Updated: 2026-05-14 | Account: B | Session: B8-B | Features: Dynamic Kit/Tool System
 
 ## Where We Are
-Session B8-A done. **TypeScript: 0 errors.** Committed to master.
+Session B8-B done. **TypeScript: 0 errors. Build: passing.** Committed to main.
+
+---
+
+## What Was Done (Session B8-B)
+
+### TASK 1 — Kit Model
+- `packages/db/src/models/Kit.ts` — NEW
+  - Fields: slug (unique), name, description, icon, color, order, isActive, showInOnboarding, onboardingLabel, onboardingDescription, onboardingIcon, timestamps
+- `packages/db/src/index.ts`: added `export * from "./models/Kit"`
+
+### TASK 2 — Tool Model Extended
+- `packages/db/src/models/Tool.ts` — UPDATED
+  - Added `IFormField` interface + `FormFieldSchema` (key, label, type, placeholder, required, options[])
+  - Added: type ('ai'|'client-side'), kitSlug, kitRef (ObjectId), aiModel, systemPrompt, promptTemplate
+  - Added: formFields[], outputType ('text'|'html'|'image'|'json'), outputLabel, color, tags[]
+  - Added: maxOutputTokens, temperature, dailyLimit, requiredPlan
+
+### TASK 3 — Seed Script
+- `apps/web/src/scripts/seed-kits.ts` — NEW
+  - Seeds 5 kits: creator, sme, hr, legal, marketing
+  - Updates 20 AI tools with formFields, systemPrompt, promptTemplate, aiModel, outputType
+  - Updates 7 client-side tools with type='client-side' + kitSlug
+  - Run: `npx ts-node -r tsconfig-paths/register src/scripts/seed-kits.ts`
+
+### TASK 4 — Public Kit APIs
+- `apps/web/src/app/api/public/kits/route.ts` — NEW
+  - GET (no auth), Redis cache `kits:public` 10 min, returns active kits sorted by order
+- `apps/web/src/app/api/public/kits/[slug]/route.ts` — NEW
+  - GET (no auth), returns single kit + all tools with that kitSlug
+
+### TASK 5 — Tool Config API (safe)
+- `apps/web/src/app/api/tools/[slug]/config/route.ts` — NEW
+  - GET (auth required), Redis cache `tool:config:{slug}` 5 min
+  - Returns safe fields only — systemPrompt and promptTemplate NEVER exposed to frontend
+  - Returns: slug, name, description, icon, color, kitSlug, kitName, creditCost, isActive, type, outputType, outputLabel, formFields, aiModel, dailyLimit, requiredPlan
+
+### TASK 6 — Universal Tool Runner
+- `apps/web/src/app/api/tools/run/route.ts` — NEW
+  - POST (auth required), handles all dynamically-created AI tools
+  - Flow: parse → fetch tool → auth+user → credit cost → credit check → abuse check → validate required fields → build prompt ({{key}} substitution) → call AI → watermark (free users) → deduct credits → CreditTransaction → low credit alert
+  - Supports Anthropic, Google Gemini, OpenAI, DALL-E image generation
+  - Credits NEVER deducted if AI call fails
+
+### TASK 7 — DynamicIcon Component
+- `apps/web/src/components/ui/DynamicIcon.tsx` — NEW
+  - Resolves lucide-react icon by string name at runtime
+  - Fallback: `Box` icon if name not found
+
+### TASK 8 — UniversalToolRenderer
+- `apps/web/src/components/tools/UniversalToolRenderer.tsx` — NEW
+  - Client component for dynamically-created AI tools (no dedicated component directory)
+  - Fetches config from `/api/tools/{slug}/config` on mount
+  - Renders dynamic form fields (text/textarea/select/number) from DB
+  - OutputRenderer: handles text, html (iframe+tabs), image, json
+  - Error handling: 402 → redirect /pricing, 429 → cooldown timer
+
+### TASK 9 — Dynamic Tool Page Routing
+- `apps/web/src/app/(site)/tools/[slug]/page.tsx` — UPDATED
+  - Existing tools (27 in toolComponents map) → use their dedicated component (unchanged)
+  - New DB tools not in the map → fall through to `<UniversalToolRenderer slug={params.slug} />`
+
+### TASK 10 — DB-Driven Onboarding
+- `apps/web/src/app/onboarding/page.tsx` — UPDATED
+  - Step 1: fetches kits from `/api/public/kits`, shows 5 skeleton boxes while loading
+  - Kit cards use `DynamicIcon` with DB-provided icon names
+  - Fallback to FALLBACK_PROFESSION_OPTIONS if API fails
+- `apps/web/src/lib/recommendations.ts` — UPDATED
+  - Kept sync `getRecommendedTools` (client-safe)
+  - Added async `getRecommendedToolsFromDB` for server/API use (scores by kitSlug, challenges, isFree, teamSize)
+  - Added async `buildKitNameFromDB` for server/API use
+- `apps/web/src/app/api/onboarding/recommendations/route.ts` — UPDATED
+  - Now calls `getRecommendedToolsFromDB` (DB-driven, not hardcoded)
+
+### TASK 11 — Admin Kit Management
+- `apps/web/src/app/api/admin/kits/route.ts` — NEW: GET (kits + tool count), POST (create kit)
+- `apps/web/src/app/api/admin/kits/[slug]/route.ts` — NEW: PATCH (update), DELETE (soft)
+- `apps/web/src/app/api/admin/kits/reorder/route.ts` — NEW: PATCH bulk reorder
+- `apps/web/src/app/admin/kits/page.tsx` — NEW: kit list with add/edit modal, order arrows, visibility toggle
+
+### TASK 12 — Admin Tool Builder
+- `apps/web/src/app/api/admin/tools/route.ts` — NEW: POST creates Tool + ToolConfig together
+- `apps/web/src/app/api/admin/tools/[slug]/route.ts` — UPDATED: extended with 15+ new fields
+- `apps/web/src/components/admin/ToolBuilder.tsx` — NEW: 4-step modal (basic info → AI config → form builder → settings)
+- `apps/web/src/components/admin/AdminToolsClient.tsx` — NEW: client wrapper with "Add New Tool" button
+- `apps/web/src/app/admin/tools/page.tsx` — UPDATED: uses AdminToolsClient
+- `apps/web/src/app/admin/layout.tsx` — UPDATED: added "Kits" nav item
+
+### TASK 13 — Final Cleanup
+- Removed stale TODO(B5-B) comment from `apps/web/src/app/api/onboarding/complete/route.ts`
+- Cache invalidation verified: kits:public (kit changes), tool:config:{slug} (tool changes), balance+sidebar (credit ops)
+- TypeScript: 0 errors | Build: passing
+
+---
 
 ---
 
