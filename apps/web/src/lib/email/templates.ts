@@ -196,3 +196,32 @@ export function creditLowEmail({ name, balance }: { name: string; balance: numbe
     `),
   };
 }
+
+export function renewalReminderEmail({
+  name,
+  planName,
+  daysLeft,
+}: {
+  name: string
+  planName: string
+  daysLeft: number
+}): EmailTemplate {
+  const firstName = name.split(" ")[0] ?? name;
+  return {
+    subject: `Your SetuLix ${planName} plan expires in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`,
+    html: baseEmailTemplate(`
+      <h2 style="color:#09090b;margin:0 0 8px;font-size:20px;font-weight:700;">Your Plan is Expiring Soon</h2>
+      <p style="color:#71717a;margin:0 0 20px;font-size:15px;line-height:1.6;">
+        Hi ${firstName}, your <strong style="color:#7c3aed;">${planName}</strong> plan expires in
+        <strong style="color:#f59e0b;">${daysLeft} day${daysLeft === 1 ? "" : "s"}</strong>.
+      </p>
+      <p style="color:#71717a;margin:0 0 24px;font-size:14px;line-height:1.6;">
+        Renew now to keep access to all features and your credit balance without interruption.
+      </p>
+      <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://setulix.com"}/pricing"
+         style="display:inline-block;background:#7c3aed;color:#ffffff;font-size:14px;font-weight:600;padding:12px 28px;border-radius:8px;text-decoration:none;">
+        Renew Now →
+      </a>
+    `),
+  };
+}

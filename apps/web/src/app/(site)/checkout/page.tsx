@@ -37,6 +37,10 @@ interface BillingProfile {
   contactPerson?: string;
 }
 
+// Cashfree JS instance type (dynamic import)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type CashfreeInstance = any;
+
 // ── Validation ────────────────────────────────────────────────────────────────
 
 const individualSchema = z.object({
@@ -80,9 +84,11 @@ export default function CheckoutPage() {
   const [item, setItem] = useState<ItemDetails | null>(null);
   const [itemLoading, setItemLoading] = useState(true);
   const [accountType, setAccountType] = useState<"individual" | "business">("individual");
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [saveBilling, setSaveBilling] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [payError, setPayError] = useState<string | null>(null);
+  const [cashfree, setCashfree] = useState<CashfreeInstance>(null);
 
   // Individual fields
   const [fullName, setFullName] = useState("");
@@ -98,6 +104,15 @@ export default function CheckoutPage() {
   const [businessName, setBusinessName] = useState("");
   const [gstState, setGstState] = useState("");
   const [contactPerson, setContactPerson] = useState("");
+
+  // Initialize Cashfree JS SDK
+  useEffect(() => {
+    import("@cashfreepayments/cashfree-js").then(({ load }) => {
+      load({ mode: (process.env.NEXT_PUBLIC_CASHFREE_MODE as "sandbox" | "production") || "sandbox" })
+        .then(setCashfree)
+        .catch(() => console.error("Failed to load Cashfree JS"));
+    });
+  }, []);
 
   // Load item details
   useEffect(() => {
@@ -156,28 +171,71 @@ export default function CheckoutPage() {
     return true;
   }
 
-  async function handleProceed() {
-    if (!validate()) return;
-    setSaving(true);
+  async function handlePayment() {
+    setPayError(null);
 
-    try {
-      if (saveBilling) {
-        await fetch("/api/user/billing-profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            accountType, fullName, phone, addressLine1, addressLine2,
-            city, state, pincode, gstin, businessName, gstState, contactPerson,
-          }),
-        });
-      }
-      // TODO(B8): Trigger Cashfree checkout here
-      toast.info("Payment gateway coming soon — Cashfree integration in progress.");
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    if (!validate()) return;
+    if (!cashfree) {
+      setPayError("Payment gateway is loading. Please try again.");
+      return;
     }
 
-    setSaving(false);
+    setLoading(true);
+
+    try {
+      // Build billing details
+      const billingDetails = {
+        accountType,
+        fullName: accountType === "individual" ? fullName : contactPerson,
+        phone,
+        businessName: accountType === "business" ? businessName : undefined,
+        gstin: gstin || undefined,
+        address: addressLine1 + (addressLine2 ? ", " + addressLine2 : ""),
+        city,
+        state: accountType === "individual" ? state : gstState,
+        pincode,
+      };
+
+      // Create order
+      const orderPayload =
+        type === "pack"
+          ? {
+              type: "credit_pack" as const,
+              packId: id!,
+              billingDetails,
+              saveBilling,
+            }
+          : {
+              type: "plan" as const,
+              planSlug: slug!,
+              billingCycle: cycle,
+              billingDetails,
+              saveBilling,
+            };
+
+      const res = await fetch("/api/payments/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderPayload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to create order");
+      }
+
+      const { paymentSessionId } = await res.json();
+
+      // Open Cashfree seamless popup
+      cashfree.checkout({
+        paymentSessionId,
+        redirectTarget: "_modal",
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      setPayError(msg);
+      setLoading(false);
+    }
   }
 
   function fieldError(field: string) {
@@ -391,35 +449,43 @@ export default function CheckoutPage() {
               <p className="text-sm text-muted-foreground">No item selected</p>
             )}
 
-            {/* Proceed button */}
-            <div className="relative">
-              <button
-                onClick={handleProceed}
-                disabled={saving || !item}
-                title="Payments coming soon — Cashfree integration in progress"
-                className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50 cursor-not-allowed"
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
-                Proceed to Pay
-              </button>
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                Payments coming soon — Cashfree integration in progress
-              </p>
-            </div>
+            {/* Pay button */}
+            <button
+              onClick={handlePayment}
+              disabled={loading || !cashfree || !item}
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4" />
+                  Pay ₹{item?.total?.toFixed(2) ?? "..."}
+                </>
+              )}
+            </button>
+
+            {/* Payment error */}
+            {payError && (
+              <p className="text-sm text-red-500 text-center -mt-1">{payError}</p>
+            )}
 
             {/* Trust indicators */}
             <div className="space-y-2 pt-1 border-t border-border">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Shield className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                <span>Secure payment powered by Cashfree</span>
+                <span>Secured by Cashfree</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Lock className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                <span>256-bit SSL encryption</span>
+                <span>256-bit SSL Encryption</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                <span>Fair usage policy applies</span>
+                <span>Money-back guaranteed on failed payments</span>
               </div>
             </div>
           </div>

@@ -60,7 +60,8 @@
       "Bash(MONGODB_URI=\"mongodb+srv://deepakg:UNSBqYcJKkIyvPlY@cluster0.wbok0wx.mongodb.net/toolhub?retryWrites=true&w=majority\" npx tsx apps/web/src/scripts/seed-plans.ts)",
       "Bash(MONGODB_URI=\"mongodb+srv://deepakg:UNSBqYcJKkIyvPlY@cluster0.wbok0wx.mongodb.net/toolhub?retryWrites=true&w=majority\" npx tsx apps/web/src/scripts/seed-tools.ts)",
       "Bash(MONGODB_URI=\"mongodb+srv://deepakg:UNSBqYcJKkIyvPlY@cluster0.wbok0wx.mongodb.net/toolhub?retryWrites=true&w=majority\" npx tsx apps/web/src/scripts/fix-mobile-index.ts)",
-      "Bash(test -f \"apps/web/src/app/api/admin/users/[userId]/restore/route.ts\")"
+      "Bash(test -f \"apps/web/src/app/api/admin/users/[userId]/restore/route.ts\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('main',''\\), d.get\\('types',''\\), list\\(d.get\\('exports',{}\\).keys\\(\\)\\)[:5]\\)\")"
     ]
   }
 }

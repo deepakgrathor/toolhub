@@ -110,6 +110,32 @@ const config: NextAuthConfig = {
           token.onboardingCompleted = user.onboardingCompleted ?? false;
         }
       }
+      // Check plan expiry on each token refresh
+      if (token.id && !token.isDeleted) {
+        try {
+          await connectDB();
+          const dbUser = await User.findById(token.id).select("plan planExpiry");
+          if (
+            dbUser &&
+            dbUser.plan !== "free" &&
+            dbUser.planExpiry &&
+            dbUser.planExpiry < new Date()
+          ) {
+            // Plan expired — reset to free
+            await User.findByIdAndUpdate(token.id, {
+              plan: "free",
+              planExpiry: null,
+            });
+            const { getRedis } = await import("@toolhub/shared");
+            const redis = getRedis();
+            await redis.del(`plan:${token.id}`);
+            await redis.del(`sidebar:${token.id}`);
+          }
+        } catch {
+          // Non-blocking — never fail auth for this
+        }
+      }
+
       // Allow client-side session updates (onboarding, avatar)
       if (trigger === "update") {
         const s = session as { onboardingCompleted?: boolean; image?: string };

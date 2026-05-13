@@ -1,372 +1,178 @@
 # Handoff Note
-Updated: 2026-05-13 | Account: B | Session: B7-B | Features (Tasks 11–23)
+Updated: 2026-05-14 | Account: B | Session: B8-A | Features: Cashfree Payment Integration
 
 ## Where We Are
-Session B7-B done. **TypeScript: 0 errors.** Committed to main.
+Session B8-A done. **TypeScript: 0 errors.** Committed to master.
 
 ---
 
-## What Was Done (Session B7-B)
-
-### TASK 11 — Explore Page Scroll Overlap
-- Already correct: `sticky top-14 z-20` in `explore/page.tsx` matches navbar `h-14`
-- No changes needed
-
-### TASK 12 — My Tools Pre-populated on Fresh Signup
-- `packages/db/src/models/User.ts`: changed `selectedTools: [{ type: String }]` → `selectedTools: { type: [String], default: [] }`
-- `apps/web/src/app/api/onboarding/complete/route.ts`: removed `selectedTools: recommendedTools` from `User.findByIdAndUpdate` call; removed unused `getRecommendedTools` import and `challenge` field from body type
-- **Result**: Fresh signup → MY TOOLS section is empty; kit tools derived from professions at runtime
-
-### TASK 13 — Remove Plan-based Tool Restrictions
-- `apps/web/src/lib/plan-access.ts`: `isPlanBlocked()` always returns `false`
-- `apps/web/src/lib/tool-guard.ts`: removed plan check entirely, kept only abuse protection
-- `apps/web/src/app/(site)/tools/[slug]/page.tsx`: removed UpgradePrompt, plan check logic, and auth import
-- `apps/web/src/components/credits/PaywallModal.tsx`: updated to show "Buy Credits" (→ /checkout?type=pack) AND "Upgrade Plan" (→ /pricing) buttons side by side
-
-### TASK 14 — Watermark System for FREE Outputs
-- `apps/web/src/lib/user-plan.ts` — NEW: `getUserPlan(userId)` with Redis cache (TTL 5min)
-- `apps/web/src/lib/watermark.ts` — NEW: `applyWatermark(output, planSlug, toolSlug)` — text watermark for text tools, HTML watermark for website-generator, no watermark for thumbnail-ai
-- `packages/shared/src/tool-types.ts`: added `planSlug?: string` to `ToolEngineContext`
-- All 17 JSON tool engines: added `applyWatermark` import + wrapped `outputText: JSON.stringify(parsed)` with watermark
-- `website-generator/engine.ts`: watermark applied to `finalHtml` before saving/returning
-- All 19 tool API routes: added `getUserPlan` import + pass `planSlug` in execute context
-
-### TASK 15 — Output History with Plan-based Limits
-- `apps/web/src/app/api/user/history/route.ts`: added `getUserPlan` call; free=0 days (returns upgradeRequired:true), lite=30, pro=90, business/enterprise=365 days cutoff filter
-- `apps/web/src/components/dashboard/HistoryTable.tsx`: shows upgrade prompt card (Clock icon + "Upgrade to LITE" CTA) for FREE users; shows "Showing last {days} days" badge for paid users
-
-### TASK 16-19, 22-23 — Verified Previously Completed
-- All files confirmed present and functional (credits ledger, sidebar widget, account delete, credit alerts, email system, checkout page)
-
-### TASK 20 — Admin Dynamic Bonus Settings
-- `apps/web/src/components/admin/SettingsForm.tsx`: added `SiteSettings` fields + "Bonus & Rewards" section with 3 number inputs (welcome_bonus_credits, referral_joining_bonus, referral_reward_credits)
-- `apps/web/src/app/admin/settings/page.tsx`: added defaults + fetch for bonus fields
-- `apps/web/src/app/api/admin/settings/route.ts`: added 3 bonus fields to Zod schema
-
-### TASK 21 — Credit Rollover Cron System
-- `apps/web/src/lib/credit-rollover.ts` — NEW: `processUserRollover(userId, planSlug)` — carries forward unused credits (max: lite=200, pro=700, business=1500), creates CreditTransaction type 'rollover', sends notification, invalidates Redis
-- `apps/web/src/app/api/cron/rollover/route.ts` — NEW: secured by `Authorization: Bearer {CRON_SECRET}`, processes subscribers in batches of 50
-- `vercel.json`: added cron schedule `0 18 1 * *` (1st of month 18:00 UTC = 00:00 IST)
-- `packages/db/src/models/CreditTransaction.ts`: added `rollover` to type enum
-- `apps/web/.env`: added `CRON_SECRET=dev-cron-secret-change-in-production`
-
----
-
-
----
-
-## What Was Done (Session B7-A)
-
-### Bug Fixes (10 tasks)
-
-**TASK 1 — /history page**
-- Added subtitle "Your recent AI generations" to `history/page.tsx`
-- Updated `api/user/history/route.ts` to return `outputText` (needed by modal) + strip HTML tags from preview
-- Updated `HistoryTable.tsx`: new columns (Tool Name | Output Preview | Credits | Date & Time), fixed modal to show typed content (image/HTML/text), added Copy button
-
-**TASK 2 — Onboarding credit logic**
-- `api/onboarding/complete/route.ts`: reads credit amounts from SiteConfig (with fallback to 10)
-- Added `note` field to all CreditTransaction.create calls
-- Added `status !== 'suspicious'` check before awarding referral credits
-- Fixed Redis invalidation: now invalidates both `balance:{userId}` AND `balance:{referrerId}`
-- No user can ever get double credits (welcomeCreditGiven guard)
-
-**TASK 3 — Profile photo in navbar**
-- `auth.ts`: JWT `update` trigger now also handles `image` field (was only handling `onboardingCompleted`)
-- Profile page already calls `await update({ image: url })` after upload — now works correctly
-
-**TASK 4 — Remove "free tool" text**
-- Removed "— free tool." from descriptions: quotation-generator, expense-tracker, offer-letter, tds-sheet, salary-slip config files
-- Removed "Login to save your expenses permanently." banner from `ExpenseTrackerTool.tsx`
-- Removed unused `Info` import
-
-**TASK 5 — Pricing page plans (already done in B7)**
-- `api/public/plans/route.ts` stale empty-cache fix was already in place
-
-**TASK 6 — /register → 404**
-- `PricingPage.tsx`: removed all `/register` hrefs; added `useSession`, `useRouter`, `useAuthStore`
-- Logged-in users → redirect to `/dashboard` (free) or `/checkout?type=plan&slug=X` (paid)
-- Logged-out users → opens auth modal (signup tab) + stores `pending_plan` in localStorage
-
-**TASK 7 — Marketing tools: logged-in users see login modal**
-- `(marketing)/tools/page.tsx`: added `useSession` + `useRouter`
-- Tool card click: logged-in → `/tools/{slug}`, logged-out → auth modal
-- "Try all 27 tools" CTA: logged-in → `/dashboard`, logged-out → auth modal
-
-**TASK 8 — Homepage redirect for logged-in users (already done in B7)**
-- Middleware never redirected `/` → confirmed no redirect block present
-
-**TASK 9 — About page "Built With" section**
-- Removed entire "Built With" `<section>` + `TECH_STACK` array from `about/page.tsx`
-
-**TASK 10 — History eye icon empty modal**
-- Fixed by Tasks 1 + API change: modal now shows text / iframe / image based on toolSlug/content
-- Copy button copies output to clipboard
-
----
-
-## What Was Done (Session B7)
-
-### Bug Fixes
-
-**BUG FIX 1 — /history 404 Error**
-- Created `apps/web/src/app/(site)/history/page.tsx`
-- The route was already in middleware `APP_ROUTES` but the page only existed at `dashboard/history`
-- New page reuses `<HistoryTable />` component
-
-**BUG FIX 2 — Onboarding Credit Notifications**
-- `apps/web/src/app/api/onboarding/complete/route.ts`
-- Updated notification messages to match spec exactly:
-  - Referred user: title='Joining Bonus!', message='You got 10 credits for joining via referral link.'
-  - Referrer: message='Your referral joined SetuLix. You got 10 credits!'
-  - Direct user: title='Welcome to SetuLix!', message='You got 10 free credits to get started.'
-
-**BUG FIX 3 — Profile Photo Not Updating in Navbar**
-- `apps/web/src/app/(site)/profile/page.tsx`
-- Added `const { update } = useSession()` to `AvatarUploader` component
-- After successful upload: calls `await update({ image: data.url })` to sync NextAuth session
-- Navbar reads from `session.user.image` and now updates instantly
-- Fixed avatar priority: `avatarUrl || data?.user.avatar || session.user.image`
-
-**BUG FIX 4 — Remove "Free tool" Text**
-- Removed `Free tool — no login required. Login to save your work.` info banner from 5 tools:
-  - `tools/gst-invoice/GstInvoiceTool.tsx`
-  - `tools/tds-sheet/TdsSheetTool.tsx`
-  - `tools/quotation-generator/QuotationGeneratorTool.tsx`
-  - `tools/offer-letter/OfferLetterTool.tsx`
-  - `tools/salary-slip/SalarySlipTool.tsx`
-- Removed unused `Info` import from lucide-react in each file
-- Updated `tools/gst-invoice/config.ts` description (removed "— free, no login required")
-
-**BUG FIX 5 — Plans API Stale Empty Cache**
-- `apps/web/src/app/api/public/plans/route.ts`
-- If Redis cached an empty array (from before seed was run), now invalidates cache key and falls through to DB
-- Prevents stale `[]` from being served when plans exist in DB
-
----
-
-### New DB Models
-
-**`packages/db/src/models/BillingProfile.ts`** — NEW
-- Fields: userId (unique), accountType (individual/business), fullName, phone, address fields, gstin, businessName, gstState, contactPerson
-- Exported from `packages/db/src/index.ts`
-
-**`packages/db/src/models/User.ts`** — UPDATED
-- Added: `isDeleted: boolean` (default false), `deletedAt: Date | null`, `status: 'active' | 'deleted' | 'banned'` (default 'active')
-
-**`packages/db/src/models/CreditTransaction.ts`** — UPDATED
-- Added: `note?: string` field
-- Added types: `plan_upgrade`, `credit_purchase` (alongside existing types)
-- Exported `CreditTransactionType` type
-
-**`packages/db/src/credit-service.ts`** — UPDATED
-- `addCredits()` now accepts `plan_upgrade` and `credit_purchase` as valid types
-
----
-
-### Feature 1 — Credit Ledger
-
-**`apps/web/src/app/(site)/credits/page.tsx`** — NEW
-- Balance card (large display)
-- 4 summary stat cards: Total Earned, Total Spent, This Month, Transaction Count
-- Transaction table with: type badge, description, +/- amount (green/red), balance after, date
-- Type badges: Welcome (purple), Referral (green), Tool Used (blue), Purchase (teal), Plan Upgrade (orange), Admin (gray)
-- Filter tabs: All | Earned | Spent
-- Load More pagination (20 per page)
-- Empty state with Coins icon
-
-**`apps/web/src/app/api/user/credits/ledger/route.ts`** — NEW
-- `GET /api/user/credits/ledger?filter=all|earned|spent&page=1`
-- Returns: `{ transactions, totalCount, totalPages, page, summary: { balance, earned, spent, thisMonth, transactionCount } }`
-- Summary aggregated from all transactions (not affected by filter)
-
-**Middleware** — Updated: added `/credits` and `/checkout` to APP_ROUTES
-
----
-
-### Feature 2 — Sidebar Plan Widget
-
-**`apps/web/src/components/layout/Sidebar.tsx`** — UPDATED
-- New `PlanWidget` component at bottom of sidebar (above CreditsWidget)
-- Expanded: plan badge + upgrade button + progress bar + credits used/total + tagline
-- Collapsed: animated SVG donut ring with color-coded fill (green/amber/red)
-- Progress bar colors: green <60%, amber 60-80%, red >80%
-- Upgrade button: FREE/LITE → "Upgrade", PRO → "Go Business", BUSINESS/ENTERPRISE → hidden
-- Added Credits link (`/credits`) and History link (`/history`) to sidebar nav
-
-**`apps/web/src/app/api/user/sidebar-stats/route.ts`** — NEW
-- `GET /api/user/sidebar-stats`
-- Returns: `{ planSlug, planName, currentCredits, planCredits, creditsUsed }`
-- Redis cached 2-minute TTL (`sidebar:{userId}`)
-
----
-
-### Feature 3 — Account Delete (Soft)
-
-**`apps/web/src/app/api/user/delete-account/route.ts`** — NEW
-- `POST /api/user/delete-account`
-- Sets `isDeleted=true`, `deletedAt=now`, `status='deleted'`
-- Invalidates Redis keys: balance, workspace, sidebar, autofill, user cache
-- Sends account deletion email (fire-and-forget)
-
-**`apps/web/src/app/api/admin/users/[userId]/restore/route.ts`** — NEW
-- `POST /api/admin/users/[id]/restore` (admin auth required)
-- Sets `isDeleted=false`, `deletedAt=null`, `status='active'`
-
-**`apps/web/src/app/(site)/profile/page.tsx`** — UPDATED
-- Danger Zone section at bottom: red border card, AlertTriangle icon, description
-- "Delete My Account" button → opens confirmation modal
-- Modal: warning text + type "DELETE" input + disabled Delete button until text matches
-- On confirm: POST /api/user/delete-account → signOut → redirect to `/?deleted=true`
-
-**`apps/web/src/auth.ts`** — UPDATED
-- Credentials `authorize`: throws error if `user.isDeleted === true`
-- Google OAuth jwt callback: if `dbUser.isDeleted`, sets `token.isDeleted=true` and returns early
-
-**`apps/web/src/middleware.ts`** — UPDATED
-- If `payload.isDeleted === true` or `!payload.id` → redirect to `/`
-
-**`apps/web/src/components/marketing/DeletedAccountToast.tsx`** — NEW
-- Client component that checks `?deleted=true` on URL and shows toast
-- Imported in marketing home page
-
----
-
-### Feature 4 — Credit Low Alert
-
-**`apps/web/src/lib/credit-alerts.ts`** — NEW
-- `checkAndSendCreditAlert(userId, currentBalance, planSlug)`
-- Threshold: 20% of plan credits (free=2, lite=40, pro=140, business=300)
-- Redis key: `credit_alert_sent:{userId}:{YYYY-MM}` — one alert per user per month
-- TTL = seconds until end of month
-- On trigger: creates in-app notification, sets Redis sentinel
-- Never throws — fully wrapped in try-catch
-
-**`apps/web/src/app/api/user/credits/deduct/route.ts`** — UPDATED
-- After successful deduction: `void checkAndSendCreditAlert(userId, newBalance, planSlug)`
-- Fire-and-forget (never delays response)
-
----
-
-### Feature 5 — Email System
-
-**`apps/web/src/lib/email/sender.ts`** — NEW
-- `sendEmail({ to, subject, html, replyTo? })`
-- Uses Resend API (`RESEND_API_KEY` env var)
-- Falls back to console.log if key not set (dev mode)
-- Never throws — all errors caught and logged
-
-**`apps/web/src/lib/email/base-template.ts`** — NEW
-- `baseEmailTemplate(content: string): string`
-- Full HTML shell: purple header, content area, footer with SetuLabsAI branding
-- Mobile-responsive with inline styles (email client compatible)
-
-**`apps/web/src/lib/email/templates.ts`** — NEW
-- `welcomeEmail({ name })` — subject: "Welcome to SetuLix, {name}!"
-- `accountDeletionEmail({ name })` — subject: "Your SetuLix account has been deactivated"
-- `creditPurchaseEmail({ name, credits, amount, invoiceNumber, transactionId })`
-- `planUpgradeEmail({ name, planName, credits, amount, invoiceNumber })`
-- `creditLowEmail({ name, balance })`
-
-**`apps/web/src/lib/email/invoice.ts`** — NEW
-- `generateInvoiceHTML(data: InvoiceData): string`
-- Full GST invoice: seller/buyer boxes, items table, CGST/SGST breakdown, payment info
-- Premium inline-styled HTML (email + browser compatible)
-
-**`apps/web/src/lib/email/invoice-number.ts`** — NEW
-- `generateInvoiceNumber(): Promise<string>`
-- Format: `SLX-2026-XXXXX` (atomic increment via MongoDB `$inc`)
-- Stored in SiteConfig collection: key=`last_invoice_number`
-
-**Email triggers wired:**
-- Welcome email → `onboarding/complete/route.ts` (fire-and-forget)
-- Deletion email → `user/delete-account/route.ts` (fire-and-forget)
-- TODO(B8): Purchase email → Cashfree webhook handler (not yet built)
-
----
-
-### Feature 6 — Checkout Page
-
-**`apps/web/src/app/(site)/checkout/page.tsx`** — NEW
-- Query: `?type=plan&slug=pro&cycle=monthly` or `?type=pack&id=PACK_ID`
-- Left: billing form with Individual/Business toggle (pill)
-  - Individual: name, phone, address, city, state, PIN, optional GSTIN
-  - Business: business name, GSTIN (validated regex), GST state, contact person, phone, address, PIN
-  - Zod validation with per-field error display
-  - "Save billing details" checkbox (checked by default)
-  - Pre-fills from saved billing profile on mount
-- Right (sticky): order summary card
-  - Item name + credits + billing cycle
-  - Subtotal / GST 18% / Total breakdown
-  - "Proceed to Pay" button (disabled, tooltip: "coming soon — Cashfree")
-  - Trust indicators: Shield/Lock/CheckCircle
-
-**`apps/web/src/app/api/user/billing-profile/route.ts`** — NEW
-- `GET /api/user/billing-profile` — returns saved profile or null
-- `POST /api/user/billing-profile` — upsert (one per user)
-
-**`apps/web/src/app/api/checkout/item-details/route.ts`** — NEW
-- `GET /api/checkout/item-details?type=plan&slug=pro&cycle=monthly`
-- `GET /api/checkout/item-details?type=pack&id=PACK_ID`
-- Returns: `{ type, name, credits, cycle, subtotal, gstAmount, total }`
-- GST rate: 18% (CGST 9% + SGST 9%)
+## What Was Done (Session B8-A)
+
+### TASK 1 — Cashfree SDK Install
+- `apps/web`: installed `cashfree-pg@5.1.3` (backend) + `@cashfreepayments/cashfree-js@1.0.7` (frontend)
+- Added `NEXT_PUBLIC_APP_URL=http://localhost:3000` to `apps/web/.env`
+
+### TASK 2 — Cashfree Utility
+- `apps/web/src/lib/cashfree.ts` — NEW
+  - `createCashfreeOrder()` — creates Cashfree order, returns `{ order_id, payment_session_id, order_status }`
+  - `verifyCashfreeOrder()` — fetches order status from Cashfree
+  - `verifyCashfreeWebhook()` — HMAC-SHA256 signature verification
+  - Cashfree instance: `new Cashfree(CFEnvironment.SANDBOX|PRODUCTION, appId, secretKey)`
+- `apps/web/src/types/cashfree-js.d.ts` — NEW: type declarations for `@cashfreepayments/cashfree-js`
+
+### TASK 3 — Payment Model
+- `packages/db/src/models/Payment.ts` — NEW
+  - Fields: userId, orderId (unique), cashfreeOrderId, type (credit_pack|plan)
+  - Credit pack: packId, credits
+  - Plan: planSlug, billingCycle
+  - Amounts: amount (subtotal), gstAmount, totalAmount, currency (INR)
+  - Status: created | paid | failed | cancelled (default: created)
+  - Cashfree: paymentSessionId, cashfreePaymentId, paymentMethod
+  - Invoice: invoiceNumber (generated after payment)
+  - billingSnapshot (stored at time of payment)
+- `packages/db/src/index.ts`: added `export * from "./models/Payment"`
+
+### TASK 4 — Order ID Generator
+- `apps/web/src/lib/order-id.ts` — NEW
+  - `generateOrderId()` → format: `SLX-YYYYMMDD-XXXXXXXX` (e.g. `SLX-20260514-A3B7X9K2`)
+
+### TASK 5 — Create Order API
+- `apps/web/src/app/api/payments/create-order/route.ts` — NEW
+  - POST, auth required
+  - Accepts: type=credit_pack (packId) or type=plan (planSlug + billingCycle)
+  - Validates billing details with Zod
+  - Fetches item details from DB (CreditPack or Plan)
+  - Calculates GST 18%, totalAmount
+  - Optionally upserts BillingProfile
+  - Creates Cashfree order → saves Payment doc
+  - Returns: `{ orderId, paymentSessionId }`
+
+### TASK 6 — Webhook Handler
+- `apps/web/src/lib/payment-processor.ts` — NEW (shared logic for webhook + verify)
+  - `processCreditPackPayment(payment)` — adds credits, CreditTransaction, Redis invalidate, invoice, notification, email
+  - `processPlanPayment(payment)` — sets user.plan + planExpiry, UserSubscription, CreditTransaction, Redis invalidate, invoice, notification, email
+- `apps/web/src/app/api/payments/webhook/route.ts` — NEW
+  - POST, no auth (Cashfree webhook)
+  - Reads raw body, verifies HMAC-SHA256 signature
+  - Handles `PAYMENT_SUCCESS_WEBHOOK` only
+  - Idempotent: already-paid orders return 200 without reprocessing
+  - Never throws — returns 500 on error (Cashfree retries on non-200)
+
+### TASK 7 — Payment Return Page + Verify API
+- `apps/web/src/app/api/payments/verify/route.ts` — NEW
+  - GET, auth required
+  - Security: finds payment by orderId AND userId (prevents cross-user access)
+  - If payment.status='created': checks Cashfree directly, processes if PAID (webhook delay fallback)
+  - Returns: `{ status: paid|pending|failed|not_found, type, credits }`
+- `apps/web/src/app/(site)/payment/return/page.tsx` — NEW
+  - 4 states: loading (Loader2), paid (CheckCircle), pending (Clock + auto-retry every 3s, max 5), failed (XCircle), not_found (AlertCircle)
+  - Pending auto-retry: max 5 retries, then shows manual "Check Status" button
+- `apps/web/src/middleware.ts`: added `/payment` to APP_ROUTES
+
+### TASK 8 — Checkout Page Live Integration
+- `apps/web/src/app/(site)/checkout/page.tsx` — UPDATED
+  - Imports `@cashfreepayments/cashfree-js` dynamically
+  - Initializes Cashfree JS on mount: `load({ mode: 'sandbox' })`
+  - `handlePayment()`: validates form → calls `/api/payments/create-order` → calls `cashfree.checkout({ paymentSessionId, redirectTarget: '_modal' })`
+  - Pay button: active when cashfree loaded + item loaded; shows loading spinner during processing
+  - Error display: red text below pay button
+  - Trust badges: "Secured by Cashfree" / "256-bit SSL" / "Money-back on failed payments"
+
+### TASK 9 — Plan Expiry + Renewal Reminder Cron
+- `packages/db/src/models/User.ts` — UPDATED
+  - Added: `planExpiry: Date | null` (default null)
+  - Added: `renewalReminderSent: boolean` (default false)
+- `apps/web/src/auth.ts` — UPDATED
+  - JWT callback: after every token refresh, checks if `user.planExpiry < now`
+  - If expired: resets `plan → 'free'`, `planExpiry → null`, invalidates `plan:{id}` + `sidebar:{id}` Redis keys
+- `apps/web/src/lib/email/templates.ts` — UPDATED
+  - Added `renewalReminderEmail({ name, planName, daysLeft })` template
+- `apps/web/src/app/api/cron/renewal-reminder/route.ts` — NEW
+  - GET, secured by `Authorization: Bearer {CRON_SECRET}`
+  - Finds users: plan !== free, planExpiry ≤ 7 days from now, > now, renewalReminderSent = false
+  - Sends renewal reminder email, sets renewalReminderSent=true
+- `vercel.json` — UPDATED
+  - Added cron: `0 3 * * *` for `/api/cron/renewal-reminder` (daily at 03:00 UTC)
+
+### TASK 10 — Admin Payments Page
+- `apps/web/src/app/api/admin/payments/route.ts` — NEW
+  - GET, admin auth required
+  - Filters by status (all/paid/failed/created/cancelled), page, limit=20
+  - Aggregates: totalRevenue, todayRevenue, totalTransactions, successRate
+  - Populates userId with name+email
+- `apps/web/src/app/admin/payments/page.tsx` — NEW
+  - 4 stat cards: Total Revenue | Today's Revenue | Transactions | Success Rate
+  - Filter tabs: All | Paid | Failed | Pending | Cancelled
+  - Table: Order ID | User | Type | Amount | Status | Date | Invoice | Details
+  - Expandable detail row: billing snapshot, CF payment ID, payment method, credits added
+  - Pagination
+- `apps/web/src/app/admin/layout.tsx` — UPDATED
+  - Added "Payments" nav item (Receipt icon) between Referrals and Notifications
 
 ---
 
 ## Architecture Notes
 
-### New Redis Keys (B7)
+### Cashfree Payment Flow
 ```
-sidebar:{userId}                    TTL 2min — sidebar stats (plan + credits)
-credit_alert_sent:{userId}:{YYYY-MM} TTL = seconds until month end
-```
-
-### Deleted User Flow
-```
-User clicks "Delete My Account"
-  → types "DELETE" in modal
-  → POST /api/user/delete-account
-      → User.isDeleted=true, deletedAt=now, status='deleted'
-      → Redis invalidated
-      → accountDeletionEmail (fire-and-forget)
-  → signOut() → redirect to /?deleted=true
-  → DeletedAccountToast shows "Account deleted. Sorry to see you go."
-
-Deleted user tries to login:
-  Credentials → authorize() throws error → shown in AuthModal
-  Google → jwt() returns early with isDeleted=true → middleware blocks at next request
-
-Admin restore:
-  POST /api/admin/users/[id]/restore → isDeleted=false, status='active'
+User fills checkout form
+  → POST /api/payments/create-order
+      → Fetch item (CreditPack or Plan) from DB
+      → Calculate GST 18%
+      → createCashfreeOrder() → Cashfree API
+      → Payment.create({ status: 'created', paymentSessionId })
+      → Return { orderId, paymentSessionId }
+  → cashfree.checkout({ paymentSessionId, redirectTarget: '_modal' })
+      → Cashfree popup opens
+      → User pays
+      → Cashfree redirects to /payment/return?order_id=SLX-...
+          → GET /api/payments/verify → checks DB + Cashfree
+          → If paid: show success page
+      → Cashfree webhook: POST /api/payments/webhook
+          → verifyCashfreeWebhook() HMAC check
+          → processCreditPackPayment OR processPlanPayment
+          → Credits added, invoice generated, email sent
 ```
 
-### Email System Architecture
+### Plan Expiry Flow
 ```
-sendEmail() ← never throws, always try-catch
-  ↓
-templates.ts ← { subject, html } per event
-  ↓
-base-template.ts ← consistent branded wrapper
-  ↓
-invoice.ts ← standalone HTML invoice (for attachment trigger in B8)
-  ↓
-invoice-number.ts ← atomic SLX-YYYY-XXXXX via MongoDB $inc
+Plan purchased → User.planExpiry = now + 30/365 days
+NextAuth jwt callback → every token refresh:
+  if user.planExpiry < now && plan !== 'free':
+    → reset plan='free', planExpiry=null
+    → invalidate Redis plan:{id} + sidebar:{id}
+Cron renewal-reminder (daily 03:00 UTC):
+  → find expiring plans (within 7 days, not yet reminded)
+  → sendEmail(renewalReminderEmail)
+  → set renewalReminderSent=true
+  → reset on plan renewal
 ```
 
-### Checkout Flow (current state)
+### New Redis Keys (B8-A)
 ```
-/checkout?type=plan&slug=pro&cycle=monthly
-  → GET /api/checkout/item-details → { name, credits, cycle, gst breakdown }
-  → GET /api/user/billing-profile → pre-fill form
-  → User fills billing form
-  → POST /api/user/billing-profile → save details
-  → "Proceed to Pay" → disabled (TODO B8: trigger Cashfree)
+None new — existing keys invalidated:
+  balance:{userId}    — after credit purchase
+  sidebar:{userId}    — after credit purchase or plan change
+  plan:{userId}       — after plan change or expiry
+```
+
+### New Collections (B8-A)
+```
+payments  — Payment docs (orderId unique index, userId index)
+```
+
+### Cashfree Test Credentials (Sandbox)
+```
+Card: 4111 1111 1111 1111
+Expiry: Any future (e.g. 12/26)
+CVV: Any 3 digits (e.g. 123)
+OTP: 123456
 ```
 
 ---
 
-## What Was Done (Session B6)
-[See previous HANDOFF for B6 details — Production Pricing + Abuse Protection]
+## What Was Done (Session B7-B)
+[See previous HANDOFF for B7-B details — Watermark, history limits, credit ledger, plan widget, account delete, rollover, email system, checkout]
 
 ---
 

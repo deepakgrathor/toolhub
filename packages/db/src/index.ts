@@ -19,3 +19,4 @@ export * from "./referral-service";
 export * from "./models/Plan";
 export * from "./models/UserSubscription";
 export * from "./models/BillingProfile";
+export * from "./models/Payment";

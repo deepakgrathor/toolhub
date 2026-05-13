@@ -37,6 +37,9 @@ export interface IUser extends Document {
   profileScore: number;
   // Referral
   welcomeCreditGiven: boolean;
+  // Plan expiry
+  planExpiry?: Date | null;
+  renewalReminderSent?: boolean;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -96,6 +99,9 @@ const UserSchema = new Schema<IUser>(
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
     lastSeen: { type: Date, default: Date.now },
+    // Plan expiry
+    planExpiry: { type: Date, default: null },
+    renewalReminderSent: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
