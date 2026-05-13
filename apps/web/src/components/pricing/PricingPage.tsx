@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { Check, X, Mail, Package, Lock, ChevronDown } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/auth-store";
 import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -86,18 +89,26 @@ function BillingToggle({
 
 // ── Plan card ─────────────────────────────────────────────────────────────────
 
-function PlanCard({ plan, cycle }: { plan: Plan; cycle: "monthly" | "yearly" }) {
+function PlanCard({
+  plan,
+  cycle,
+  onCtaClick,
+}: {
+  plan: Plan;
+  cycle: "monthly" | "yearly";
+  onCtaClick: (slug: string) => void;
+}) {
   const pricing = plan.pricing[cycle];
   const monthlyPricing = plan.pricing.monthly;
 
-  const ctaMap: Record<string, { label: string; href: string }> = {
-    free:       { label: "Get Started Free",        href: "/register" },
-    lite:       { label: "Start Creating",           href: "/register?plan=lite" },
-    pro:        { label: "Upgrade to Pro",            href: "/register?plan=pro" },
-    business:   { label: "Start Business Plan",      href: "/register?plan=business" },
-    enterprise: { label: "Contact Sales",            href: "mailto:talk.enterprise@toolspire.io" },
+  const ctaLabels: Record<string, string> = {
+    free:       "Get Started Free",
+    lite:       "Start Creating",
+    pro:        "Upgrade to Pro",
+    business:   "Start Business Plan",
+    enterprise: "Contact Sales",
   };
-  const cta = ctaMap[plan.slug] ?? { label: "Get Started", href: "/register" };
+  const ctaLabel = ctaLabels[plan.slug] ?? "Get Started";
 
   return (
     <div
@@ -169,15 +180,15 @@ function PlanCard({ plan, cycle }: { plan: Plan; cycle: "monthly" | "yearly" }) 
       {/* CTA */}
       {plan.type === "enterprise" ? (
         <a
-          href={cta.href}
+          href="mailto:talk.enterprise@toolspire.io"
           className="flex items-center justify-center gap-2 w-full rounded-xl border border-border py-2.5 text-sm font-semibold text-foreground hover:bg-muted/40 transition-colors"
         >
           <Mail className="h-4 w-4" />
-          {cta.label}
+          {ctaLabel}
         </a>
       ) : (
-        <a
-          href={cta.href}
+        <button
+          onClick={() => onCtaClick(plan.slug)}
           className={cn(
             "w-full rounded-xl py-2.5 text-sm font-semibold text-center transition-colors",
             plan.isPopular
@@ -187,8 +198,8 @@ function PlanCard({ plan, cycle }: { plan: Plan; cycle: "monthly" | "yearly" }) 
               : "bg-[#7c3aed]/10 text-[#7c3aed] border border-[#7c3aed]/30 hover:bg-[#7c3aed]/20"
           )}
         >
-          {cta.label}
-        </a>
+          {ctaLabel}
+        </button>
       )}
 
       {/* Features */}
@@ -316,6 +327,25 @@ const FAQS = [
 
 export function PricingPage({ plans, packs, rollover }: Props) {
   const [cycle, setCycle] = useState<"monthly" | "yearly">("monthly");
+  const { data: session } = useSession();
+  const router = useRouter();
+  const openAuthModal = useAuthStore((s) => s.openAuthModal);
+
+  function handlePlanCta(slug: string) {
+    if (session) {
+      if (slug === "free") {
+        router.push("/dashboard");
+      } else {
+        router.push(`/checkout?type=plan&slug=${slug}&cycle=${cycle}`);
+      }
+    } else {
+      if (slug !== "free") {
+        localStorage.setItem("pending_plan", slug);
+        localStorage.setItem("pending_plan_cycle", cycle);
+      }
+      openAuthModal("signup");
+    }
+  }
 
   return (
     <div className="min-h-screen px-4 py-16 max-w-7xl mx-auto">
@@ -347,7 +377,7 @@ export function PricingPage({ plans, packs, rollover }: Props) {
       {/* Plan cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-6 items-start">
         {plans.map((plan) => (
-          <PlanCard key={plan._id} plan={plan} cycle={cycle} />
+          <PlanCard key={plan._id} plan={plan} cycle={cycle} onCtaClick={handlePlanCta} />
         ))}
       </div>
 

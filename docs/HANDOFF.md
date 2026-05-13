@@ -1,8 +1,58 @@
 # Handoff Note
-Updated: 2026-05-13 | Account: B | Session: B7 | Bug Fixes + Credit Ledger + Sidebar Plan Widget + Email System + Checkout
+Updated: 2026-05-13 | Account: B | Session: B7-A | 10 Bug Fixes
 
 ## Where We Are
-Session B7 done. **TypeScript: 0 errors.** Committed to main (a7d1aad).
+Session B7-A done. **TypeScript: 0 errors.** Committed to main.
+
+---
+
+## What Was Done (Session B7-A)
+
+### Bug Fixes (10 tasks)
+
+**TASK 1 — /history page**
+- Added subtitle "Your recent AI generations" to `history/page.tsx`
+- Updated `api/user/history/route.ts` to return `outputText` (needed by modal) + strip HTML tags from preview
+- Updated `HistoryTable.tsx`: new columns (Tool Name | Output Preview | Credits | Date & Time), fixed modal to show typed content (image/HTML/text), added Copy button
+
+**TASK 2 — Onboarding credit logic**
+- `api/onboarding/complete/route.ts`: reads credit amounts from SiteConfig (with fallback to 10)
+- Added `note` field to all CreditTransaction.create calls
+- Added `status !== 'suspicious'` check before awarding referral credits
+- Fixed Redis invalidation: now invalidates both `balance:{userId}` AND `balance:{referrerId}`
+- No user can ever get double credits (welcomeCreditGiven guard)
+
+**TASK 3 — Profile photo in navbar**
+- `auth.ts`: JWT `update` trigger now also handles `image` field (was only handling `onboardingCompleted`)
+- Profile page already calls `await update({ image: url })` after upload — now works correctly
+
+**TASK 4 — Remove "free tool" text**
+- Removed "— free tool." from descriptions: quotation-generator, expense-tracker, offer-letter, tds-sheet, salary-slip config files
+- Removed "Login to save your expenses permanently." banner from `ExpenseTrackerTool.tsx`
+- Removed unused `Info` import
+
+**TASK 5 — Pricing page plans (already done in B7)**
+- `api/public/plans/route.ts` stale empty-cache fix was already in place
+
+**TASK 6 — /register → 404**
+- `PricingPage.tsx`: removed all `/register` hrefs; added `useSession`, `useRouter`, `useAuthStore`
+- Logged-in users → redirect to `/dashboard` (free) or `/checkout?type=plan&slug=X` (paid)
+- Logged-out users → opens auth modal (signup tab) + stores `pending_plan` in localStorage
+
+**TASK 7 — Marketing tools: logged-in users see login modal**
+- `(marketing)/tools/page.tsx`: added `useSession` + `useRouter`
+- Tool card click: logged-in → `/tools/{slug}`, logged-out → auth modal
+- "Try all 27 tools" CTA: logged-in → `/dashboard`, logged-out → auth modal
+
+**TASK 8 — Homepage redirect for logged-in users (already done in B7)**
+- Middleware never redirected `/` → confirmed no redirect block present
+
+**TASK 9 — About page "Built With" section**
+- Removed entire "Built With" `<section>` + `TECH_STACK` array from `about/page.tsx`
+
+**TASK 10 — History eye icon empty modal**
+- Fixed by Tasks 1 + API change: modal now shows text / iframe / image based on toolSlug/content
+- Copy button copies output to clipboard
 
 ---
 

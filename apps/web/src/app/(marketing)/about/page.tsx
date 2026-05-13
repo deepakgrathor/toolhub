@@ -7,11 +7,6 @@ export const metadata: Metadata = {
   description: `${BRAND.name} is an AI-powered multi-tool SaaS platform built for Indian businesses. 27 tools across 5 kits.`,
 };
 
-const TECH_STACK = [
-  "Next.js 14", "MongoDB", "OpenAI", "Anthropic Claude",
-  "Google Gemini", "Razorpay", "Vercel", "Upstash Redis",
-];
-
 const KITS = [
   { name: "Creator Kit", tools: "Blog, YT Script, Thumbnail AI, Title, Hook, Caption" },
   { name: "SME Kit", tools: "GST Invoice, Expense Tracker, Quotation, QR Code, WhatsApp Bulk" },
@@ -85,20 +80,6 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Built With */}
-        <section>
-          <h2 className="text-2xl font-bold text-foreground mb-6">Built With</h2>
-          <div className="flex flex-wrap gap-2">
-            {TECH_STACK.map((tech) => (
-              <span
-                key={tech}
-                className="rounded-full border border-border bg-muted px-4 py-1.5 text-sm text-foreground"
-              >
-                {tech}
-              </span>
-            ))}
-          </div>
-        </section>
       </div>
     </div>
   );

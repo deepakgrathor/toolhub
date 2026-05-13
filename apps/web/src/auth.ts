@@ -110,9 +110,15 @@ const config: NextAuthConfig = {
           token.onboardingCompleted = user.onboardingCompleted ?? false;
         }
       }
-      // Allow onboarding page to update session without re-login
-      if (trigger === "update" && (session as { onboardingCompleted?: boolean })?.onboardingCompleted !== undefined) {
-        token.onboardingCompleted = (session as { onboardingCompleted: boolean }).onboardingCompleted;
+      // Allow client-side session updates (onboarding, avatar)
+      if (trigger === "update") {
+        const s = session as { onboardingCompleted?: boolean; image?: string };
+        if (s.onboardingCompleted !== undefined) {
+          token.onboardingCompleted = s.onboardingCompleted;
+        }
+        if (s.image !== undefined) {
+          token.image = s.image;
+        }
       }
       return token;
     },

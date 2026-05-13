@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Eye, ExternalLink, History } from "lucide-react";
+import { Eye, ExternalLink, History, Copy, X } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface OutputRecord {
   _id: string;
   toolSlug: string;
+  toolName?: string;
   outputText: string;
+  outputPreview: string;
   creditsUsed: number;
   createdAt: string;
 }
@@ -77,7 +80,7 @@ export function HistoryTable() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [dialogOutput, setDialogOutput] = useState<string | null>(null);
+  const [dialogRecord, setDialogRecord] = useState<OutputRecord | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -108,9 +111,10 @@ export function HistoryTable() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-background/40">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Date</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tool</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Credits Used</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tool Name</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell">Output Preview</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Credits</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Date & Time</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
@@ -122,21 +126,24 @@ export function HistoryTable() {
                         key={row._id}
                         className="border-b border-border last:border-0 hover:bg-white/3 transition-colors"
                       >
-                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
-                          {formatDate(row.createdAt)}
+                        <td className="px-4 py-3 text-foreground text-sm font-medium">
+                          {row.toolName ?? TOOL_NAMES[row.toolSlug] ?? row.toolSlug}
                         </td>
-                        <td className="px-4 py-3 text-foreground">
-                          {TOOL_NAMES[row.toolSlug] ?? row.toolSlug}
+                        <td className="px-4 py-3 text-muted-foreground text-xs hidden sm:table-cell max-w-[200px]">
+                          <span className="truncate block">{row.outputPreview || "—"}</span>
                         </td>
                         <td className="px-4 py-3">
                           <span className="rounded-full bg-[#7c3aed]/15 px-2 py-0.5 text-xs font-medium text-[#7c3aed]">
                             {row.creditsUsed} cr
                           </span>
                         </td>
+                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs hidden md:table-cell">
+                          {formatDate(row.createdAt)}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => setDialogOutput(row.outputText)}
+                              onClick={() => setDialogRecord(row)}
                               className="flex items-center justify-center rounded-lg border border-border p-1.5 text-muted-foreground hover:text-foreground hover:bg-surface transition-colors"
                               title="View output"
                             >
@@ -193,28 +200,69 @@ export function HistoryTable() {
       </div>
 
       {/* Output viewer dialog */}
-      {dialogOutput !== null && (
+      {dialogRecord !== null && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          onClick={() => setDialogOutput(null)}
+          onClick={() => setDialogRecord(null)}
         >
           <div
-            className="relative w-full max-w-2xl rounded-xl border border-border bg-surface shadow-xl"
+            className="relative w-full max-w-3xl rounded-xl border border-border bg-surface shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
-              <h3 className="font-semibold text-foreground">Output</h3>
+              <h3 className="font-semibold text-foreground">
+                {dialogRecord.toolName ?? TOOL_NAMES[dialogRecord.toolSlug] ?? dialogRecord.toolSlug}
+              </h3>
               <button
-                onClick={() => setDialogOutput(null)}
-                className="text-muted-foreground hover:text-foreground transition-colors text-lg leading-none"
+                onClick={() => setDialogRecord(null)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                ×
+                <X className="h-5 w-5" />
               </button>
             </div>
             <div className="max-h-[60vh] overflow-y-auto p-5">
-              <pre className="whitespace-pre-wrap break-words text-sm text-foreground font-[var(--font-mono,monospace)]">
-                {dialogOutput}
-              </pre>
+              {dialogRecord.toolSlug === "thumbnail-ai" ? (
+                <img
+                  src={dialogRecord.outputText}
+                  alt="Generated thumbnail"
+                  className="w-full rounded-lg"
+                />
+              ) : dialogRecord.toolSlug === "website-generator" ||
+                dialogRecord.outputText.trimStart().startsWith("<!DOCTYPE") ||
+                dialogRecord.outputText.trimStart().startsWith("<html") ? (
+                <div className="space-y-3">
+                  <iframe
+                    srcDoc={dialogRecord.outputText}
+                    className="w-full h-96 rounded-lg border border-border"
+                    sandbox="allow-same-origin"
+                  />
+                  <button
+                    onClick={() => {
+                      const blob = new Blob([dialogRecord.outputText], { type: "text/html" });
+                      window.open(URL.createObjectURL(blob));
+                    }}
+                    className="text-xs text-[#7c3aed] hover:underline"
+                  >
+                    Open in new tab
+                  </button>
+                </div>
+              ) : (
+                <div className="whitespace-pre-wrap text-sm text-foreground leading-relaxed">
+                  {dialogRecord.outputText || <span className="text-muted-foreground italic">No output saved for this generation.</span>}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-3 border-t border-border px-5 py-3">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(dialogRecord.outputText);
+                  toast.success("Copied to clipboard");
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40 transition-colors"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy
+              </button>
             </div>
           </div>
         </div>

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useAuthStore } from "@/store/auth-store";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import {
   Sparkles, Building2, Users, Scale, Megaphone,
   FileText, Video, Image, Heading, Zap, MessageSquare,
@@ -54,8 +56,26 @@ const KITS = [
 
 export default function MarketingToolsPage() {
   const openAuthModal = useAuthStore((s) => s.openAuthModal);
+  const { data: session } = useSession();
+  const router = useRouter();
   const [activeKit, setActiveKit] = useState("all");
   const [search, setSearch] = useState("");
+
+  function handleToolClick(slug: string) {
+    if (session) {
+      router.push(`/tools/${slug}`);
+    } else {
+      openAuthModal("signup");
+    }
+  }
+
+  function handleCtaClick() {
+    if (session) {
+      router.push("/dashboard");
+    } else {
+      openAuthModal("signup");
+    }
+  }
 
   const filtered = ALL_TOOLS.filter((t) => {
     const kitMatch = activeKit === "all" || t.kit === activeKit;
@@ -116,7 +136,7 @@ export default function MarketingToolsPage() {
         {filtered.map(({ slug, name, Icon, desc, credit }) => (
           <button
             key={slug}
-            onClick={() => openAuthModal("signup")}
+            onClick={() => handleToolClick(slug)}
             className="group rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-all duration-150 text-left"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 mb-3 group-hover:bg-primary/20 transition-colors">
@@ -142,10 +162,10 @@ export default function MarketingToolsPage() {
         <h2 className="text-2xl font-bold text-white mb-2">Try all 27 tools free</h2>
         <p className="text-primary-foreground/80 mb-6">Sign up and get 10 free credits instantly.</p>
         <button
-          onClick={() => openAuthModal("signup")}
+          onClick={handleCtaClick}
           className="rounded-xl bg-white px-8 py-3 text-sm font-bold text-primary hover:opacity-90 transition-opacity"
         >
-          Start Free — No Card Needed
+          {session ? "Go to Dashboard" : "Start Free — No Card Needed"}
         </button>
       </div>
     </div>

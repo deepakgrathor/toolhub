@@ -24,17 +24,24 @@ export async function GET(req: NextRequest) {
     ToolOutput.countDocuments({ userId }),
   ]);
 
-  const enriched = outputs.map((o) => ({
-    _id: o._id,
-    toolSlug: o.toolSlug,
-    toolName: TOOL_NAME_MAP[o.toolSlug] ?? o.toolSlug,
-    outputPreview:
-      o.toolSlug === "thumbnail-ai"
-        ? "Image generated"
-        : (o.outputText ?? "").slice(0, 60).trim(),
-    creditsUsed: o.creditsUsed,
-    createdAt: o.createdAt,
-  }));
+  const enriched = outputs.map((o) => {
+    const isImage = o.toolSlug === "thumbnail-ai";
+    const rawText = o.outputText ?? "";
+    const isHtml = rawText.trimStart().startsWith("<!DOCTYPE") || rawText.trimStart().startsWith("<html");
+    const previewText = isHtml
+      ? rawText.replace(/<[^>]*>/g, "").slice(0, 50).trim()
+      : rawText.slice(0, 50).trim();
+
+    return {
+      _id: o._id,
+      toolSlug: o.toolSlug,
+      toolName: TOOL_NAME_MAP[o.toolSlug] ?? o.toolSlug,
+      outputPreview: isImage ? "Image generated" : previewText,
+      outputText: o.outputText ?? "",
+      creditsUsed: o.creditsUsed,
+      createdAt: o.createdAt,
+    };
+  });
 
   return NextResponse.json({
     outputs: enriched,
