@@ -375,15 +375,15 @@ export default function CheckoutPage() {
                 <div className="space-y-2 pt-1">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="text-foreground">₹{item.subtotal.toFixed(2)}</span>
+                    <span className="text-foreground">₹{item.subtotal?.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">GST (18%)</span>
-                    <span className="text-foreground">₹{item.gstAmount.toFixed(2)}</span>
+                    <span className="text-foreground">₹{item.gstAmount?.toFixed(2)}</span>
                   </div>
                   <div className="border-t border-border pt-2 flex justify-between font-semibold">
                     <span className="text-foreground">Total</span>
-                    <span className="text-foreground text-base">₹{item.total.toFixed(2)}</span>
+                    <span className="text-foreground text-base">₹{item.total?.toFixed(2)}</span>
                   </div>
                 </div>
               </>

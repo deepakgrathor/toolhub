@@ -5,9 +5,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
-  ChevronLeft, ChevronRight,
-  LayoutDashboard, Gift, LogOut, X, Coins, Compass,
-  Sparkles, Plus, History, TrendingUp,
+  ChevronLeft,
+  ChevronRight,
+  LayoutDashboard,
+  Gift,
+  LogOut,
+  X,
+  Coins,
+  Compass,
+  Sparkles,
+  Plus,
+  History,
+  TrendingUp,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
@@ -29,9 +38,9 @@ function useWorkspaceInit() {
       const data = await res.json();
       if (data?.kitTools) {
         setWorkspace({
-          kitName:    data.kitName   ?? "My Workspace",
+          kitName: data.kitName ?? "My Workspace",
           professions: data.professions ?? [],
-          kitTools:  data.kitTools  ?? [],
+          kitTools: data.kitTools ?? [],
           addedTools: data.addedTools ?? [],
         });
       }
@@ -53,7 +62,7 @@ function CreditsWidget({ isCollapsed }: { isCollapsed: boolean }) {
   if (isCollapsed) {
     return (
       <Link
-        href="/pricing"
+        href="/credits"
         title={`${balance} credits`}
         className="flex justify-center rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted/50 hover:text-primary transition-colors"
       >
@@ -64,12 +73,14 @@ function CreditsWidget({ isCollapsed }: { isCollapsed: boolean }) {
 
   return (
     <Link
-      href="/pricing"
+      href="/credits"
       className="flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-primary/10 transition-colors group"
       title="Buy more credits"
     >
       <Coins className="h-[18px] w-[18px] shrink-0 text-primary" />
-      <span className="flex-1 text-sm text-foreground font-medium">Credits</span>
+      <span className="flex-1 text-sm text-foreground font-medium">
+        Credits
+      </span>
       {isLoading ? (
         <div className="h-5 w-10 animate-pulse rounded-full bg-muted/50" />
       ) : (
@@ -103,15 +114,21 @@ function PlanWidget({ isCollapsed }: { isCollapsed: boolean }) {
 
   if (!stats) return null;
 
-  const { planName, planSlug, currentCredits, planCredits, creditsUsed } = stats;
-  const pct = planCredits > 0 ? Math.min(100, (creditsUsed / planCredits) * 100) : 0;
+  const { planName, planSlug, currentCredits, planCredits, creditsUsed } =
+    stats;
+  const pct =
+    planCredits > 0 ? Math.min(100, (creditsUsed / planCredits) * 100) : 0;
 
   const barColor =
     pct >= 80 ? "bg-red-500" : pct >= 60 ? "bg-amber-500" : "bg-green-500";
 
   const showUpgrade = planSlug !== "business" && planSlug !== "enterprise";
   const upgradeLabel =
-    planSlug === "pro" ? "Go Business" : planSlug === "enterprise" ? "Enterprise" : "Upgrade";
+    planSlug === "pro"
+      ? "Go Business"
+      : planSlug === "enterprise"
+        ? "Enterprise"
+        : "Upgrade";
 
   if (isCollapsed) {
     const donutSize = 28;
@@ -125,10 +142,25 @@ function PlanWidget({ isCollapsed }: { isCollapsed: boolean }) {
         title={`${currentCredits} credits · ${planName}`}
         className="flex justify-center rounded-lg px-3 py-2 hover:bg-muted/50 transition-colors"
       >
-        <svg width={donutSize} height={donutSize} viewBox="0 0 28 28" className="-rotate-90">
-          <circle cx="14" cy="14" r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
+        <svg
+          width={donutSize}
+          height={donutSize}
+          viewBox="0 0 28 28"
+          className="-rotate-90"
+        >
           <circle
-            cx="14" cy="14" r={r} fill="none"
+            cx="14"
+            cy="14"
+            r={r}
+            fill="none"
+            stroke="hsl(var(--muted))"
+            strokeWidth="3"
+          />
+          <circle
+            cx="14"
+            cy="14"
+            r={r}
+            fill="none"
             stroke={pct >= 80 ? "#ef4444" : pct >= 60 ? "#f59e0b" : "#10b981"}
             strokeWidth="3"
             strokeDasharray={`${filled} ${circ - filled}`}
@@ -206,7 +238,7 @@ function ToolLink({
         isCollapsed ? "justify-center px-2" : "pl-6 pr-3 border-l-2 ml-3",
         isActive
           ? "text-primary font-medium border-l-primary bg-primary/5"
-          : "text-muted-foreground hover:text-foreground hover:bg-accent/5 border-l-accent/20"
+          : "text-muted-foreground hover:text-foreground hover:bg-accent/5 border-l-accent/20",
       )}
     >
       {isActive && !isCollapsed && (
@@ -235,11 +267,13 @@ function SectionHeader({
         "flex items-center gap-2 rounded-lg px-3 py-2 mb-1",
         variant === "kit"
           ? "bg-accent/5 border border-accent/20"
-          : "bg-muted/50 border border-border"
+          : "bg-muted/50 border border-border",
       )}
     >
       <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
-      <span className="flex-1 truncate text-sm font-semibold text-foreground">{label}</span>
+      <span className="flex-1 truncate text-sm font-semibold text-foreground">
+        {label}
+      </span>
     </div>
   );
 }
@@ -260,7 +294,7 @@ function SidebarContent({
   useWorkspaceInit();
 
   const activeSlug = pathname.startsWith("/tools/")
-    ? pathname.split("/tools/")[1]?.split("/")[0] ?? null
+    ? (pathname.split("/tools/")[1]?.split("/")[0] ?? null)
     : null;
 
   const isDashboard = pathname === "/dashboard";
@@ -272,9 +306,23 @@ function SidebarContent({
         {!isCollapsed && <Logo size="sm" className="flex-1 min-w-0" />}
         {isCollapsed && (
           <Link href="/dashboard" className="mx-auto">
-            <svg width="18" height="18" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 32 32"
+              fill="none"
+              aria-hidden="true"
+            >
               <rect x="4" y="4" width="18" height="8" rx="3" fill="#7c3aed" />
-              <rect x="10" y="12" width="18" height="8" rx="3" fill="#7c3aed" opacity="0.7" />
+              <rect
+                x="10"
+                y="12"
+                width="18"
+                height="8"
+                rx="3"
+                fill="#7c3aed"
+                opacity="0.7"
+              />
               <rect x="4" y="20" width="18" height="8" rx="3" fill="#7c3aed" />
             </svg>
           </Link>
@@ -299,7 +347,7 @@ function SidebarContent({
             isDashboard
               ? "bg-primary/10 text-primary font-medium"
               : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-            isCollapsed && "justify-center"
+            isCollapsed && "justify-center",
           )}
         >
           <LayoutDashboard className="h-[18px] w-[18px] shrink-0" />
@@ -317,7 +365,7 @@ function SidebarContent({
             pathname === "/explore"
               ? "bg-primary/10 text-primary font-medium"
               : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-            isCollapsed && "justify-center"
+            isCollapsed && "justify-center",
           )}
         >
           <Compass className="h-[18px] w-[18px] shrink-0" />
@@ -326,7 +374,7 @@ function SidebarContent({
       </div>
 
       {/* Credits link */}
-      <div className="px-2 pb-2 shrink-0">
+      {/* <div className="px-2 pb-2 shrink-0">
         <Link
           href="/credits"
           title={isCollapsed ? "Credits" : undefined}
@@ -335,13 +383,13 @@ function SidebarContent({
             pathname === "/credits"
               ? "bg-primary/10 text-primary font-medium"
               : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-            isCollapsed && "justify-center"
+            isCollapsed && "justify-center",
           )}
         >
           <Coins className="h-[18px] w-[18px] shrink-0" />
           {!isCollapsed && <span>Credits</span>}
         </Link>
-      </div>
+      </div> */}
 
       <div className="border-t border-border/50 shrink-0" />
 
@@ -382,7 +430,11 @@ function SidebarContent({
                   </p>
                 )}
                 {!isCollapsed && (
-                  <SectionHeader icon={Plus} label="My Added Tools" variant="added" />
+                  <SectionHeader
+                    icon={Plus}
+                    label="My Added Tools"
+                    variant="added"
+                  />
                 )}
                 {addedTools.map((tool) => (
                   <ToolLink
@@ -402,7 +454,10 @@ function SidebarContent({
         {!initialized && !isCollapsed && (
           <div className="space-y-2 px-1 pt-1">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-7 rounded-md bg-muted/40 animate-pulse" />
+              <div
+                key={i}
+                className="h-7 rounded-md bg-muted/40 animate-pulse"
+              />
             ))}
           </div>
         )}
@@ -424,7 +479,7 @@ function SidebarContent({
             title={isCollapsed ? "History" : undefined}
             className={cn(
               "sidebar-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
-              isCollapsed && "justify-center"
+              isCollapsed && "justify-center",
             )}
           >
             <History className="h-[18px] w-[18px] shrink-0" />
@@ -437,7 +492,7 @@ function SidebarContent({
             title={isCollapsed ? "Refer & Earn" : undefined}
             className={cn(
               "sidebar-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
-              isCollapsed && "justify-center"
+              isCollapsed && "justify-center",
             )}
           >
             <Gift className="h-[18px] w-[18px] shrink-0" />
@@ -449,7 +504,7 @@ function SidebarContent({
             title={isCollapsed ? "Logout" : undefined}
             className={cn(
               "sidebar-link w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors",
-              isCollapsed && "justify-center"
+              isCollapsed && "justify-center",
             )}
           >
             <LogOut className="h-[18px] w-[18px] shrink-0" />
@@ -475,7 +530,7 @@ function DesktopSidebar() {
     <aside
       className={cn(
         "hidden md:flex h-screen flex-col border-r border-border bg-surface transition-[width] duration-200 shrink-0 relative",
-        isCollapsed ? "w-14" : "w-[220px]"
+        isCollapsed ? "w-14" : "w-[220px]",
       )}
     >
       <SidebarContent isCollapsed={isCollapsed} />
@@ -484,10 +539,11 @@ function DesktopSidebar() {
         className="absolute -right-3 top-[58px] z-10 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-surface text-muted-foreground hover:text-foreground transition-colors shadow-sm"
         title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
-        {isCollapsed
-          ? <ChevronRight className="h-3 w-3" />
-          : <ChevronLeft  className="h-3 w-3" />
-        }
+        {isCollapsed ? (
+          <ChevronRight className="h-3 w-3" />
+        ) : (
+          <ChevronLeft className="h-3 w-3" />
+        )}
       </button>
     </aside>
   );
