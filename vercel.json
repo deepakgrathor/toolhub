@@ -2,7 +2,7 @@
   "buildCommand": "npm run build -w web",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "outputDirectory": ".next",
+  "outputDirectory": "apps/web/.next",
   "crons": [
     {
       "path": "/api/cron/rollover",
