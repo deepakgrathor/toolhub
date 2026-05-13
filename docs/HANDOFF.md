@@ -1,192 +1,273 @@
 # Handoff Note
-Updated: 2026-05-13 | Account: B | Session: B6 | Production Pricing + Abuse Protection
+Updated: 2026-05-13 | Account: B | Session: B7 | Bug Fixes + Credit Ledger + Sidebar Plan Widget + Email System + Checkout
 
 ## Where We Are
-Session B6 done. **TypeScript: 0 errors.** Committed to master.
+Session B7 done. **TypeScript: 0 errors.** Committed to main (a7d1aad).
 
 ---
 
-## What Was Done (Session B6)
+## What Was Done (Session B7)
 
-### Production Pricing System + Abuse Protection
+### Bug Fixes
 
-**DB Models Updated:**
-- `packages/db/src/models/Plan.ts`
-  - `IPlanFeature.highlight`: `boolean` → `string` (empty = no tag, non-empty = tag label e.g. "Coming Soon")
-  - Added `usageExamples: string[]` field
-  - Added `PlanSlug` type export: `"free" | "lite" | "pro" | "business" | "enterprise"`
-  - `slug` enum updated to match new 5-plan set
-- `packages/db/src/models/User.ts`
-  - `plan` enum extended: added `"lite"` and `"business"` alongside existing free/pro/enterprise
+**BUG FIX 1 — /history 404 Error**
+- Created `apps/web/src/app/(site)/history/page.tsx`
+- The route was already in middleware `APP_ROUTES` but the page only existed at `dashboard/history`
+- New page reuses `<HistoryTable />` component
 
-**Seed Scripts:**
-- `apps/web/src/scripts/seed-plans.ts` — fully rewritten with B6 plans
-  - Plans: FREE (₹0), LITE (₹399/mo, 200cr), PRO (₹999/mo, 700cr, isPopular), BUSINESS (₹2999/mo, 1500cr), ENTERPRISE (custom)
-  - Yearly prices: LITE ₹319, PRO ₹799, BUSINESS ₹2399 (all ~20% off monthly)
-  - Removes stale `starter` plan
-  - Credit packs: Starter 50cr/₹149, Growth 150cr/₹349, Pro Pack 400cr/₹799 (isPopular), Power 1000cr/₹1799
-  - Removes old 3-pack set
-- `apps/web/src/scripts/seed-tools.ts` — NEW; upserts creditCost for all 27 tools
-  - 0cr: client-side tools (qr, gst-calc, gst-invoice, expense-tracker, quotation, salary-slip, offer-letter, tds-sheet)
-  - 1cr: hook-writer, caption-generator, title-generator, email-subject, whatsapp-bulk
-  - 2cr: jd-generator
-  - 3cr: blog-generator, resume-screener, appraisal-draft, policy-generator, ad-copy, linkedin-bio, legal-disclaimer
-  - 4cr: yt-script
-  - 8cr: seo-auditor, legal-notice
-  - 10cr: thumbnail-ai, nda-generator
-  - 25cr: website-generator
+**BUG FIX 2 — Onboarding Credit Notifications**
+- `apps/web/src/app/api/onboarding/complete/route.ts`
+- Updated notification messages to match spec exactly:
+  - Referred user: title='Joining Bonus!', message='You got 10 credits for joining via referral link.'
+  - Referrer: message='Your referral joined SetuLix. You got 10 credits!'
+  - Direct user: title='Welcome to SetuLix!', message='You got 10 free credits to get started.'
 
-**Both seeds were run and confirmed successful.**
+**BUG FIX 3 — Profile Photo Not Updating in Navbar**
+- `apps/web/src/app/(site)/profile/page.tsx`
+- Added `const { update } = useSession()` to `AvatarUploader` component
+- After successful upload: calls `await update({ image: data.url })` to sync NextAuth session
+- Navbar reads from `session.user.image` and now updates instantly
+- Fixed avatar priority: `avatarUrl || data?.user.avatar || session.user.image`
 
-**Plan Access Control:**
-- `apps/web/src/lib/plan-access.ts` — NEW
-  - `PLAN_TOOL_ACCESS`: blocked tool lists per plan slug
-  - Free: blocks all heavy AI tools (blog, yt-script, thumbnail-ai, jd, resume, appraisal, policy, legal, nda, disclaimer, ad-copy, linkedin, seo, website, whatsapp)
-  - Lite: blocks website-generator, legal-notice, nda-generator, thumbnail-ai, seo-auditor
-  - Pro/Business/Enterprise: nothing blocked
-  - `isPlanBlocked(planSlug, toolSlug): boolean`
-  - `getUpgradeMessage(planSlug, toolSlug): string` → "Website Generator requires Pro plan. Upgrade to unlock."
-  - `getRequiredPlan(toolSlug): PlanSlug | null`
+**BUG FIX 4 — Remove "Free tool" Text**
+- Removed `Free tool — no login required. Login to save your work.` info banner from 5 tools:
+  - `tools/gst-invoice/GstInvoiceTool.tsx`
+  - `tools/tds-sheet/TdsSheetTool.tsx`
+  - `tools/quotation-generator/QuotationGeneratorTool.tsx`
+  - `tools/offer-letter/OfferLetterTool.tsx`
+  - `tools/salary-slip/SalarySlipTool.tsx`
+- Removed unused `Info` import from lucide-react in each file
+- Updated `tools/gst-invoice/config.ts` description (removed "— free, no login required")
 
-**Abuse Protection:**
-- `apps/web/src/lib/abuse-protection.ts` — NEW
-  - Daily caps via Redis key `abuse:daily:{userId}:{toolSlug}:{YYYY-MM-DD}`
-    - website-generator: LITE→3/day, PRO+→10/day
-    - thumbnail-ai: 5/day all plans
-  - 30-second cooldown via `abuse:cooldown:{userId}:{toolSlug}` for heavy tools (website-generator, legal-notice, nda-generator, seo-auditor, thumbnail-ai)
-  - Fails open on Redis unavailable (never blocks users due to infra issues)
-  - `checkAbuseLimit({ userId, toolSlug, planSlug }): Promise<{ allowed, reason?, retryAfter? }>`
-
-**Tool Guard (shared helper):**
-- `apps/web/src/lib/tool-guard.ts` — NEW
-  - `runToolGuard(userId, toolSlug)` — connectDB + user plan lookup + isPlanBlocked + checkAbuseLimit
-  - Returns `NextResponse` error on fail, `null` on pass
-  - `getUserPlanSlug(userId)` — used by both the guard and the API route
-  - HTTP 403 on plan-blocked, 429 on abuse with `Retry-After` header
-
-**All 20 AI Tool Routes Updated** (added guard after auth check):
-  blog-generator, blog-generator/stream, caption-generator, hook-writer, title-generator,
-  email-subject, whatsapp-bulk, yt-script, jd-generator, linkedin-bio, legal-notice,
-  nda-generator, legal-disclaimer, ad-copy, resume-screener, appraisal-draft,
-  policy-generator, website-generator, seo-auditor, thumbnail-ai
-
-**New API Route:**
-- `GET /api/user/plan` — returns `{ planSlug }` for logged-in user, defaults to "free" if unauthenticated
-
-**UpgradePrompt Component:**
-- `apps/web/src/components/ui/UpgradePrompt.tsx` — NEW
-  - Lock icon, tool name, message, "Upgrade to {Plan}" CTA → /pricing, "View all plans" link
-  - Full dark + light theme support
-
-**Tool Page Plan Gate:**
-- `apps/web/src/app/(site)/tools/[slug]/page.tsx` — updated
-  - Server-side plan check: fetches session + user plan from DB
-  - If logged-in user's plan blocks the tool → renders `<UpgradePrompt>` instead of tool component
-  - Unauthenticated users see the tool normally (auth check fires on submit)
-
-**Pricing Page Redesign:**
-- `apps/web/src/components/pricing/PricingPage.tsx` — fully rewritten
-  - Credit slider removed (plans now have fixed credits)
-  - Annual toggle: shows "Save 20%" green badge + crossed monthly price on yearly
-  - "Most Popular" badge on PRO card (purple gradient, elevated with scale)
-  - `usageExamples` rendered as pill chips below features
-  - Feature `highlight` string rendered as accent-colored tag (not bold text)
-  - Active CTAs: Free→/register, Lite→/register?plan=lite, Pro→/register?plan=pro, Business→/register?plan=business, Enterprise→mailto
-  - "Fair usage applies" footnote with Lock icon
-  - Credit packs: 4 packs (Starter/Growth/Pro Pack/Power), "Best Value" badge on Pro Pack
-  - Save 20% shown per card when yearly selected; annual total shown beneath price
-
-**Admin Plans Table:**
-- `apps/web/src/components/admin/PlansTable.tsx` — updated
-  - Removed: pricePerCredit field, maxCredits slider, yearlyDiscountPercent field, dynamic price calculation
-  - Kept: basePrice (monthly + yearly), baseCredits, isActive, isPopular, features management
-  - Feature `highlight` is now a text input (tag label) instead of a checkbox
-  - Table now shows credits/mo column
-  - Admin page updated to map new PlanRow shape (removed removed fields)
-
-**Public Plans API fix:**
-- `apps/web/src/app/api/public/plans/route.ts` — yearly savings calculation fixed
-  - Was: `monthly*12 - yearly` (wrong: yearly was monthly equivalent, not total)
-  - Now: `(monthly - yearly) * 12` (correct: both are per-month values)
+**BUG FIX 5 — Plans API Stale Empty Cache**
+- `apps/web/src/app/api/public/plans/route.ts`
+- If Redis cached an empty array (from before seed was run), now invalidates cache key and falls through to DB
+- Prevents stale `[]` from being served when plans exist in DB
 
 ---
 
-## What Was Done (Session B5-B)
+### New DB Models
 
-### Notification Center + Admin Push System
-[See previous HANDOFF for B5-B details]
+**`packages/db/src/models/BillingProfile.ts`** — NEW
+- Fields: userId (unique), accountType (individual/business), fullName, phone, address fields, gstin, businessName, gstState, contactPerson
+- Exported from `packages/db/src/index.ts`
+
+**`packages/db/src/models/User.ts`** — UPDATED
+- Added: `isDeleted: boolean` (default false), `deletedAt: Date | null`, `status: 'active' | 'deleted' | 'banned'` (default 'active')
+
+**`packages/db/src/models/CreditTransaction.ts`** — UPDATED
+- Added: `note?: string` field
+- Added types: `plan_upgrade`, `credit_purchase` (alongside existing types)
+- Exported `CreditTransactionType` type
+
+**`packages/db/src/credit-service.ts`** — UPDATED
+- `addCredits()` now accepts `plan_upgrade` and `credit_purchase` as valid types
 
 ---
 
-## What Was Done (Session B5-A)
-### Refer & Earn System (B5-A)
-[See previous HANDOFF for B5-A details]
+### Feature 1 — Credit Ledger
+
+**`apps/web/src/app/(site)/credits/page.tsx`** — NEW
+- Balance card (large display)
+- 4 summary stat cards: Total Earned, Total Spent, This Month, Transaction Count
+- Transaction table with: type badge, description, +/- amount (green/red), balance after, date
+- Type badges: Welcome (purple), Referral (green), Tool Used (blue), Purchase (teal), Plan Upgrade (orange), Admin (gray)
+- Filter tabs: All | Earned | Spent
+- Load More pagination (20 per page)
+- Empty state with Coins icon
+
+**`apps/web/src/app/api/user/credits/ledger/route.ts`** — NEW
+- `GET /api/user/credits/ledger?filter=all|earned|spent&page=1`
+- Returns: `{ transactions, totalCount, totalPages, page, summary: { balance, earned, spent, thisMonth, transactionCount } }`
+- Summary aggregated from all transactions (not affected by filter)
+
+**Middleware** — Updated: added `/credits` and `/checkout` to APP_ROUTES
 
 ---
 
-## What Was Done (Session B4)
-### Dynamic Pricing + Subscription Plans System
-[See previous HANDOFF for B4 details]
+### Feature 2 — Sidebar Plan Widget
+
+**`apps/web/src/components/layout/Sidebar.tsx`** — UPDATED
+- New `PlanWidget` component at bottom of sidebar (above CreditsWidget)
+- Expanded: plan badge + upgrade button + progress bar + credits used/total + tagline
+- Collapsed: animated SVG donut ring with color-coded fill (green/amber/red)
+- Progress bar colors: green <60%, amber 60-80%, red >80%
+- Upgrade button: FREE/LITE → "Upgrade", PRO → "Go Business", BUSINESS/ENTERPRISE → hidden
+- Added Credits link (`/credits`) and History link (`/history`) to sidebar nav
+
+**`apps/web/src/app/api/user/sidebar-stats/route.ts`** — NEW
+- `GET /api/user/sidebar-stats`
+- Returns: `{ planSlug, planName, currentCredits, planCredits, creditsUsed }`
+- Redis cached 2-minute TTL (`sidebar:{userId}`)
 
 ---
 
-## What Was Done (Session B2)
-### Smart Autofill System
-[See previous HANDOFF for B2 details]
+### Feature 3 — Account Delete (Soft)
+
+**`apps/web/src/app/api/user/delete-account/route.ts`** — NEW
+- `POST /api/user/delete-account`
+- Sets `isDeleted=true`, `deletedAt=now`, `status='deleted'`
+- Invalidates Redis keys: balance, workspace, sidebar, autofill, user cache
+- Sends account deletion email (fire-and-forget)
+
+**`apps/web/src/app/api/admin/users/[userId]/restore/route.ts`** — NEW
+- `POST /api/admin/users/[id]/restore` (admin auth required)
+- Sets `isDeleted=false`, `deletedAt=null`, `status='active'`
+
+**`apps/web/src/app/(site)/profile/page.tsx`** — UPDATED
+- Danger Zone section at bottom: red border card, AlertTriangle icon, description
+- "Delete My Account" button → opens confirmation modal
+- Modal: warning text + type "DELETE" input + disabled Delete button until text matches
+- On confirm: POST /api/user/delete-account → signOut → redirect to `/?deleted=true`
+
+**`apps/web/src/auth.ts`** — UPDATED
+- Credentials `authorize`: throws error if `user.isDeleted === true`
+- Google OAuth jwt callback: if `dbUser.isDeleted`, sets `token.isDeleted=true` and returns early
+
+**`apps/web/src/middleware.ts`** — UPDATED
+- If `payload.isDeleted === true` or `!payload.id` → redirect to `/`
+
+**`apps/web/src/components/marketing/DeletedAccountToast.tsx`** — NEW
+- Client component that checks `?deleted=true` on URL and shows toast
+- Imported in marketing home page
+
+---
+
+### Feature 4 — Credit Low Alert
+
+**`apps/web/src/lib/credit-alerts.ts`** — NEW
+- `checkAndSendCreditAlert(userId, currentBalance, planSlug)`
+- Threshold: 20% of plan credits (free=2, lite=40, pro=140, business=300)
+- Redis key: `credit_alert_sent:{userId}:{YYYY-MM}` — one alert per user per month
+- TTL = seconds until end of month
+- On trigger: creates in-app notification, sets Redis sentinel
+- Never throws — fully wrapped in try-catch
+
+**`apps/web/src/app/api/user/credits/deduct/route.ts`** — UPDATED
+- After successful deduction: `void checkAndSendCreditAlert(userId, newBalance, planSlug)`
+- Fire-and-forget (never delays response)
+
+---
+
+### Feature 5 — Email System
+
+**`apps/web/src/lib/email/sender.ts`** — NEW
+- `sendEmail({ to, subject, html, replyTo? })`
+- Uses Resend API (`RESEND_API_KEY` env var)
+- Falls back to console.log if key not set (dev mode)
+- Never throws — all errors caught and logged
+
+**`apps/web/src/lib/email/base-template.ts`** — NEW
+- `baseEmailTemplate(content: string): string`
+- Full HTML shell: purple header, content area, footer with SetuLabsAI branding
+- Mobile-responsive with inline styles (email client compatible)
+
+**`apps/web/src/lib/email/templates.ts`** — NEW
+- `welcomeEmail({ name })` — subject: "Welcome to SetuLix, {name}!"
+- `accountDeletionEmail({ name })` — subject: "Your SetuLix account has been deactivated"
+- `creditPurchaseEmail({ name, credits, amount, invoiceNumber, transactionId })`
+- `planUpgradeEmail({ name, planName, credits, amount, invoiceNumber })`
+- `creditLowEmail({ name, balance })`
+
+**`apps/web/src/lib/email/invoice.ts`** — NEW
+- `generateInvoiceHTML(data: InvoiceData): string`
+- Full GST invoice: seller/buyer boxes, items table, CGST/SGST breakdown, payment info
+- Premium inline-styled HTML (email + browser compatible)
+
+**`apps/web/src/lib/email/invoice-number.ts`** — NEW
+- `generateInvoiceNumber(): Promise<string>`
+- Format: `SLX-2026-XXXXX` (atomic increment via MongoDB `$inc`)
+- Stored in SiteConfig collection: key=`last_invoice_number`
+
+**Email triggers wired:**
+- Welcome email → `onboarding/complete/route.ts` (fire-and-forget)
+- Deletion email → `user/delete-account/route.ts` (fire-and-forget)
+- TODO(B8): Purchase email → Cashfree webhook handler (not yet built)
+
+---
+
+### Feature 6 — Checkout Page
+
+**`apps/web/src/app/(site)/checkout/page.tsx`** — NEW
+- Query: `?type=plan&slug=pro&cycle=monthly` or `?type=pack&id=PACK_ID`
+- Left: billing form with Individual/Business toggle (pill)
+  - Individual: name, phone, address, city, state, PIN, optional GSTIN
+  - Business: business name, GSTIN (validated regex), GST state, contact person, phone, address, PIN
+  - Zod validation with per-field error display
+  - "Save billing details" checkbox (checked by default)
+  - Pre-fills from saved billing profile on mount
+- Right (sticky): order summary card
+  - Item name + credits + billing cycle
+  - Subtotal / GST 18% / Total breakdown
+  - "Proceed to Pay" button (disabled, tooltip: "coming soon — Cashfree")
+  - Trust indicators: Shield/Lock/CheckCircle
+
+**`apps/web/src/app/api/user/billing-profile/route.ts`** — NEW
+- `GET /api/user/billing-profile` — returns saved profile or null
+- `POST /api/user/billing-profile` — upsert (one per user)
+
+**`apps/web/src/app/api/checkout/item-details/route.ts`** — NEW
+- `GET /api/checkout/item-details?type=plan&slug=pro&cycle=monthly`
+- `GET /api/checkout/item-details?type=pack&id=PACK_ID`
+- Returns: `{ type, name, credits, cycle, subtotal, gstAmount, total }`
+- GST rate: 18% (CGST 9% + SGST 9%)
 
 ---
 
 ## Architecture Notes
 
-### Plan Slugs (B6 final set)
-free → lite → pro → business → enterprise
-
-### Plan Access Flow
+### New Redis Keys (B7)
 ```
-Tool page load (server component)
-  → auth() → getUserPlanSlug(userId)
-  → isPlanBlocked(planSlug, toolSlug)
-  → YES: render <UpgradePrompt>
-  → NO:  render <ToolComponent>
-
-Tool API call (POST /api/tools/[tool])
-  → auth check
-  → runToolGuard(userId, toolSlug)
-      → connectDB + User.findById (plan)
-      → isPlanBlocked → 403 if blocked
-      → checkAbuseLimit → 429 if over limit
-  → existing credit check (InsufficientCreditsError)
-  → AI call + credit deduction
+sidebar:{userId}                    TTL 2min — sidebar stats (plan + credits)
+credit_alert_sent:{userId}:{YYYY-MM} TTL = seconds until month end
 ```
 
-### Redis Keys (B6 additions)
+### Deleted User Flow
 ```
-abuse:daily:{userId}:{toolSlug}:{YYYY-MM-DD}   TTL = seconds until midnight
-abuse:cooldown:{userId}:{toolSlug}              TTL = 30s
+User clicks "Delete My Account"
+  → types "DELETE" in modal
+  → POST /api/user/delete-account
+      → User.isDeleted=true, deletedAt=now, status='deleted'
+      → Redis invalidated
+      → accountDeletionEmail (fire-and-forget)
+  → signOut() → redirect to /?deleted=true
+  → DeletedAccountToast shows "Account deleted. Sorry to see you go."
+
+Deleted user tries to login:
+  Credentials → authorize() throws error → shown in AuthModal
+  Google → jwt() returns early with isDeleted=true → middleware blocks at next request
+
+Admin restore:
+  POST /api/admin/users/[id]/restore → isDeleted=false, status='active'
 ```
 
-### Pricing Data Flow (unchanged from B4)
+### Email System Architecture
 ```
-Admin edits plan → PATCH /api/admin/plans/[slug]
-                 → DB updated → Redis plans:public invalidated
-
-/pricing page → GET /api/public/plans (plans + yearlySavings)
-              → GET /api/public/credit-packs
-              → GET /api/public/site-config/rollover
-              → PricingPage client component (handles toggle)
+sendEmail() ← never throws, always try-catch
+  ↓
+templates.ts ← { subject, html } per event
+  ↓
+base-template.ts ← consistent branded wrapper
+  ↓
+invoice.ts ← standalone HTML invoice (for attachment trigger in B8)
+  ↓
+invoice-number.ts ← atomic SLX-YYYY-XXXXX via MongoDB $inc
 ```
 
-### Credit Costs (B6 final)
-| Tool | Credits |
-|------|---------|
-| Client-side tools | 0 |
-| hook-writer, caption, title, email-subject, whatsapp-bulk | 1 |
-| jd-generator | 2 |
-| blog, resume, appraisal, policy, ad-copy, linkedin, disclaimer | 3 |
-| yt-script | 4 |
-| seo-auditor, legal-notice | 8 |
-| thumbnail-ai, nda-generator | 10 |
-| website-generator | 25 |
+### Checkout Flow (current state)
+```
+/checkout?type=plan&slug=pro&cycle=monthly
+  → GET /api/checkout/item-details → { name, credits, cycle, gst breakdown }
+  → GET /api/user/billing-profile → pre-fill form
+  → User fills billing form
+  → POST /api/user/billing-profile → save details
+  → "Proceed to Pay" → disabled (TODO B8: trigger Cashfree)
+```
+
+---
+
+## What Was Done (Session B6)
+[See previous HANDOFF for B6 details — Production Pricing + Abuse Protection]
 
 ---
 
