@@ -17,15 +17,8 @@ export async function POST(req: NextRequest) {
 
     const userId = session.user.id;
 
-    // STEP 1 — Auth + plan check
+    // STEP 1 — Auth + plan check (all plans allowed)
     const planSlug = await getUserPlan(userId);
-
-    if (planSlug === "free") {
-      return NextResponse.json(
-        { error: "PDF download requires LITE plan" },
-        { status: 403 }
-      );
-    }
 
     const body = await req.json() as {
       toolSlug: string;
@@ -36,6 +29,7 @@ export async function POST(req: NextRequest) {
     const { toolSlug, toolName, content } = body;
 
     // STEP 2 — Fetch brand assets (PRO+ only)
+    const isProPlus = planSlug !== "free" && planSlug !== "lite";
     let brandAssets: {
       logoUrl: string | null;
       signatureUrl: string | null;
@@ -48,7 +42,7 @@ export async function POST(req: NextRequest) {
       businessEmail?: string;
     } | null = null;
 
-    if (planSlug !== "lite") {
+    if (isProPlus) {
       await connectDB();
       const profile = await BusinessProfile.findOne({ userId }).lean();
       if (profile) {
@@ -77,7 +71,8 @@ export async function POST(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let pdfElement: React.ReactElement<any>;
 
-    if (brandAssets) {
+    if (isProPlus && brandAssets) {
+      // PRO+ → fully branded PDF
       pdfElement = (
         <ProPDFTemplate
           title={toolName}
@@ -95,11 +90,13 @@ export async function POST(req: NextRequest) {
         />
       );
     } else {
+      // FREE → watermarked footer | LITE → clean footer
       pdfElement = (
         <LitePDFTemplate
           title={toolName}
           content={content}
           date={date}
+          showWatermark={planSlug === "free"}
         />
       );
     }

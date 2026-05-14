@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   Loader2, Copy, Download, RefreshCw, Sparkles, Check,
-  ExternalLink, Code2, Eye, AlertCircle, FileDown, Lock,
+  ExternalLink, Code2, Eye, AlertCircle, FileDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
@@ -576,42 +576,30 @@ export function UniversalToolRenderer({ slug }: { slug: string }) {
               <div className="flex items-center gap-2">
                 {/* Download PDF — only for text/json output */}
                 {(config.outputType === "text" || config.outputType === "json") && (
-                  planSlug === "free" ? (
+                  <div className="relative group">
                     <button
-                      disabled
-                      title="Upgrade to LITE to download PDF"
-                      className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground opacity-50 cursor-not-allowed"
+                      onClick={() => setShowPDFPreview(true)}
+                      disabled={downloading}
+                      className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
                     >
-                      <FileDown className="h-3.5 w-3.5" />
-                      PDF
-                      <Lock className="h-3 w-3" />
-                    </button>
-                  ) : (
-                    <div className="relative group">
-                      <button
-                        onClick={() => setShowPDFPreview(true)}
-                        disabled={downloading}
-                        className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
-                      >
-                        {downloading ? (
-                          <><Loader2 className="h-3.5 w-3.5 animate-spin" /> PDF...</>
-                        ) : (
-                          <>
-                            <FileDown className="h-3.5 w-3.5" />
-                            PDF
-                            {planSlug !== "lite" && (
-                              <span className="rounded-full bg-primary/15 px-1.5 text-primary text-[10px]">Branded</span>
-                            )}
-                          </>
-                        )}
-                      </button>
-                      {planSlug !== "lite" && (
-                        <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-10 w-48 rounded-lg border border-border bg-card p-2 text-xs text-muted-foreground shadow-lg">
-                          Downloading with your brand logo &amp; signature
-                        </div>
+                      {downloading ? (
+                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> PDF...</>
+                      ) : (
+                        <>
+                          <FileDown className="h-3.5 w-3.5" />
+                          PDF
+                          {planSlug !== "free" && planSlug !== "lite" && (
+                            <span className="rounded-full bg-primary/15 px-1.5 text-primary text-[10px]">Branded</span>
+                          )}
+                        </>
                       )}
-                    </div>
-                  )
+                    </button>
+                    {planSlug !== "free" && planSlug !== "lite" && (
+                      <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-10 w-48 rounded-lg border border-border bg-card p-2 text-xs text-muted-foreground shadow-lg">
+                        Downloading with your brand logo &amp; signature
+                      </div>
+                    )}
+                  </div>
                 )}
                 <button
                   onClick={handleGenerate}

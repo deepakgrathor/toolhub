@@ -48,7 +48,7 @@ export function PDFPreviewModal({
       });
 
       if (res.status === 403) {
-        toast.error("PDF download requires LITE plan. Upgrade to download.");
+        toast.error("PDF generation failed. Please try again.");
         return;
       }
 

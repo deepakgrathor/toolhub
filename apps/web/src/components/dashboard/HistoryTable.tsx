@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Eye, ExternalLink, History, Copy, X, Clock, TrendingUp, FileDown, Lock, Loader2 } from "lucide-react";
+import { Eye, ExternalLink, History, Copy, X, Clock, TrendingUp, FileDown, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -102,10 +102,6 @@ export function HistoryTable() {
   }, [page]);
 
   async function handlePDFDownload(record: OutputRecord) {
-    if (planSlug === "free") {
-      toast.error("PDF download requires LITE plan. Upgrade to download.");
-      return;
-    }
     setPdfDownloading(true);
     try {
       const toolName = record.toolName ?? TOOL_NAMES[record.toolSlug] ?? record.toolSlug;
@@ -332,29 +328,17 @@ export function HistoryTable() {
               )}
             </div>
             <div className="flex items-center justify-end gap-3 border-t border-border px-5 py-3">
-              {planSlug === "free" ? (
-                <button
-                  disabled
-                  title="Upgrade to LITE to download PDF"
-                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground opacity-50 cursor-not-allowed"
-                >
-                  <FileDown className="h-3.5 w-3.5" />
-                  Download PDF
-                  <Lock className="h-3 w-3" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => handlePDFDownload(dialogRecord)}
-                  disabled={pdfDownloading || !dialogRecord.outputText}
-                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40 transition-colors disabled:opacity-50"
-                >
-                  {pdfDownloading ? (
-                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating...</>
-                  ) : (
-                    <><FileDown className="h-3.5 w-3.5" /> Download PDF</>
-                  )}
-                </button>
-              )}
+              <button
+                onClick={() => handlePDFDownload(dialogRecord)}
+                disabled={pdfDownloading || !dialogRecord.outputText}
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40 transition-colors disabled:opacity-50"
+              >
+                {pdfDownloading ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating...</>
+                ) : (
+                  <><FileDown className="h-3.5 w-3.5" /> Download PDF</>
+                )}
+              </button>
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(dialogRecord.outputText);
