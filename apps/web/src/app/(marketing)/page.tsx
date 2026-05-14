@@ -4,17 +4,21 @@ import Link from "next/link";
 import { HeroCTA, FinalCTA, ToolsShowcaseSection } from "@/components/marketing/HeroCTA";
 import { DeletedAccountToast } from "@/components/marketing/DeletedAccountToast";
 import { PersonaJourney } from "@/components/marketing/PersonaJourney";
+import { TrustedByStrip } from "@/components/marketing/TrustedByStrip";
 import {
   Zap, ArrowRight, Check, X, ChevronDown,
   Sparkles, Building2, Users, Scale, Megaphone,
   Star, Clock, UserCheck, LogIn,
+  TrendingUp, MapPin, Quote, CheckCircle,
+  FileText, Receipt, ChevronRight,
 } from "lucide-react";
 import type { Metadata } from "next";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "SetuLix — India Ka #1 AI Workspace for Every Business",
+  title: "SetuLix — AI Workspace for Indian Professionals",
   description:
-    "27 powerful AI tools for creators, businesses, HR teams, marketers & legal professionals. Save 10+ hours every week. Free to start. Made in India.",
+    "27 AI tools for Indian creators, businesses, HR teams, and legal professionals. Save 10+ hours every week. Free to start — no card needed.",
 };
 
 // ── Static data ───────────────────────────────────────────────────────────────
@@ -25,125 +29,236 @@ const WHO_CARDS = [
     kit: "creator",
     Icon: Sparkles,
     title: "Content Creator",
-    desc: "Scripts, thumbnails, hooks, captions — sab kuch ek jagah",
-    tools: ["Blog Generator", "YT Script", "Hook Writer", "Caption", "Thumbnail AI", "Title Gen"],
+    desc: "Scripts, thumbnails, hooks, and captions — every content format, done in minutes.",
+    outcome: "Save 6+ hours per video",
+    tools: ["YT Script Writer", "Thumbnail AI", "Hook Writer", "Blog Generator", "Title Generator"],
+    color: "violet",
   },
   {
     kit: "sme",
     Icon: Building2,
-    title: "Business Owner (SME)",
-    desc: "GST invoice, quotation, expense tracking — free mein",
-    tools: ["GST Invoice", "Quotation", "Expense Tracker", "QR Generator", "Website Gen", "GST Calc"],
+    title: "Business Owner",
+    desc: "GST invoices, salary slips, quotations, and expense tracking — all free.",
+    outcome: "Cut back-office time by 80%",
+    tools: ["GST Invoice", "Salary Slip", "Quotation", "Expense Tracker", "TDS Sheet"],
+    color: "blue",
   },
   {
     kit: "hr",
     Icon: Users,
     title: "HR Professional",
-    desc: "JD, offer letter, appraisal, policy — minutes mein",
-    tools: ["JD Generator", "Resume Screener", "Appraisal Draft", "Policy Gen", "Offer Letter"],
+    desc: "JDs, offer letters, appraisals, and policies — built for solo and team HR.",
+    outcome: "Hire 3x faster",
+    tools: ["JD Generator", "Resume Screener", "Appraisal Draft", "Policy Generator"],
+    color: "teal",
   },
   {
-    kit: "ca-legal",
+    kit: "legal",
     Icon: Scale,
-    title: "CA / Legal Pro",
-    desc: "Legal notices, NDAs, disclaimers — AI se draft karo",
-    tools: ["Legal Notice", "NDA Generator", "Legal Disclaimer", "TDS Sheet", "WhatsApp Bulk"],
+    title: "CA & Legal Pro",
+    desc: "Legal notices, NDAs, and disclaimers — AI-drafted, court-ready format.",
+    outcome: "Handle 3x more clients",
+    tools: ["Legal Notice", "NDA Generator", "GST Calculator", "Legal Disclaimer"],
+    color: "amber",
   },
   {
     kit: "marketing",
     Icon: Megaphone,
-    title: "Marketer",
-    desc: "Ad copy, LinkedIn bio, email subjects — conversions badhao",
-    tools: ["Ad Copy", "Caption Gen", "Email Subject", "LinkedIn Bio", "Hook Writer", "SEO Auditor"],
+    title: "Marketer & Agency",
+    desc: "Ad copy, SEO audits, LinkedIn bios, and email subjects — campaigns done faster.",
+    outcome: "Deliver more, with same team",
+    tools: ["Ad Copy Writer", "SEO Auditor", "LinkedIn Bio", "Email Subject"],
+    color: "pink",
   },
 ];
 
 const FEATURES = [
   {
-    title: "Personalized Workspace",
-    desc: "Signup karo, profession batao — AI tumhara workspace khud set karta hai. 27 tools, 5 kits, 1 platform.",
-    badge: "Onboarding",
-    visual: "workspace",
+    icon: UserCheck,
+    title: "Your personalized kit",
+    desc: "Tell us your profession. SetuLix sets up a workspace with the tools you actually need — not 27 tabs of confusion.",
+    badge: "Smart onboarding",
   },
   {
-    title: "27 AI Tools",
-    desc: "Ek subscription. 27 tools. Koi alag app nahi. Creator se leke CA tak — sab covered.",
-    badge: "All-in-One",
-    visual: "tools",
+    icon: Zap,
+    title: "AI tools that work for India",
+    desc: "GST invoices, legal notices, Hindi-friendly scripts — built for how Indian professionals actually work.",
+    badge: "Built for India",
   },
   {
-    title: "Credit System",
-    desc: "Sirf use karo jo chahiye. Credits kabhi expire nahi hote. Free tools bhi hain — koi pressure nahi.",
-    badge: "Flexible",
-    visual: "credits",
+    icon: Clock,
+    title: "Pay only for what you use",
+    desc: "No forced subscriptions. Start free. Buy credits when you need more. SME tools are free forever.",
+    badge: "Flexible pricing",
   },
 ];
 
-const COMPARISON = [
-  { feature: "Indian Tools (GST, Legal)",  setulix: true,  chatgpt: false, jasper: false, copyai: false },
-  { feature: "Hindi Support",              setulix: true,  chatgpt: "partial", jasper: false, copyai: false },
-  { feature: "GST Invoice Generator",      setulix: true,  chatgpt: false, jasper: false, copyai: false },
-  { feature: "Credits (no subscription)",  setulix: true,  chatgpt: false, jasper: false, copyai: false },
-  { feature: "Free Tools Available",       setulix: true,  chatgpt: false, jasper: false, copyai: false },
-  { feature: "Made in India",              setulix: true,  chatgpt: false, jasper: false, copyai: false },
-  { feature: "Indian Payments (Razorpay)", setulix: true,  chatgpt: false, jasper: false, copyai: false },
-  { feature: "Personalized AI Kit",        setulix: true,  chatgpt: false, jasper: false, copyai: false },
+const COMPETITORS = ["SetuLix", "ChatGPT", "Canva", "Vyapar", "Jasper"];
+
+const COMPARISON: {
+  feature: string;
+  values: (boolean | "partial")[];
+}[] = [
+  { feature: "GST Invoice & TDS Sheet",
+    values: [true, false, false, true, false] },
+  { feature: "Legal Notice & NDA Generator",
+    values: [true, "partial", false, false, false] },
+  { feature: "YouTube Scripts & Hooks",
+    values: [true, "partial", false, false, true] },
+  { feature: "HR — JD & Resume Screening",
+    values: [true, "partial", false, false, false] },
+  { feature: "Indian payments (UPI/Paygic)",
+    values: [true, false, false, true, false] },
+  { feature: "Free tools — no login needed",
+    values: [true, false, "partial", "partial", false] },
+  { feature: "Pay-per-use credits",
+    values: [true, false, false, false, false] },
+  { feature: "Profession-specific kits",
+    values: [true, false, "partial", false, false] },
+  { feature: "Built specifically for India",
+    values: [true, false, false, true, false] },
 ];
 
 const TESTIMONIALS = [
   {
-    name: "Priya Sharma",
-    role: "Content Creator, Delhi",
-    avatar: "PS",
-    quote: "SetuLix ne mera 3 ghante ka kaam 20 minute mein kar diya. Blog + thumbnail + hook sab ek jagah!",
+    name: "Sneha Patil",
+    role: "HR Manager",
+    city: "Pune",
+    avatar: "SP",
+    color: "teal",
+    stat: "Saved 38 hrs/month",
+    quote: "I was the only HR at a 12-person startup with three open roles. Writing JDs alone took my entire Monday. With SetuLix, I get a complete JD in 6 minutes, my shortlist is ranked before lunch, and my offer letters are error-free every time.",
+    featured: true,
   },
   {
-    name: "Rajesh Kumar",
-    role: "CA, Mumbai",
+    name: "Rahul Khanna",
+    role: "Finance YouTuber · 180K subscribers",
+    city: "Delhi",
     avatar: "RK",
-    quote: "GST invoice aur legal notices ab seconds mein ready. Clients bhi impressed hain. Best investment.",
+    color: "violet",
+    stat: "9 videos/month vs 4",
+    quote: "I was paying ₹4,000 a month just for thumbnails. SetuLix cut that to under ₹200. The YT Script Writer gave me my Monday mornings back. My upload consistency went from broken to 100%.",
+    featured: false,
   },
   {
-    name: "Anjali Verma",
-    role: "HR Manager, Bangalore",
-    avatar: "AV",
-    quote: "JD se offer letter tak — sab AI se. Hiring timeline 60% reduce ho gayi hamare liye.",
+    name: "Adv. Anjali Mehta",
+    role: "Practicing Advocate",
+    city: "Mumbai",
+    avatar: "AM",
+    color: "amber",
+    stat: "22 clients vs 8",
+    quote: "A legal notice used to take me four hours. I was turning away clients not because I lacked skill, but because I had no time. SetuLix drafts in 10 minutes. I review and send.",
+    featured: false,
+  },
+  {
+    name: "Vikram Gupta",
+    role: "Wholesale Business Owner",
+    city: "Surat",
+    avatar: "VG",
+    color: "blue",
+    stat: "Saved ₹3,000/month",
+    quote: "I was paying my accountant ₹3,000 a month just for invoicing. Now I generate error-free GST invoices in 3 minutes, salary slips in 20. No accountant. No Tally. No stress.",
+    featured: false,
+  },
+  {
+    name: "Priya Sharma",
+    role: "Agency Founder · 3-person team",
+    city: "Bangalore",
+    avatar: "PS",
+    color: "pink",
+    stat: "11 clients vs 4",
+    quote: "My team was maxed at 4 clients. Ad copy alone took 3 hours per client. I turned away two new clients in one quarter — not because we didn't want the work, but because there was no capacity. SetuLix changed that.",
+    featured: false,
   },
 ];
 
 const FAQS = [
   {
-    q: "Kya yeh free hai?",
-    a: "Haan! Signup pe free credits milte hain. QR generator, GST calculator jaise tools bilkul free hain. Credit-based tools ke liye sirf use karo.",
+    q: "What is the difference between a plan and credits?",
+    a: "Plans give you a monthly credit allowance — LITE: 200cr, PRO: 700cr, BUSINESS: 1500cr — plus benefits like output history and branded PDF downloads. Credit packs are one-time top-ups with no expiry. You can mix both.",
   },
   {
-    q: "Credits kab expire hote hain?",
-    a: "Kabhi nahi! Purchased credits permanent hain. Sirf signup bonus credits ki expiry hoti hai (30 din).",
+    q: "What can I use for free without paying anything?",
+    a: "All SME tools — GST Invoice, Salary Slip, Expense Tracker, Quotation Generator, TDS Sheet, and QR Generator — are completely free, forever. You also get 10 free credits on signup to try any AI tool.",
   },
   {
-    q: "Konse AI models use hote hain?",
-    a: "GPT-4o, Claude 3.5, Gemini Flash — tool ke hisaab se best model automatically use hota hai. Admin se change bhi ho sakta hai.",
+    q: "Do credits expire?",
+    a: "Purchased credit packs never expire. Monthly plan credits roll over based on your plan — LITE: 1 month, PRO: 2 months, BUSINESS: 3 months. Signup bonus credits are valid for 30 days.",
   },
   {
-    q: "Kya data secure hai?",
-    a: "Bilkul. Aapka data encrypted hai. Tool outputs ek defined time ke baad delete ho jaate hain. No third-party sharing.",
+    q: "Is my data safe? Who can see my outputs?",
+    a: "Your outputs are private to your account. We do not share or sell your data. Output history is retained based on your plan (FREE: not stored, LITE: 30 days, PRO: 90 days, BUSINESS: 1 year) and then permanently deleted.",
   },
   {
-    q: "Hindi mein kaam karta hai?",
-    a: "Haan! Input Hindi ya Hinglish mein de sakte ho. Output language choose kar sakte ho.",
+    q: "Can I cancel my plan anytime?",
+    a: "Yes. Plans are monthly or annual — no lock-in contracts. If you cancel, you keep access until your billing period ends. Credit pack credits are yours to keep regardless.",
   },
   {
-    q: "Subscription cancel kar sakte hain?",
-    a: "SetuLix mein subscription nahi hai! Sirf credits hain — jo use karo woh pay karo. Koi commitment nahi.",
+    q: "Which AI models does SetuLix use?",
+    a: "Each tool uses the model best suited for its task — Claude Sonnet for legal documents and NDAs, GPT-4o for SEO audits, Gemini Flash for captions and hooks, and DALL-E 3 for thumbnails. You always get the best output, not the cheapest model.",
+  },
+  {
+    q: "Do I get a GST invoice for my purchase?",
+    a: "Yes. A proper GST tax invoice (CGST + SGST breakdown) is automatically generated after every payment and emailed to you. Add your GSTIN at checkout for business billing.",
+  },
+  {
+    q: "What happens when I run out of credits mid-month?",
+    a: "Buy a credit pack anytime — no need to upgrade your plan or wait for the month to reset. Credit packs stack on top of your monthly allowance and never expire.",
   },
 ];
 
 const STATS = [
-  { value: "27+",    label: "AI Tools" },
-  { value: "5",      label: "Purpose-built Kits" },
-  { value: "Free",   label: "To Start" },
-  { value: "10hr+",  label: "Saved Per Week" },
+  { value: "27+", label: "AI Tools" },
+  { value: "5",   label: "Profession Kits" },
+  { value: "10s", label: "To first output" },
+  { value: "₹0",  label: "To get started" },
 ];
+
+// ── Kit color map (complete class strings — never interpolate) ─────────────────
+
+const KIT_COLOR_MAP: Record<string, {
+  iconBg   : string
+  iconText : string
+  chipBg   : string
+  chipText : string
+  chipBorder: string
+}> = {
+  violet: {
+    iconBg   : "bg-violet-500/10",
+    iconText : "text-violet-600 dark:text-violet-400",
+    chipBg   : "bg-violet-500/10",
+    chipText : "text-violet-700 dark:text-violet-300",
+    chipBorder: "border-violet-500/20",
+  },
+  blue: {
+    iconBg   : "bg-blue-500/10",
+    iconText : "text-blue-600 dark:text-blue-400",
+    chipBg   : "bg-blue-500/10",
+    chipText : "text-blue-700 dark:text-blue-300",
+    chipBorder: "border-blue-500/20",
+  },
+  teal: {
+    iconBg   : "bg-teal-500/10",
+    iconText : "text-teal-600 dark:text-teal-400",
+    chipBg   : "bg-teal-500/10",
+    chipText : "text-teal-700 dark:text-teal-300",
+    chipBorder: "border-teal-500/20",
+  },
+  amber: {
+    iconBg   : "bg-amber-500/10",
+    iconText : "text-amber-600 dark:text-amber-400",
+    chipBg   : "bg-amber-500/10",
+    chipText : "text-amber-700 dark:text-amber-300",
+    chipBorder: "border-amber-500/20",
+  },
+  pink: {
+    iconBg   : "bg-pink-500/10",
+    iconText : "text-pink-600 dark:text-pink-400",
+    chipBg   : "bg-pink-500/10",
+    chipText : "text-pink-700 dark:text-pink-300",
+    chipBorder: "border-pink-500/20",
+  },
+}
 
 // ── Components ────────────────────────────────────────────────────────────────
 
@@ -173,10 +288,35 @@ function SectionHeading({
   );
 }
 
-function CompareCell({ value }: { value: boolean | string }) {
-  if (value === true)  return <Check className="h-5 w-5 text-green-500 mx-auto" />;
-  if (value === false) return <X className="h-5 w-5 text-muted-foreground/40 mx-auto" />;
-  return <span className="text-yellow-500 text-sm mx-auto block text-center">Partial</span>;
+function CompareCell({
+  value,
+  highlight = false,
+}: {
+  value: boolean | "partial"
+  highlight?: boolean
+}) {
+  if (value === true) {
+    return (
+      <Check
+        className={cn(
+          "h-4 w-4 mx-auto",
+          highlight ? "text-primary" : "text-green-500"
+        )}
+      />
+    )
+  }
+  if (value === false) {
+    return (
+      <X className="h-4 w-4 mx-auto
+        text-muted-foreground/30" />
+    )
+  }
+  return (
+    <span className="text-[11px] font-medium
+      text-amber-600 dark:text-amber-400">
+      Partial
+    </span>
+  )
 }
 
 // ── Accordion FAQ ─────────────────────────────────────────────────────────────
@@ -207,105 +347,288 @@ export default async function MarketingHomePage() {
       <DeletedAccountToast />
 
       {/* ══ SECTION 1 — HERO ══════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden px-4 py-20 md:py-32 text-center">
-        {/* Background grid + glow */}
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(124,58,237,0.12),transparent)]" />
-        <div
-          className="absolute inset-0 -z-10 opacity-20"
+      <section className="relative overflow-hidden
+        px-4 pt-24 pb-20 md:pt-32 md:pb-28">
+
+        {/* Background: radial purple glow */}
+        <div className="absolute inset-0 -z-10"
           style={{
-            backgroundImage:
-              "linear-gradient(rgba(124,58,237,0.15) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,0.15) 1px,transparent 1px)",
-            backgroundSize: "50px 50px",
+            background: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124,58,237,0.15), transparent)"
           }}
         />
 
-        <div className="mx-auto max-w-4xl">
-          <Badge className="mb-6">
-            India Ka #1 AI Workspace
-          </Badge>
+        {/* Subtle grid overlay */}
+        <div
+          className="absolute inset-0 -z-10 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              "linear-gradient(var(--color-border,#e5e7eb) 1px, transparent 1px), linear-gradient(90deg, var(--color-border,#e5e7eb) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }}
+        />
 
-          <h1 className="text-4xl md:text-6xl font-bold text-foreground leading-tight tracking-tight mb-6">
-            Ek AI Workspace.{" "}
-            <span className="text-primary">Sabka Kaam.</span>
-          </h1>
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2
+            gap-12 lg:gap-16 items-center">
 
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-            27 powerful AI tools for creators, businesses, HR teams, marketers &amp; legal professionals.
-            Save 10+ hours every week.
-          </p>
+            {/* Left: text content */}
+            <HeroCTA />
 
-          <HeroCTA />
+            {/* Right: visual mockup */}
+            <div className="rounded-2xl border border-border
+              bg-card shadow-xl p-5 lg:ml-auto w-full
+              max-w-md">
 
-          <p className="text-sm text-muted-foreground">
-            500+ Indian businesses · 27 AI Tools · Made with love in India
-          </p>
+              {/* Header row */}
+              <div className="flex items-center
+                justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full
+                    bg-primary" />
+                  <span className="text-sm font-medium
+                    text-foreground">SetuLix AI</span>
+                </div>
+                <div className="flex items-center gap-1.5
+                  text-xs text-green-600
+                  dark:text-green-400">
+                  <div className="w-1.5 h-1.5 rounded-full
+                    bg-green-500 animate-pulse" />
+                  generating...
+                </div>
+              </div>
+
+              {/* Tool preview cards */}
+              {[
+                {
+                  icon: FileText,
+                  name: "JD Generator",
+                  stat: "6 min vs 3 hrs",
+                },
+                {
+                  icon: Scale,
+                  name: "Legal Notice",
+                  stat: "10 min vs 4 hrs",
+                },
+                {
+                  icon: Receipt,
+                  name: "GST Invoice",
+                  stat: "3 min · Free",
+                },
+              ].map(({ icon: Icon, name, stat }) => (
+                <div
+                  key={name}
+                  className="flex items-center
+                    justify-between bg-muted/50
+                    rounded-lg p-3 mt-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-3.5 w-3.5
+                      text-primary shrink-0" />
+                    <span className="text-xs font-medium
+                      text-foreground">{name}</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5
+                    rounded-full bg-primary/10
+                    text-primary font-medium shrink-0">
+                    {stat}
+                  </span>
+                </div>
+              ))}
+
+              {/* Footer row */}
+              <div className="flex items-center gap-2
+                mt-4 pt-3 border-t border-border">
+                <CheckCircle className="h-3.5 w-3.5
+                  text-green-500 shrink-0" />
+                <p className="text-xs text-muted-foreground">
+                  Credits deducted only after
+                  successful output
+                </p>
+              </div>
+
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ══ SECTION 2 — STATS BAR ════════════════════════════════════════════ */}
-      <section className="border-y border-border bg-card/50">
-        <div className="mx-auto max-w-4xl px-4 py-8 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          {STATS.map(({ value, label }) => (
-            <div key={label} className="flex flex-col items-center gap-1">
-              <div className="text-3xl font-bold text-primary">{value}</div>
-              <div className="text-sm text-muted-foreground">{label}</div>
-            </div>
-          ))}
+      <section className="border-y border-border
+        bg-card/40">
+        <div className="max-w-5xl mx-auto px-4 py-8">
+          <div className="grid grid-cols-2 md:grid-cols-4
+            gap-6 text-center">
+            {STATS.map(({ value, label }) => (
+              <div key={label}
+                className="flex flex-col
+                  items-center gap-1.5">
+                <div className="text-3xl md:text-4xl
+                  font-bold text-primary tabular-nums">
+                  {value}
+                </div>
+                <div className="text-xs font-medium
+                  text-muted-foreground uppercase
+                  tracking-wide">
+                  {label}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
+      {/* ══ TRUSTED BY STRIP ════════════════════════════════════════════════ */}
+      <TrustedByStrip />
+
       {/* ══ SECTION 3 — WHO IS IT FOR ════════════════════════════════════════ */}
       <section className="px-4 py-20 max-w-7xl mx-auto">
-        <SectionHeading
-          badge="5 Kits · 27 Tools"
-          title="Kiske liye hai SetuLix?"
-          subtitle="Creator ho, business owner ho, ya HR manager — SetuLix har professional ke liye banaya gaya hai."
-        />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {WHO_CARDS.map(({ Icon, title, desc, tools, kit }) => (
-            <Link key={kit} href={`/kits/${kit === "ca-legal" ? "legal" : kit}`}>
-              <div className="group rounded-2xl border border-border bg-card p-5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 h-full cursor-pointer">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 mb-4 group-hover:bg-primary/20 transition-colors">
-                  <Icon className="h-5 w-5 text-primary" />
+
+        <div className="text-center mb-10">
+          <span className="inline-block text-[10px]
+            font-bold uppercase tracking-widest
+            text-primary bg-primary/10 rounded-full
+            px-3 py-1 mb-3">
+            5 Profession Kits
+          </span>
+          <h2 className="text-3xl md:text-4xl font-bold
+            text-foreground mb-3">
+            Built for every Indian professional
+          </h2>
+          <p className="text-base text-muted-foreground
+            max-w-xl mx-auto">
+            Pick your kit. Get a workspace with the tools
+            you actually need — not 27 tabs of confusion.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2
+          lg:grid-cols-3 xl:grid-cols-5 gap-4">
+
+          {WHO_CARDS.map(({ kit, Icon, title, desc,
+                            outcome, tools, color }) => {
+            const c = KIT_COLOR_MAP[color]
+            return (
+              <Link
+                key={kit}
+                href={`/kits/${kit}`}
+                className="group rounded-2xl border
+                  border-border bg-card p-5 h-full
+                  hover:border-primary/30
+                  hover:shadow-md hover:shadow-primary/5
+                  transition-all duration-200
+                  flex flex-col gap-4"
+              >
+                {/* Icon */}
+                <div className={`w-10 h-10 rounded-xl
+                  flex items-center justify-center
+                  ${c.iconBg} transition-colors`}>
+                  <Icon className={`h-5 w-5 ${c.iconText}`} />
                 </div>
-                <h3 className="text-sm font-bold text-foreground mb-2">{title}</h3>
-                <p className="text-xs text-muted-foreground mb-3 leading-relaxed">{desc}</p>
-                <ul className="space-y-1">
-                  {tools.slice(0, 4).map((t) => (
-                    <li key={t} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <div className="h-1 w-1 rounded-full bg-primary/50 shrink-0" />
+
+                {/* Text */}
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold
+                    text-foreground mb-1">{title}</h3>
+                  <p className="text-xs
+                    text-muted-foreground
+                    leading-relaxed">{desc}</p>
+                </div>
+
+                {/* Outcome chip */}
+                <div className={`inline-flex items-center
+                  gap-1.5 text-[11px] font-medium
+                  px-2.5 py-1 rounded-full border
+                  self-start ${c.chipBg} ${c.chipText}
+                  ${c.chipBorder}`}>
+                  <TrendingUp className="h-3 w-3" />
+                  {outcome}
+                </div>
+
+                {/* Tool pills — top 3 + overflow count */}
+                <div className="flex flex-wrap
+                  gap-1.5 mt-auto">
+                  {tools.slice(0, 3).map(t => (
+                    <span
+                      key={t}
+                      className="text-[10px] px-2 py-0.5
+                        rounded-full bg-muted
+                        text-muted-foreground"
+                    >
                       {t}
-                    </li>
+                    </span>
                   ))}
-                  {tools.length > 4 && (
-                    <li className="text-xs text-primary font-medium">+{tools.length - 4} more</li>
+                  {tools.length > 3 && (
+                    <span className="text-[10px] px-2 py-0.5
+                      rounded-full bg-muted
+                      text-primary font-medium">
+                      +{tools.length - 3} more
+                    </span>
                   )}
-                </ul>
-              </div>
-            </Link>
-          ))}
+                </div>
+
+              </Link>
+            )
+          })}
+
         </div>
       </section>
 
       {/* ══ SECTION 4 — FEATURES ════════════════════════════════════════════ */}
-      <section id="features" className="px-4 py-20 bg-card/30">
-        <div className="max-w-6xl mx-auto">
-          <SectionHeading
-            badge="Why SetuLix"
-            title="Features jo kaam aate hain"
-            subtitle="Complex features nahi. Sirf woh jo tumhari zindagi asaan kare."
-          />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {FEATURES.map(({ title, desc, badge }) => (
-              <div key={title} className="rounded-2xl border border-border bg-card p-6 hover:border-primary/30 transition-colors">
-                <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 rounded-full px-2.5 py-1 mb-4">
+      <section id="features" className="py-20 bg-muted/30">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+
+          {/* Heading */}
+          <div className="text-center mb-12">
+            <span className="inline-block text-[10px]
+              font-bold uppercase tracking-widest
+              text-primary bg-primary/10 rounded-full
+              px-3 py-1 mb-3">
+              Why SetuLix
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold
+              text-foreground mb-3">
+              One workspace. Everything you need.
+            </h2>
+            <p className="text-base text-muted-foreground
+              max-w-xl mx-auto">
+              Not a generic AI tool. A workspace built
+              around how Indian professionals actually work.
+            </p>
+          </div>
+
+          {/* Cards */}
+          <div className="grid grid-cols-1
+            md:grid-cols-3 gap-6">
+            {FEATURES.map(({ icon: Icon, title,
+                             desc, badge }) => (
+              <div
+                key={title}
+                className="rounded-2xl border border-border
+                  bg-card p-6 flex flex-col gap-4
+                  hover:border-primary/20
+                  transition-colors"
+              >
+                <div className="w-11 h-11 rounded-xl
+                  bg-primary/10 flex items-center
+                  justify-center">
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
+
+                <span className="text-[10px] font-bold
+                  uppercase tracking-widest text-primary
+                  bg-primary/10 rounded-full px-2.5 py-1
+                  self-start">
                   {badge}
                 </span>
-                <h3 className="text-lg font-bold text-foreground mb-2">{title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+
+                <h3 className="text-base font-bold
+                  text-foreground">{title}</h3>
+
+                <p className="text-sm text-muted-foreground
+                  leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
+
         </div>
       </section>
 
@@ -318,8 +641,8 @@ export default async function MarketingHomePage() {
       <section className="px-4 py-20 max-w-7xl mx-auto">
         <SectionHeading
           badge="All Tools"
-          title="27 Tools. 5 Categories. Ek Platform."
-          subtitle="Explore karo saare tools — free se premium tak."
+          title="27 tools. 5 categories. One platform."
+          subtitle="Browse all tools — free and AI-powered."
         />
         <ToolsShowcaseSection />
         <div className="mt-8 text-center">
@@ -337,14 +660,14 @@ export default async function MarketingHomePage() {
         <div className="max-w-4xl mx-auto">
           <SectionHeading
             badge="3 Steps"
-            title="Kaise kaam karta hai?"
-            subtitle="30 seconds se shuru karo. Bilkul free."
+            title="How it works"
+            subtitle="Up and running in under a minute. Free."
           />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
             {[
-              { step: "01", Icon: LogIn,     title: "Sign Up Free",      desc: "30 second signup. Google ya email se. Koi credit card nahi." },
-              { step: "02", Icon: UserCheck,  title: "Set Up Workspace",  desc: "Profession batao. AI tumhara personalized kit ready karta hai." },
-              { step: "03", Icon: Zap,        title: "Start Creating",    desc: "Tool use karo. AI output pao. Credits deduct. Simple hai!" },
+              { step: "01", Icon: LogIn,     title: "Sign Up Free",      desc: "30-second signup. Google or email. No card required." },
+              { step: "02", Icon: UserCheck,  title: "Set Up Workspace",  desc: "Tell us your profession. We set up a personalized workspace for you." },
+              { step: "03", Icon: Zap,        title: "Start Creating",    desc: "Pick a tool. Get your output. Credits deduct only on success." },
             ].map(({ step, Icon, title, desc }) => (
               <div key={step} className="flex flex-col items-center text-center">
                 <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 mb-4">
@@ -364,36 +687,74 @@ export default async function MarketingHomePage() {
       {/* ══ SECTION 7 — COMPARISON TABLE ════════════════════════════════════ */}
       <section className="px-4 py-20 max-w-5xl mx-auto">
         <SectionHeading
-          badge="Comparison"
-          title="Kyun SetuLix?"
-          subtitle="India ke liye bana — Bharat ke liye."
+          badge="How SetuLix compares"
+          title="Built specifically for Indian professionals."
+          subtitle="Most tools are built for a global audience. SetuLix is built for how India works."
         />
         <div className="overflow-x-auto rounded-2xl border border-border">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-card">
-                <th className="text-left px-4 py-3 font-semibold text-foreground">Feature</th>
-                <th className="px-4 py-3 font-bold text-primary">SetuLix</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">ChatGPT</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Jasper</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Copy.ai</th>
+              <tr className="border-b border-border bg-muted/50">
+                <th className="text-left px-4 py-3 text-sm
+                  font-semibold text-foreground w-[35%]">
+                  Feature
+                </th>
+                {COMPETITORS.map((name, i) => (
+                  <th
+                    key={name}
+                    className={cn(
+                      "px-4 py-3 text-sm font-semibold text-center",
+                      i === 0
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {i === 0 ? (
+                      <span className="flex flex-col
+                        items-center gap-1">
+                        {name}
+                        <span className="text-[9px] font-medium
+                          bg-primary/10 text-primary rounded-full
+                          px-2 py-0.5">
+                          ← Us
+                        </span>
+                      </span>
+                    ) : (
+                      name
+                    )}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {COMPARISON.map(({ feature, setulix, chatgpt, jasper, copyai }, i) => (
-                <tr key={feature} className={i % 2 === 0 ? "bg-background" : "bg-card/40"}>
-                  <td className="px-4 py-3 text-foreground">{feature}</td>
-                  <td className="px-4 py-3 text-center"><CompareCell value={setulix} /></td>
-                  <td className="px-4 py-3 text-center"><CompareCell value={chatgpt} /></td>
-                  <td className="px-4 py-3 text-center"><CompareCell value={jasper} /></td>
-                  <td className="px-4 py-3 text-center"><CompareCell value={copyai} /></td>
+              {COMPARISON.map(({ feature, values }, rowIdx) => (
+                <tr
+                  key={feature}
+                  className={rowIdx % 2 === 0
+                    ? "bg-background"
+                    : "bg-muted/20"}
+                >
+                  <td className="px-4 py-3 text-sm
+                    text-foreground">{feature}</td>
+                  {values.map((val, colIdx) => (
+                    <td key={colIdx}
+                      className="px-4 py-3 text-center">
+                      <CompareCell
+                        value={val}
+                        highlight={colIdx === 0}
+                      />
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className="text-center text-sm text-muted-foreground mt-4">
-          Proudly Indian. Built for Bharat.
+        <p className="text-center text-xs
+          text-muted-foreground mt-4 italic">
+          Each tool serves a different purpose.
+          SetuLix is built specifically for
+          Indian professionals.
         </p>
       </section>
 
@@ -402,8 +763,8 @@ export default async function MarketingHomePage() {
         <div className="max-w-4xl mx-auto">
           <SectionHeading
             badge="Pricing"
-            title="Simple. Transparent. Fair."
-            subtitle="No subscriptions. Sirf use karo, credit deduct hoga."
+            title="Simple, transparent pricing."
+            subtitle="Start free. Upgrade when you need more."
           />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
@@ -469,8 +830,8 @@ export default async function MarketingHomePage() {
       <section className="px-4 py-20 max-w-5xl mx-auto">
         <SectionHeading
           badge="Testimonials"
-          title="Real users. Real results."
-          subtitle="Dekho kya kehte hain SetuLix users."
+          title="Real people. Real results."
+          subtitle="What Indian professionals say about SetuLix."
         />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {TESTIMONIALS.map(({ name, role, avatar, quote }) => (
@@ -500,7 +861,7 @@ export default async function MarketingHomePage() {
         <div className="max-w-3xl mx-auto">
           <SectionHeading
             badge="FAQ"
-            title="Aapke sawaalon ke jawab"
+            title="Frequently asked questions"
           />
           <div className="space-y-3">
             {FAQS.map(({ q, a }) => (
@@ -514,10 +875,10 @@ export default async function MarketingHomePage() {
       <section className="px-4 py-24">
         <div className="max-w-3xl mx-auto rounded-3xl bg-gradient-to-br from-primary to-primary/70 p-10 text-center shadow-2xl shadow-primary/20">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
-            Abhi shuru karo — free mein
+            Your AI workspace is ready.
           </h2>
           <p className="text-primary-foreground/80 text-base mb-8">
-            No credit card. No commitment. Sirf signup karo.
+            Start free today. No card. No commitment.
           </p>
           <FinalCTA />
         </div>
@@ -568,10 +929,10 @@ export default async function MarketingHomePage() {
 
           <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              &copy; 2025 SetuLabsAI. All rights reserved.
+              &copy; 2026 SetuLabsAI. All rights reserved.
             </p>
             <p className="text-xs text-muted-foreground text-center">
-              Designed &amp; Developed by SetuLabsAI · Founder &amp; CEO: Deepak Rathor · Made with love in India
+              Designed &amp; built by SetuLabsAI · Founder &amp; CEO: Deepak Rathor · Made in India
             </p>
           </div>
         </div>

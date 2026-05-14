@@ -1,9 +1,60 @@
 # Handoff Note
-Updated: 2026-05-14 | Account: B | Session: B9 | Features: "Real Impact" Personas Section on marketing homepage
+Updated: 2026-05-15 | Account: B | Session: B10-A | Features: Marketing Website Redesign — Foundation + Hero + Stats + TrustedBy + Kit Cards + Features + Comparison
 
 ## Where We Are
-Session B9 done. Persona Journey section built and integrated. **TypeScript: 0 errors (apps/web).**
+Session B10-A done. Marketing homepage fully redesigned. **TypeScript: 0 errors (apps/web).**
 Note: `npx turbo build` fails with pre-existing `Cannot find module for page: /_document` error (not caused by any recent changes).
+
+---
+
+## What Was Done (Session B10-A)
+
+### B10-A — Marketing Website Redesign (Foundation)
+
+#### Modified Files
+- `apps/web/src/app/(marketing)/page.tsx`
+  - **Static data updated**: WHO_CARDS (added `outcome`, `color` fields), FEATURES (added `icon` field), STATS (new values), COMPARISON (new `values[]` array format with 5 competitors), FAQS (8 new English FAQs), TESTIMONIALS (5 detailed personas with `stat`, `color`, `city`, `featured` fields), COMPETITORS array added
+  - **KIT_COLOR_MAP**: 5 color entries (violet/blue/teal/amber/pink) — all complete Tailwind strings, no interpolation
+  - **Hero section**: 2-column layout (HeroCTA left + visual mockup card right), radial glow + grid overlay background
+  - **Stats bar**: redesigned with `tabular-nums`, uppercase tracking labels, `md:text-4xl`
+  - **TrustedByStrip**: placed between stats bar and Kit Cards section
+  - **Kit Cards (WHO IS IT FOR)**: redesigned with `KIT_COLOR_MAP`, outcome chip (TrendingUp), tool pills (top 3 + overflow)
+  - **Features section**: redesigned with icon + badge + card layout, `bg-muted/30` background
+  - **Comparison table**: updated to use `COMPETITORS` array header, `values[]` body, improved `CompareCell` with `highlight` prop, amber "Partial" in dark mode
+  - **English audit**: all Hindi text replaced — `Kaise kaam karta hai?` → `How it works`, `Kyun SetuLix?` → `Built specifically for Indian professionals.`, `Abhi shuru karo — free mein` → `Your AI workspace is ready.`, all step descriptions updated, footer copyright updated to 2026
+  - **Metadata**: title + description updated (English only)
+  - **Imports**: added `TrendingUp, MapPin, Quote, CheckCircle, FileText, Receipt, ChevronRight, cn`
+
+- `apps/web/src/components/marketing/HeroCTA.tsx`
+  - `HeroCTA` redesigned: left-column only, eyebrow badge, H1 "Save 10 hours / this week. / Every week.", subheadline, CTA pair (`<a>` links), social proof strip with avatar initials
+  - `FinalCTA` and `ToolsShowcaseSection` unchanged
+  - Auth logic preserved in `FinalCTA` and `ToolsShowcaseSection`
+
+#### New Files
+- `apps/web/src/components/marketing/TrustedByStrip.tsx` — NEW
+  - Marquee strip with 10 professional avatars (doubled for seamless loop)
+  - Left/right gradient fade using `from-background`
+  - Uses `animate-marquee-setulix` CSS class
+
+- `apps/web/src/app/globals.css` — updated
+  - Added `@keyframes marquee-setulix` + `.animate-marquee-setulix` (30s linear infinite)
+
+#### Rules Verified
+- TypeScript: 0 errors
+- No Hindi text in any UI string
+- No dynamic Tailwind class interpolation (`bg-${color}` pattern — never used)
+- All icons: lucide-react only, no emojis
+- Semantic tokens throughout (bg-background, bg-card, text-foreground, etc.)
+- Dark + light theme: all components use Tailwind dark: variants or semantic tokens
+- Persona Journey (B9) — not touched
+
+---
+
+## Next Session: B10-B
+- Tools showcase section redesign
+- How It Works redesign
+- Testimonials section redesign (new richer card design using TESTIMONIALS data added in B10-A)
+- Final CTA redesign
 
 ---
 

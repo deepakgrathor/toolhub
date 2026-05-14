@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Zap } from "lucide-react";
 import {
-  FileText, Video, Image, Heading, Zap, MessageSquare,
+  FileText, Video, Image, Heading, MessageSquare,
   Receipt, Wallet, ClipboardList, Globe, QrCode,
   MessageCircle, Banknote, FileSearch, Briefcase,
   Mail, TrendingUp, Shield, Calculator, Table2,
@@ -11,25 +11,82 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 
-// ── Hero CTA (hero section) ────────────────────────────────────────────────────
+// ── Hero CTA (left column — text content only) ────────────────────────────────
 
 export function HeroCTA() {
-  const openAuthModal = useAuthStore((s) => s.openAuthModal);
-
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
-      <button
-        onClick={() => openAuthModal("signup")}
-        className="flex items-center gap-2 rounded-xl bg-primary px-8 py-3.5 text-base font-bold text-white hover:opacity-90 transition-opacity shadow-lg shadow-primary/25"
-      >
-        Start Free — No Card Needed <ArrowRight className="h-5 w-5" />
-      </button>
-      <a
-        href="/tools"
-        className="flex items-center gap-2 rounded-xl border border-border px-8 py-3.5 text-base font-semibold text-foreground hover:bg-muted/50 transition-colors"
-      >
-        Explore Tools
-      </a>
+    <div className="flex flex-col gap-6">
+
+      {/* Eyebrow badge */}
+      <div className="inline-flex items-center gap-2
+        self-start px-3 py-1.5 rounded-full border
+        border-primary/30 bg-primary/10 text-primary
+        text-xs font-medium">
+        <Zap className="h-3.5 w-3.5" />
+        Built for India · Trusted by 500+ professionals
+      </div>
+
+      {/* H1 */}
+      <h1 className="text-4xl md:text-6xl font-bold
+        tracking-tight leading-tight text-foreground">
+        Save 10 hours
+        <br />this week.
+        <br />
+        <span className="text-primary">Every week.</span>
+      </h1>
+
+      {/* Subheadline */}
+      <p className="text-lg text-muted-foreground
+        max-w-lg leading-relaxed">
+        27 AI tools built for Indian creators,
+        businesses, HR teams, and legal professionals.
+        One workspace. Start free — no card needed.
+      </p>
+
+      {/* CTA pair */}
+      <div className="flex flex-wrap items-center gap-3">
+        <a
+          href="/?auth=signup"
+          className="inline-flex items-center gap-2
+            px-6 py-3 rounded-xl font-semibold text-sm
+            bg-primary text-primary-foreground
+            hover:opacity-90 transition-opacity"
+        >
+          Start free today
+          <ArrowRight className="h-4 w-4" />
+        </a>
+        <a
+          href="/tools"
+          className="inline-flex items-center gap-2
+            px-6 py-3 rounded-xl font-semibold text-sm
+            border border-border text-foreground
+            hover:bg-muted/50 transition-colors"
+        >
+          Explore tools
+        </a>
+      </div>
+
+      {/* Social proof strip */}
+      <div className="flex items-center gap-3 mt-2">
+        <div className="flex items-center">
+          {["SP", "RK", "AM", "VG", "PS"].map((init) => (
+            <div
+              key={init}
+              className="w-7 h-7 rounded-full
+                bg-primary/10 border-2 border-background
+                flex items-center justify-center
+                text-[10px] font-bold text-primary
+                -ml-2 first:ml-0"
+            >
+              {init}
+            </div>
+          ))}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Joined by 500+ Indian professionals
+        </p>
+      </div>
+
     </div>
   );
 }

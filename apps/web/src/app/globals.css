@@ -174,3 +174,12 @@ a:focus-visible {
   border-radius: 4px;
 }
 
+/* Marquee animation for TrustedByStrip */
+@keyframes marquee-setulix {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee-setulix {
+  animation: marquee-setulix 30s linear infinite;
+}
+
