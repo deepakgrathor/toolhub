@@ -1,8 +1,46 @@
 # Handoff Note
-Updated: 2026-05-14 | Account: B | Session: B8-C-1 | Features: Brand Assets + PDF Generation
+Updated: 2026-05-14 | Account: B | Session: B8-C-2-A | Features: Saved Presets — Model + APIs + Store + Hook
 
 ## Where We Are
-Session B8-C-1 done. **TypeScript: 0 errors. Build: passing.** Committed to main.
+Session B8-C-2-A done. **TypeScript: 0 errors (apps/web). Build: passing.** Committed to main.
+
+---
+
+## What Was Done (Session B8-C-2-A)
+
+### TASK 1 — Preset Model
+- `packages/db/src/models/Preset.ts` — NEW
+  - Fields: userId (ObjectId ref User), toolSlug, name (max 50), inputs (Mixed), isDefault (default false), timestamps
+  - Compound index: `{ userId: 1, toolSlug: 1 }` for fast per-tool lookup
+- `packages/db/src/index.ts`: added `export * from "./models/Preset"`
+
+### TASK 2 — Preset List + Create API
+- `apps/web/src/app/api/tools/presets/route.ts` — NEW
+  - GET: auth required, plan check (403 for free/lite), toolSlug required, returns presets sorted by createdAt desc
+  - POST: auth required, plan check (403 for free/lite), validates body, PRO limit = 5 per tool (400 if exceeded), BUSINESS/ENTERPRISE unlimited
+  - Creates preset with isDefault: false
+
+### TASK 3 — Preset Update + Delete API
+- `apps/web/src/app/api/tools/presets/[id]/route.ts` — NEW
+  - PATCH: auth + ownership check (404 if not found/not own), handles isDefault (clears others via updateMany before setting), updates name/inputs with validation
+  - DELETE: auth + ownership check, findByIdAndDelete
+
+### TASK 4 — Preset Zustand Store
+- `apps/web/src/store/preset-store.ts` — NEW
+  - State: `presets: Record<toolSlug, Preset[]>`, `fetchedTools: string[]`, `loading: Record<toolSlug, boolean>`
+  - Actions: setPresets, addPreset, updatePreset, removePreset, clearDefaultsForTool, getPresets, getDefaultPreset, isFetched, setLoading, markFetched
+  - isFetched prevents duplicate API calls per tool
+
+### TASK 5 — usePresets Hook
+- `apps/web/src/hooks/usePresets.ts` — NEW
+  - fetchPresets: skips if already fetched, handles 403 (not PRO) gracefully
+  - savePreset: POST → store.addPreset on success
+  - deletePreset: DELETE → store.removePreset on success
+  - setDefaultPreset: PATCH → clearDefaultsForTool + updatePreset on success
+  - updatePresetName: PATCH name only → store.updatePreset on success
+  - Returns: presets, defaultPreset, loading, isFetched + all action functions
+
+---
 
 ---
 

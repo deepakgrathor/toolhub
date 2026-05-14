@@ -21,3 +21,4 @@ export * from "./models/UserSubscription";
 export * from "./models/BillingProfile";
 export * from "./models/Payment";
 export * from "./models/Kit";
+export * from "./models/Preset";
