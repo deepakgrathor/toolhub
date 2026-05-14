@@ -106,6 +106,7 @@ export default function CheckoutPage() {
   // Paygic modal state
   const [paygicModalOpen, setPaygicModalOpen] = useState(false);
   const [paygicOrderData, setPaygicOrderData] = useState<PaygicOrderData | null>(null);
+  const [successRedirecting, setSuccessRedirecting] = useState(false);
 
   // Individual fields
   const [fullName, setFullName] = useState("");
@@ -140,9 +141,17 @@ export default function CheckoutPage() {
     });
   }, [activeGateway]);
 
+  // Redirect if pack checkout is missing id
+  useEffect(() => {
+    if (type === "pack" && !id) {
+      router.replace("/pricing#credit-packs");
+    }
+  }, [type, id, router]);
+
   // Load item details
   useEffect(() => {
     if (!type) return;
+    if (type === "pack" && !id) return;
     const params = new URLSearchParams({ type });
     if (slug) params.set("slug", slug);
     if (id) params.set("id", id);
@@ -234,14 +243,23 @@ export default function CheckoutPage() {
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to create order");
+        let errMsg = "Failed to create order. Please try again.";
+        try {
+          const errData = await res.json();
+          if (errData?.error) errMsg = errData.error;
+        } catch { /* response was not JSON */ }
+        throw new Error(errMsg);
       }
 
-      const orderData = await res.json();
+      let orderData: Record<string, unknown>;
+      try {
+        orderData = await res.json();
+      } catch {
+        throw new Error("Unexpected response from server. Please try again.");
+      }
 
       if (orderData.gatewaySlug === "paygic") {
-        setPaygicOrderData(orderData as PaygicOrderData);
+        setPaygicOrderData(orderData as unknown as PaygicOrderData);
         setPaygicModalOpen(true);
         setLoading(false);
         return;
@@ -535,6 +553,14 @@ export default function CheckoutPage() {
 
       </div>
 
+      {/* Full-page success loader — shown while navigating to /payment/return */}
+      {successRedirecting && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background/95 backdrop-blur-sm">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-sm font-medium text-muted-foreground">Processing your payment...</p>
+        </div>
+      )}
+
       {/* Paygic checkout modal */}
       {paygicOrderData && (
         <PaygicCheckoutModal
@@ -553,6 +579,7 @@ export default function CheckoutPage() {
           expiresIn={paygicOrderData.expiresIn || 300}
           onSuccess={() => {
             setPaygicModalOpen(false);
+            setSuccessRedirecting(true);
             router.push(`/payment/return?order_id=${paygicOrderData.orderId}`);
           }}
           onFailure={() => {

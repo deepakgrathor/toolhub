@@ -12,10 +12,9 @@ const CACHE_TTL = 300;
 export async function getActiveGateway(): Promise<IGateway> {
   const redis = getRedis();
 
-  const cached = await redis.get<string>(CACHE_KEY);
-  if (cached) {
-    const { slug, config } = JSON.parse(cached) as { slug: string; config: GatewayConfig };
-    return buildGateway(slug, config);
+  const cached = await redis.get<{ slug: string; config: GatewayConfig }>(CACHE_KEY);
+  if (cached && cached.slug) {
+    return buildGateway(cached.slug, cached.config);
   }
 
   await connectDB();
@@ -38,7 +37,7 @@ export async function getActiveGateway(): Promise<IGateway> {
     extraConfig: (gateway.config.extraConfig as Record<string, unknown>) || {},
   };
 
-  await redis.set(CACHE_KEY, JSON.stringify({ slug: gateway.slug, config }), { ex: CACHE_TTL });
+  await redis.set(CACHE_KEY, { slug: gateway.slug, config }, { ex: CACHE_TTL });
 
   return buildGateway(gateway.slug, config);
 }

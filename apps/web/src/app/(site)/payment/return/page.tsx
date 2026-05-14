@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react'
+import { useCreditStore } from '@/store/credits-store'
 
 type PaymentStatus = 'loading' | 'paid' | 'pending' | 'failed' | 'not_found'
 
@@ -19,15 +20,19 @@ interface VerifyResponse {
   credits?: number
 }
 
+const AUTO_REDIRECT_SECONDS = 4
+
 export default function PaymentReturnPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const orderId = searchParams.get('order_id')
+  const syncCredits = useCreditStore((s) => s.syncFromServer)
 
   const [status, setStatus] = useState<PaymentStatus>('loading')
   const [paymentType, setPaymentType] = useState<'credit_pack' | 'plan' | null>(null)
   const [credits, setCredits] = useState<number>(0)
   const [retryCount, setRetryCount] = useState(0)
+  const [countdown, setCountdown] = useState(AUTO_REDIRECT_SECONDS)
   const MAX_RETRIES = 5
 
   const verifyPayment = useCallback(async () => {
@@ -73,6 +78,28 @@ export default function PaymentReturnPage() {
     return () => clearTimeout(timer)
   }, [status, retryCount, verifyPayment])
 
+  // On success: sync credits + auto-redirect countdown
+  useEffect(() => {
+    if (status !== 'paid') return
+
+    // Refresh credit balance in navbar immediately
+    syncCredits()
+
+    // Countdown → redirect to dashboard
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          router.push('/dashboard')
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [status, syncCredits, router])
+
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -92,22 +119,26 @@ export default function PaymentReturnPage() {
           <h1 className="text-2xl font-bold text-foreground mb-2">Payment Successful!</h1>
 
           {paymentType === 'credit_pack' ? (
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-1">
               <span className="font-semibold text-foreground">{credits} credits</span> have been added to your account.
             </p>
           ) : (
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-1">
               Your plan has been activated successfully.
             </p>
           )}
 
+          <p className="text-xs text-muted-foreground mb-6">
+            Redirecting to dashboard in {countdown}s...
+          </p>
+
           <div className="flex flex-col gap-3">
-            <Link
-              href="/dashboard"
+            <button
+              onClick={() => router.push('/dashboard')}
               className="w-full inline-flex items-center justify-center rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-medium px-4 py-2.5 transition-colors"
             >
               Go to Dashboard
-            </Link>
+            </button>
             <Link
               href="/credits"
               className="w-full inline-flex items-center justify-center rounded-lg border border-border text-foreground hover:bg-accent font-medium px-4 py-2.5 transition-colors"

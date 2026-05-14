@@ -1,9 +1,26 @@
 # Handoff Note
-Updated: 2026-05-14 | Account: B | Session: B8-D | Features: Multi-Payment Gateway System — Paygic (priority) + Cashfree
+Updated: 2026-05-14 | Account: B | Session: B8-D-2 | Features: Checkout bugfixes — Credits page Buy Credits link, checkout guard
 
 ## Where We Are
-Session B8-D done. **TypeScript: 0 errors (apps/web).** Committed + pushed to main.
+Session B8-D-2 done. Checkout flow bugs fixed. **TypeScript: 0 errors (apps/web).**
 Note: `npx turbo build` fails with pre-existing `Cannot find module for page: /_document` error (not caused by any recent changes).
+
+---
+
+## What Was Done (Session B8-D-2)
+
+### BUG FIX — Credits page "Buy Credits" link missing pack ID
+- `apps/web/src/app/(site)/credits/page.tsx`
+  - Changed: `href="/checkout?type=pack"` → `href="/pricing#credit-packs"`
+  - User is now taken to the pricing page to select a pack first, then Buy Now navigates with correct `id`
+- `apps/web/src/components/pricing/PricingPage.tsx`
+  - Added `id="credit-packs"` to the credit packs section div (enables `#credit-packs` hash anchor)
+
+### BUG FIX — Checkout page blank/broken when accessed without pack id
+- `apps/web/src/app/(site)/checkout/page.tsx`
+  - Added redirect guard: if `type === "pack"` and `id` is missing, immediately `router.replace("/pricing#credit-packs")`
+  - Added guard in item-details fetch: skips fetch if `type === "pack" && !id` (prevents 400 error toast)
+  - Ensures the order summary never shows empty/broken state
 
 ---
 

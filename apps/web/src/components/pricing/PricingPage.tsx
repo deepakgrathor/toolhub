@@ -412,7 +412,7 @@ export function PricingPage({ plans, packs, rollover }: Props) {
 
       {/* Credit packs section */}
       {packs.length > 0 && (
-        <div className="mb-16">
+        <div id="credit-packs" className="mb-16">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-foreground mb-2">
               Need more credits? Buy a pack.

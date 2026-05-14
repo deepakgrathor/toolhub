@@ -1,20 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import QRCode from "qrcode";
 import { CheckCircle, XCircle, Clock, Loader2, Smartphone, X, Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function isMobileDevice() {
   if (typeof navigator === "undefined") return false;
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
-
-function getQRSrc(dynamicQR: string, upiIntent: string): string {
-  if (dynamicQR) return dynamicQR;
-  if (upiIntent) {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiIntent)}`;
-  }
-  return "";
 }
 
 interface PaygicCheckoutModalProps {
@@ -55,6 +48,7 @@ export function PaygicCheckoutModal({
   const [pollStatus, setPollStatus] = useState<PollStatus>("idle");
   const [activeTab, setActiveTab] = useState<"qr" | "apps">("qr");
   const [copied, setCopied] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const isMobile = isMobileDevice();
   const pollIntervalRef = useRef<ReturnType<typeof setInterval>>();
   const countdownRef = useRef<ReturnType<typeof setInterval>>();
@@ -79,6 +73,15 @@ export function PaygicCheckoutModal({
       // silent — keep polling
     }
   }
+
+  // Generate QR code from upiIntent (or dynamicQR as text)
+  useEffect(() => {
+    const qrText = upiIntent || dynamicQR;
+    if (!isOpen || !qrText) return;
+    QRCode.toDataURL(qrText, { width: 200, margin: 1 })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(""));
+  }, [isOpen, upiIntent, dynamicQR]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -212,20 +215,21 @@ export function PaygicCheckoutModal({
             {/* QR tab */}
             {activeTab === "qr" && (
               <div className="flex flex-col items-center gap-3">
-                {(() => {
-                  const qrSrc = getQRSrc(dynamicQR, upiIntent);
-                  return qrSrc ? (
-                    <img
-                      src={qrSrc}
-                      alt="Payment QR Code"
-                      className="w-48 h-48 rounded-xl border border-border object-contain bg-white p-1"
-                    />
-                  ) : (
-                    <div className="w-48 h-48 rounded-xl border border-border bg-muted/30 flex items-center justify-center">
+                {qrDataUrl ? (
+                  <img
+                    src={qrDataUrl}
+                    alt="UPI Payment QR"
+                    className="w-48 h-48 rounded-xl border border-border object-contain bg-white p-1"
+                  />
+                ) : (
+                  <div className="w-48 h-48 rounded-xl border border-border bg-muted/30 flex items-center justify-center">
+                    {upiIntent || dynamicQR ? (
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    ) : (
                       <p className="text-xs text-muted-foreground text-center px-4">QR not available</p>
-                    </div>
-                  );
-                })()}
+                    )}
+                  </div>
+                )}
                 <p className="text-sm text-muted-foreground">Scan with any UPI app</p>
                 <p className="text-xs text-muted-foreground/60">PhonePe • GPay • Paytm • BHIM</p>
                 {/* Copy UPI ID fallback for desktop */}

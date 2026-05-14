@@ -129,7 +129,7 @@ export default function CreditsPage() {
         <h1 className="text-2xl font-bold text-foreground">Credits</h1>
         <div className="flex gap-2">
           <Link
-            href="/checkout?type=pack"
+            href="/pricing#credit-packs"
             className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
           >
             <ShoppingBag className="h-4 w-4" /> Buy Credits
