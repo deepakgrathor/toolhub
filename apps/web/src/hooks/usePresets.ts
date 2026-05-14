@@ -2,42 +2,54 @@
 
 import { useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { usePresetStore } from "@/store/preset-store";
+import { usePresetStore, type Preset } from "@/store/preset-store";
 
 export function usePresets(toolSlug: string) {
   const { data: session } = useSession();
-  const store = usePresetStore();
+
+  // Granular selectors — only re-render when these specific slices change
+  const presets      = usePresetStore(s => s.presets[toolSlug] ?? []);
+  const loading      = usePresetStore(s => s.loading[toolSlug] ?? false);
+  const isFetched    = usePresetStore(s => s.fetchedTools.includes(toolSlug));
+  const defaultPreset = usePresetStore(
+    s => (s.presets[toolSlug] ?? []).find(p => p.isDefault) ?? null
+  );
+
+  // ------------------------------------------------------------------
+  // All mutating callbacks read/write store via getState() so they
+  // never end up in useCallback deps — eliminating the infinite loop
+  // caused by store object reference changing on every state update.
+  // ------------------------------------------------------------------
 
   const fetchPresets = useCallback(async () => {
     if (!session?.user) return;
-    if (store.isFetched(toolSlug)) return;
+    const { isFetched: checkFetched, setLoading, setPresets, markFetched } =
+      usePresetStore.getState();
+    if (checkFetched(toolSlug)) return;
 
-    store.setLoading(toolSlug, true);
-
+    setLoading(toolSlug, true);
     try {
       const res = await fetch(
         `/api/tools/presets?toolSlug=${encodeURIComponent(toolSlug)}`
       );
-
       if (res.status === 403) {
-        store.setPresets(toolSlug, []);
-        store.markFetched(toolSlug);
+        // Free/Lite user — not an error, just no presets available
+        setPresets(toolSlug, []);
+        markFetched(toolSlug);
         return;
       }
-
       if (!res.ok) throw new Error("Failed to fetch presets");
-
-      const { presets } = await res.json() as { presets: Parameters<typeof store.setPresets>[1] };
-      store.setPresets(toolSlug, presets);
-      store.markFetched(toolSlug);
+      const data = await res.json() as { presets: Preset[] };
+      setPresets(toolSlug, data.presets);
+      markFetched(toolSlug);
     } catch (err) {
       console.error("[usePresets] fetchPresets error:", err);
-      store.setPresets(toolSlug, []);
-      store.markFetched(toolSlug);
+      setPresets(toolSlug, []);
+      markFetched(toolSlug);
     } finally {
-      store.setLoading(toolSlug, false);
+      usePresetStore.getState().setLoading(toolSlug, false);
     }
-  }, [toolSlug, session, store]);
+  }, [toolSlug, session]);
 
   const savePreset = useCallback(async (
     name: string,
@@ -49,37 +61,36 @@ export function usePresets(toolSlug: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ toolSlug, name, inputs }),
       });
-
-      const data = await res.json() as { preset?: Parameters<typeof store.addPreset>[0]; message?: string; error?: string };
-
+      const data = await res.json() as {
+        preset?: Preset;
+        message?: string;
+        error?: string;
+      };
       if (!res.ok) {
-        return { success: false, error: data.message || data.error || "Failed to save preset" };
+        return { success: false, error: data.message ?? data.error ?? "Failed to save preset" };
       }
-
-      if (data.preset) store.addPreset(data.preset);
+      if (data.preset) usePresetStore.getState().addPreset(data.preset);
       return { success: true };
     } catch {
       return { success: false, error: "Failed to save preset" };
     }
-  }, [toolSlug, store]);
+  }, [toolSlug]);
 
   const deletePreset = useCallback(async (
     presetId: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch(`/api/tools/presets/${presetId}`, { method: "DELETE" });
-
       if (res.ok) {
-        store.removePreset(presetId, toolSlug);
+        usePresetStore.getState().removePreset(presetId, toolSlug);
         return { success: true };
       }
-
       const data = await res.json() as { error?: string };
       return { success: false, error: data.error };
     } catch {
       return { success: false, error: "Failed to delete preset" };
     }
-  }, [toolSlug, store]);
+  }, [toolSlug]);
 
   const setDefaultPreset = useCallback(async (
     presetId: string,
@@ -91,19 +102,18 @@ export function usePresets(toolSlug: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isDefault }),
       });
-
       if (res.ok) {
-        if (isDefault) store.clearDefaultsForTool(toolSlug);
-        store.updatePreset(presetId, { isDefault });
+        const state = usePresetStore.getState();
+        if (isDefault) state.clearDefaultsForTool(toolSlug);
+        state.updatePreset(presetId, { isDefault });
         return { success: true };
       }
-
       const data = await res.json() as { error?: string };
       return { success: false, error: data.error };
     } catch {
       return { success: false, error: "Failed to update preset" };
     }
-  }, [toolSlug, store]);
+  }, [toolSlug]);
 
   const updatePresetName = useCallback(async (
     presetId: string,
@@ -115,24 +125,22 @@ export function usePresets(toolSlug: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
-
       if (res.ok) {
-        store.updatePreset(presetId, { name });
+        usePresetStore.getState().updatePreset(presetId, { name });
         return { success: true };
       }
-
       const data = await res.json() as { error?: string };
       return { success: false, error: data.error };
     } catch {
-      return { success: false, error: "Failed to update preset" };
+      return { success: false, error: "Failed to update preset name" };
     }
-  }, [toolSlug, store]);
+  }, []);
 
   return {
-    presets:          store.getPresets(toolSlug),
-    defaultPreset:    store.getDefaultPreset(toolSlug),
-    loading:          store.loading[toolSlug] || false,
-    isFetched:        store.isFetched(toolSlug),
+    presets,
+    defaultPreset,
+    loading,
+    isFetched,
     fetchPresets,
     savePreset,
     deletePreset,
