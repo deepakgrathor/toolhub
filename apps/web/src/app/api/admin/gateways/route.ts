@@ -4,6 +4,57 @@ import { requireAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
+const DEFAULT_GATEWAYS = [
+  {
+    slug: "paygic",
+    name: "Paygic",
+    isActive: true,
+    isDefault: true,
+    priority: 1,
+    environment: "production",
+    config: { apiKey: "", secretKey: "", merchantId: "", webhookSecret: "", token: "", tokenGeneratedAt: null, extraConfig: {} },
+    supports: { upi: true, cards: false, netbanking: false, wallets: false, qr: true },
+    description: "UPI-only gateway. Supports PhonePe, GPay, Paytm, QR.",
+    logoUrl: "",
+  },
+  {
+    slug: "cashfree",
+    name: "Cashfree",
+    isActive: true,
+    isDefault: false,
+    priority: 2,
+    environment: "sandbox",
+    config: { apiKey: "", secretKey: "", merchantId: "", webhookSecret: "", token: "", tokenGeneratedAt: null, extraConfig: {} },
+    supports: { upi: true, cards: true, netbanking: true, wallets: true, qr: false },
+    description: "Full-featured payment gateway. Supports cards, UPI, netbanking.",
+    logoUrl: "",
+  },
+  {
+    slug: "razorpay",
+    name: "Razorpay",
+    isActive: false,
+    isDefault: false,
+    priority: 3,
+    environment: "sandbox",
+    config: { apiKey: "", secretKey: "", merchantId: "", webhookSecret: "", token: "", tokenGeneratedAt: null, extraConfig: {} },
+    supports: { upi: true, cards: true, netbanking: true, wallets: true, qr: false },
+    description: "Coming soon.",
+    logoUrl: "",
+  },
+  {
+    slug: "payu",
+    name: "PayU",
+    isActive: false,
+    isDefault: false,
+    priority: 4,
+    environment: "sandbox",
+    config: { apiKey: "", secretKey: "", merchantId: "", webhookSecret: "", token: "", tokenGeneratedAt: null, extraConfig: {} },
+    supports: { upi: true, cards: true, netbanking: true, wallets: false, qr: false },
+    description: "Coming soon.",
+    logoUrl: "",
+  },
+];
+
 function maskSecret(value: string): string {
   if (!value) return "";
   if (value.length <= 4) return "••••";
@@ -16,6 +67,18 @@ export async function GET(req: NextRequest) {
 
   try {
     await connectDB();
+
+    // Auto-seed if collection is empty
+    const count = await PaymentGateway.countDocuments({});
+    if (count === 0) {
+      for (const gw of DEFAULT_GATEWAYS) {
+        await PaymentGateway.findOneAndUpdate(
+          { slug: gw.slug },
+          { $setOnInsert: gw },
+          { upsert: true, new: true }
+        );
+      }
+    }
 
     const gateways = await PaymentGateway.find().sort({ priority: 1 }).lean();
 
