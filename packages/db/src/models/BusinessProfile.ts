@@ -13,6 +13,11 @@ export interface IBusinessProfile extends Document {
   businessAddress?: string | null;
   logo?: string | null;
   phone?: string | null;
+  logoUrl?: string | null;
+  signatureUrl?: string | null;
+  letterheadColor?: string;
+  signatoryName?: string;
+  signatoryDesignation?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,6 +39,11 @@ const BusinessProfileSchema = new Schema<IBusinessProfile>(
     businessAddress: { type: String, default: null },
     logo: { type: String, default: null },
     phone: { type: String, default: null },
+    logoUrl: { type: String, default: null },
+    signatureUrl: { type: String, default: null },
+    letterheadColor: { type: String, default: '#7c3aed' },
+    signatoryName: { type: String, default: '' },
+    signatoryDesignation: { type: String, default: '' },
   },
   { timestamps: true }
 );

@@ -1,8 +1,78 @@
 # Handoff Note
-Updated: 2026-05-14 | Account: B | Session: B8-B | Features: Dynamic Kit/Tool System
+Updated: 2026-05-14 | Account: B | Session: B8-C-1 | Features: Brand Assets + PDF Generation
 
 ## Where We Are
-Session B8-B done. **TypeScript: 0 errors. Build: passing.** Committed to main.
+Session B8-C-1 done. **TypeScript: 0 errors. Build: passing.** Committed to main.
+
+---
+
+## What Was Done (Session B8-C-1)
+
+### TASK 1 — PDF Library
+- `apps/web/package.json`: added `@react-pdf/renderer@^4.5.1`
+
+### TASK 2 — BusinessProfile Model Extended
+- `packages/db/src/models/BusinessProfile.ts` — UPDATED
+  - Added interface fields: `logoUrl`, `signatureUrl`, `letterheadColor`, `signatoryName`, `signatoryDesignation`
+  - Added schema fields with defaults: `logoUrl: null`, `signatureUrl: null`, `letterheadColor: '#7c3aed'`, `signatoryName: ''`, `signatoryDesignation: ''`
+
+### TASK 3 — Brand Assets APIs
+- `apps/web/src/app/api/profile/brand-assets/route.ts` — NEW
+  - GET: returns `{ logoUrl, signatureUrl, letterheadColor, signatoryName, signatoryDesignation }`
+  - PATCH: updates text fields, invalidates `autofill:{userId}` Redis key
+- `apps/web/src/app/api/profile/brand-assets/logo/route.ts` — NEW
+  - POST: plan check (403 for free/lite), validates PNG/JPG ≤2MB, uploads to R2 `brand/{userId}/logo.{ext}`, saves `logoUrl`
+  - DELETE: removes from R2 + clears `logoUrl`
+- `apps/web/src/app/api/profile/brand-assets/signature/route.ts` — NEW
+  - POST: plan check (403 for free/lite), validates PNG only ≤1MB, uploads to R2 `brand/{userId}/signature.png`, saves `signatureUrl`
+  - DELETE: removes from R2 + clears `signatureUrl`
+
+### TASK 4 — Brand Assets UI (Profile Page)
+- `apps/web/src/app/(site)/profile/page.tsx` — UPDATED
+  - Added `BrandAssets` interface
+  - Fetches plan (`/api/user/plan`) and brand assets on mount in parallel with profile
+  - Added Brand Assets section after business fields in Business tab
+  - FREE/LITE: locked state with Lock icon + "Upgrade to PRO" button
+  - PRO+: Logo upload (dashed area with preview), Signature upload (checkerboard preview), Color picker + hex input (debounced 500ms auto-save), Signatory name + designation inputs + Save button
+
+### TASK 5 — PDF Templates
+- `apps/web/src/lib/pdf/templates.tsx` — NEW (server-side only, no 'use client')
+  - `LitePDFTemplate`: purple header "SetuLix", tool name, content (line-by-line), footer with page number
+  - `ProPDFTemplate`: branded header (logo or biz name), biz address/phone/email, title + divider, content, signature section, branded footer
+  - `LitePDFProps` and `ProPDFProps` TypeScript interfaces exported
+
+### TASK 6 — PDF Generation API
+- `apps/web/src/app/api/tools/download-pdf/route.tsx` — NEW
+  - POST, auth required
+  - FREE → 403 "PDF download requires LITE plan"
+  - LITE → `LitePDFTemplate` (SetuLix branded)
+  - PRO+ → fetches BusinessProfile + User email → `ProPDFTemplate` (business branded)
+  - Returns PDF as `application/pdf` with Content-Disposition download header
+
+### TASK 7 — Download PDF Button (UniversalToolRenderer)
+- `apps/web/src/components/tools/UniversalToolRenderer.tsx` — UPDATED
+  - Fetches plan on mount via `/api/user/plan`
+  - PRO+: also fetches brand assets from `/api/profile/brand-assets`
+  - Download PDF button in output header (text/json output only):
+    - FREE: disabled with Lock icon
+    - LITE: enabled, opens PDF preview modal
+    - PRO+: enabled, shows "Branded" badge + tooltip
+
+### TASK 8 — PDF Preview Modal
+- `apps/web/src/components/ui/PDFPreviewModal.tsx` — NEW
+  - Shows A4-like styled preview of PDF before download
+  - LITE: purple SetuLix header
+  - PRO+: branded header with logo/color, signature preview, signatory details
+  - "Download PDF" button → actual PDF download via API → closes modal
+
+### TASK 9 — History Modal PDF Download
+- `apps/web/src/components/dashboard/HistoryTable.tsx` — UPDATED
+  - Fetches plan on mount
+  - History output modal footer: PDF button alongside Copy
+  - FREE: disabled with Lock icon
+  - LITE+: enabled → downloads PDF from history record
+
+---
 
 ---
 

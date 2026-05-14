@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   User, Building2, Camera, Lock, Loader2, Check,
   Globe, Phone, MapPin, Briefcase, FileText, AlertTriangle,
+  Palette, ImagePlus, PenLine, TrendingUp, X,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { toast } from "sonner";
@@ -54,6 +55,14 @@ interface ProfileData {
     teamSize?: string; phone?: string; businessAddress?: string; logo?: string;
   } | null;
   score: number;
+}
+
+interface BrandAssets {
+  logoUrl: string | null;
+  signatureUrl: string | null;
+  letterheadColor: string;
+  signatoryName: string;
+  signatoryDesignation: string;
 }
 
 // ── Avatar uploader ───────────────────────────────────────────────────────────
@@ -226,15 +235,34 @@ export default function ProfilePage() {
   const [bizAddress, setBizAddress] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
 
+  // Brand assets
+  const [planSlug, setPlanSlug] = useState<string>("free");
+  const [brandAssets, setBrandAssets] = useState<BrandAssets>({
+    logoUrl: null,
+    signatureUrl: null,
+    letterheadColor: "#7c3aed",
+    signatoryName: "",
+    signatoryDesignation: "",
+  });
+  const [brandLogoUploading, setBrandLogoUploading] = useState(false);
+  const [brandSigUploading, setBrandSigUploading] = useState(false);
+  const [brandSaving, setBrandSaving] = useState(false);
+  const brandLogoRef = useRef<HTMLInputElement>(null);
+  const brandSigRef = useRef<HTMLInputElement>(null);
+  const colorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (status === "unauthenticated") router.replace("/");
   }, [status, router]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    fetch("/api/profile")
-      .then((r) => r.json())
-      .then((d: ProfileData) => {
+    Promise.all([
+      fetch("/api/profile").then((r) => r.json()),
+      fetch("/api/user/plan").then((r) => r.json()).catch(() => ({ plan: "free" })),
+      fetch("/api/profile/brand-assets").then((r) => r.json()).catch(() => null),
+    ])
+      .then(([d, planData, assets]: [ProfileData, { planSlug?: string }, BrandAssets | null]) => {
         setData(d);
         setName(d.user.name ?? "");
         setMobile(d.user.mobile ?? "");
@@ -251,6 +279,8 @@ export default function ProfilePage() {
         setBizPhone(d.business?.phone ?? "");
         setBizAddress(d.business?.businessAddress ?? "");
         setLogoUrl(d.business?.logo ?? "");
+        setPlanSlug(planData?.planSlug ?? "free");
+        if (assets) setBrandAssets(assets);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -306,6 +336,95 @@ export default function ProfilePage() {
     } catch { toast.error("Save failed"); }
     setSaving(false);
   }
+
+  const isProPlus = planSlug !== "free" && planSlug !== "lite";
+
+  const handleBrandLogoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBrandLogoUploading(true);
+    const fd = new FormData();
+    fd.append("logo", file);
+    try {
+      const res = await fetch("/api/profile/brand-assets/logo", { method: "POST", body: fd });
+      const data = await res.json() as { success?: boolean; logoUrl?: string; message?: string; error?: string };
+      if (data.success && data.logoUrl) {
+        setBrandAssets((prev) => ({ ...prev, logoUrl: data.logoUrl! }));
+        toast.success("Logo uploaded");
+      } else {
+        toast.error(data.message ?? data.error ?? "Upload failed");
+      }
+    } catch { toast.error("Upload failed"); }
+    setBrandLogoUploading(false);
+    if (brandLogoRef.current) brandLogoRef.current.value = "";
+  }, []);
+
+  const handleBrandLogoRemove = useCallback(async () => {
+    try {
+      await fetch("/api/profile/brand-assets/logo", { method: "DELETE" });
+      setBrandAssets((prev) => ({ ...prev, logoUrl: null }));
+      toast.success("Logo removed");
+    } catch { toast.error("Remove failed"); }
+  }, []);
+
+  const handleBrandSigUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBrandSigUploading(true);
+    const fd = new FormData();
+    fd.append("signature", file);
+    try {
+      const res = await fetch("/api/profile/brand-assets/signature", { method: "POST", body: fd });
+      const data = await res.json() as { success?: boolean; signatureUrl?: string; message?: string; error?: string };
+      if (data.success && data.signatureUrl) {
+        setBrandAssets((prev) => ({ ...prev, signatureUrl: data.signatureUrl! }));
+        toast.success("Signature uploaded");
+      } else {
+        toast.error(data.message ?? data.error ?? "Upload failed");
+      }
+    } catch { toast.error("Upload failed"); }
+    setBrandSigUploading(false);
+    if (brandSigRef.current) brandSigRef.current.value = "";
+  }, []);
+
+  const handleBrandSigRemove = useCallback(async () => {
+    try {
+      await fetch("/api/profile/brand-assets/signature", { method: "DELETE" });
+      setBrandAssets((prev) => ({ ...prev, signatureUrl: null }));
+      toast.success("Signature removed");
+    } catch { toast.error("Remove failed"); }
+  }, []);
+
+  const handleColorChange = useCallback((color: string) => {
+    setBrandAssets((prev) => ({ ...prev, letterheadColor: color }));
+    if (colorDebounceRef.current) clearTimeout(colorDebounceRef.current);
+    colorDebounceRef.current = setTimeout(async () => {
+      try {
+        await fetch("/api/profile/brand-assets", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ letterheadColor: color }),
+        });
+      } catch { /* silent */ }
+    }, 500);
+  }, []);
+
+  const saveBrandDetails = useCallback(async () => {
+    setBrandSaving(true);
+    try {
+      const res = await fetch("/api/profile/brand-assets", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          signatoryName: brandAssets.signatoryName,
+          signatoryDesignation: brandAssets.signatoryDesignation,
+        }),
+      });
+      if (res.ok) toast.success("Brand assets saved");
+      else toast.error("Save failed");
+    } catch { toast.error("Save failed"); }
+    setBrandSaving(false);
+  }, [brandAssets.signatoryName, brandAssets.signatoryDesignation]);
 
   if (status === "loading" || loading) {
     return (
@@ -556,6 +675,191 @@ export default function ProfilePage() {
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             Save Changes
           </button>
+
+          {/* ── Brand Assets ─────────────────────────────────────────────── */}
+          <div className="mt-8 rounded-xl border border-border bg-card/50 p-5 space-y-5">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Palette className="h-5 w-5 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">Brand Assets</h3>
+              </div>
+              {isProPlus ? (
+                <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary">PRO Plan</span>
+              ) : (
+                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">Requires PRO</span>
+              )}
+            </div>
+
+            {!isProPlus ? (
+              /* Locked state */
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <Lock className="h-8 w-8 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">Brand assets are available on PRO plan</p>
+                <a
+                  href="/pricing"
+                  className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  Upgrade to PRO
+                </a>
+              </div>
+            ) : (
+              <>
+                {/* Logo Upload */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-muted-foreground">Company Logo</label>
+                  <p className="text-xs text-muted-foreground">PNG or JPG, max 2MB. Shown in PDF header.</p>
+                  <div
+                    className={cn(
+                      "relative rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center p-6 transition-colors",
+                      !brandAssets.logoUrl && "cursor-pointer hover:border-primary/50"
+                    )}
+                    onClick={() => !brandAssets.logoUrl && brandLogoRef.current?.click()}
+                  >
+                    {brandAssets.logoUrl ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <img src={brandAssets.logoUrl} alt="Logo" className="max-h-20 object-contain" />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); brandLogoRef.current?.click(); }}
+                            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors"
+                          >Change</button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); void handleBrandLogoRemove(); }}
+                            className="rounded-lg border border-destructive/50 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                          >Remove</button>
+                        </div>
+                      </div>
+                    ) : brandLogoUploading ? (
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    ) : (
+                      <>
+                        <ImagePlus className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                        <p className="text-sm text-muted-foreground">Click to upload logo</p>
+                        <p className="text-xs text-muted-foreground/60">PNG or JPG, max 2MB</p>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    ref={brandLogoRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    className="hidden"
+                    onChange={handleBrandLogoUpload}
+                  />
+                </div>
+
+                {/* Signature Upload */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-muted-foreground">Digital Signature</label>
+                  <p className="text-xs text-muted-foreground">PNG with transparent background, max 1MB.</p>
+                  <div
+                    className={cn(
+                      "relative rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center p-6 transition-colors",
+                      !brandAssets.signatureUrl && "cursor-pointer hover:border-primary/50"
+                    )}
+                    onClick={() => !brandAssets.signatureUrl && brandSigRef.current?.click()}
+                  >
+                    {brandAssets.signatureUrl ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <div
+                          className="max-h-16 overflow-hidden rounded"
+                          style={{
+                            backgroundImage: "repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 0 0/12px 12px",
+                          }}
+                        >
+                          <img src={brandAssets.signatureUrl} alt="Signature" className="max-h-16 object-contain" />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); brandSigRef.current?.click(); }}
+                            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors"
+                          >Change</button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); void handleBrandSigRemove(); }}
+                            className="rounded-lg border border-destructive/50 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                          >Remove</button>
+                        </div>
+                      </div>
+                    ) : brandSigUploading ? (
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    ) : (
+                      <>
+                        <PenLine className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                        <p className="text-sm text-muted-foreground">Click to upload signature</p>
+                        <p className="text-xs text-muted-foreground/60">PNG only, transparent background recommended</p>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    ref={brandSigRef}
+                    type="file"
+                    accept="image/png"
+                    className="hidden"
+                    onChange={handleBrandSigUpload}
+                  />
+                </div>
+
+                {/* Letterhead Color */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-muted-foreground">Letterhead Accent Color</label>
+                  <p className="text-xs text-muted-foreground">Used in PDF header and footer.</p>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="h-10 w-10 rounded-lg border border-border flex-shrink-0"
+                      style={{ backgroundColor: brandAssets.letterheadColor }}
+                    />
+                    <input
+                      type="text"
+                      value={brandAssets.letterheadColor}
+                      onChange={(e) => handleColorChange(e.target.value)}
+                      className="w-32 rounded-lg border border-border bg-card px-3 py-2 text-sm font-mono text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
+                      placeholder="#7c3aed"
+                      maxLength={7}
+                    />
+                    <input
+                      type="color"
+                      value={brandAssets.letterheadColor}
+                      onChange={(e) => handleColorChange(e.target.value)}
+                      className="h-10 w-10 cursor-pointer rounded-lg border border-border"
+                    />
+                  </div>
+                </div>
+
+                {/* Signatory Details */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-muted-foreground">Signatory Information</label>
+                  <p className="text-xs text-muted-foreground">Shown below signature in PDF.</p>
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={brandAssets.signatoryName}
+                      onChange={(e) => setBrandAssets((p) => ({ ...p, signatoryName: e.target.value }))}
+                      placeholder="e.g. Rajesh Mehta"
+                      className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
+                    />
+                    <input
+                      type="text"
+                      value={brandAssets.signatoryDesignation}
+                      onChange={(e) => setBrandAssets((p) => ({ ...p, signatoryDesignation: e.target.value }))}
+                      placeholder="e.g. Partner, Mehta & Associates"
+                      className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={saveBrandDetails}
+                  disabled={brandSaving}
+                  className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {brandSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  Save Brand Assets
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
 

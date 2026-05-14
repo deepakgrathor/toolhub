@@ -5,11 +5,12 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   Loader2, Copy, Download, RefreshCw, Sparkles, Check,
-  ExternalLink, Code2, Eye, AlertCircle,
+  ExternalLink, Code2, Eye, AlertCircle, FileDown, Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { LoginBanner } from "@/components/tools/LoginBanner";
+import { PDFPreviewModal, type BrandAssets } from "@/components/ui/PDFPreviewModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -314,21 +315,34 @@ export function UniversalToolRenderer({ slug }: { slug: string }) {
   const [output, setOutput]         = useState("");
   const [genError, setGenError]     = useState("");
   const [cooldown, setCooldown]     = useState(0);
+  const [planSlug, setPlanSlug]     = useState("free");
+  const [downloading, setDownloading] = useState(false);
+  const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const [brandAssets, setBrandAssets] = useState<BrandAssets | null>(null);
 
-  // Fetch tool config on mount
+  // Fetch tool config + plan on mount
   useEffect(() => {
     if (!session) return;
-    fetch(`/api/tools/${slug}/config`)
-      .then(r => r.json())
-      .then((data: ToolConfig & { error?: string }) => {
+    Promise.all([
+      fetch(`/api/tools/${slug}/config`).then(r => r.json()),
+      fetch("/api/user/plan").then(r => r.json()).catch(() => ({ planSlug: "free" })),
+    ])
+      .then(([data, planData]: [ToolConfig & { error?: string }, { planSlug?: string }]) => {
         if (data.error) { setError(data.error); return; }
         setConfig(data);
-        // Init form values with defaults
         const defaults: Record<string, string> = {};
         (data.formFields ?? []).forEach(f => {
           defaults[f.key] = f.defaultValue ?? "";
         });
         setFormValues(defaults);
+        const plan = planData?.planSlug ?? "free";
+        setPlanSlug(plan);
+        if (plan !== "free" && plan !== "lite") {
+          fetch("/api/profile/brand-assets")
+            .then(r => r.json())
+            .then((assets: BrandAssets) => setBrandAssets(assets))
+            .catch(() => null);
+        }
       })
       .catch(() => setError("Failed to load tool"))
       .finally(() => setLoading(false));
@@ -343,6 +357,41 @@ export function UniversalToolRenderer({ slug }: { slug: string }) {
 
   function setField(key: string, val: string) {
     setFormValues(prev => ({ ...prev, [key]: val }));
+  }
+
+  async function handleDownloadPDF() {
+    if (!config || !output) return;
+    setDownloading(true);
+    try {
+      const res = await fetch("/api/tools/download-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toolSlug: slug, toolName: config.name, content: output }),
+      });
+
+      if (res.status === 403) {
+        const { toast } = await import("sonner");
+        toast.error("PDF download requires LITE plan. Upgrade to download.");
+        return;
+      }
+
+      if (!res.ok) throw new Error("Failed");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${slug}-output.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      const { toast } = await import("sonner");
+      toast.error("Failed to generate PDF. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
   }
 
   async function handleGenerate() {
@@ -421,6 +470,18 @@ export function UniversalToolRenderer({ slug }: { slug: string }) {
   const sortedFields = [...(config.formFields ?? [])].sort((a, b) => a.order - b.order);
 
   return (
+    <>
+    {config && showPDFPreview && (
+      <PDFPreviewModal
+        isOpen={showPDFPreview}
+        onClose={() => setShowPDFPreview(false)}
+        toolSlug={slug}
+        toolName={config.name}
+        content={output}
+        planSlug={planSlug}
+        brandAssets={brandAssets}
+      />
+    )}
     <div className="flex flex-1 overflow-auto flex-col lg:flex-row">
       {/* ── Left: Form ── */}
       <div className="lg:w-[45%] lg:border-r border-border p-4 md:p-6 space-y-5">
@@ -512,14 +573,55 @@ export function UniversalToolRenderer({ slug }: { slug: string }) {
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Output
               </span>
-              <button
-                onClick={handleGenerate}
-                disabled={generating}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <RefreshCw className={cn("h-3 w-3", generating && "animate-spin")} />
-                Regenerate
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Download PDF — only for text/json output */}
+                {(config.outputType === "text" || config.outputType === "json") && (
+                  planSlug === "free" ? (
+                    <button
+                      disabled
+                      title="Upgrade to LITE to download PDF"
+                      className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground opacity-50 cursor-not-allowed"
+                    >
+                      <FileDown className="h-3.5 w-3.5" />
+                      PDF
+                      <Lock className="h-3 w-3" />
+                    </button>
+                  ) : (
+                    <div className="relative group">
+                      <button
+                        onClick={() => setShowPDFPreview(true)}
+                        disabled={downloading}
+                        className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+                      >
+                        {downloading ? (
+                          <><Loader2 className="h-3.5 w-3.5 animate-spin" /> PDF...</>
+                        ) : (
+                          <>
+                            <FileDown className="h-3.5 w-3.5" />
+                            PDF
+                            {planSlug !== "lite" && (
+                              <span className="rounded-full bg-primary/15 px-1.5 text-primary text-[10px]">Branded</span>
+                            )}
+                          </>
+                        )}
+                      </button>
+                      {planSlug !== "lite" && (
+                        <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-10 w-48 rounded-lg border border-border bg-card p-2 text-xs text-muted-foreground shadow-lg">
+                          Downloading with your brand logo &amp; signature
+                        </div>
+                      )}
+                    </div>
+                  )
+                )}
+                <button
+                  onClick={handleGenerate}
+                  disabled={generating}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <RefreshCw className={cn("h-3 w-3", generating && "animate-spin")} />
+                  Regenerate
+                </button>
+              </div>
             </div>
             <OutputRenderer
               output={output}
@@ -540,5 +642,6 @@ export function UniversalToolRenderer({ slug }: { slug: string }) {
         )}
       </div>
     </div>
+    </>
   );
 }
