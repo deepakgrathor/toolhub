@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import Link from "next/link";
-import { HeroCTA, FinalCTA, ToolsShowcaseSection } from "@/components/marketing/HeroCTA";
+import { HeroCTA, FinalCTA } from "@/components/marketing/HeroCTA";
 import { DeletedAccountToast } from "@/components/marketing/DeletedAccountToast";
 import { PersonaJourney } from "@/components/marketing/PersonaJourney";
 import { TrustedByStrip } from "@/components/marketing/TrustedByStrip";
@@ -13,16 +13,15 @@ import type { Plan, CreditPackData, RolloverConfig } from "@/components/pricing/
 import { connectDB, Plan as PlanModel, CreditPack, SiteConfig } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 import {
-  Zap, ArrowRight, Check, X, ChevronDown,
+  ArrowRight, Check, X,
   Sparkles, Building2, Users, Scale, Megaphone,
-  Star, Clock, UserCheck,
-  TrendingUp, CheckCircle, CheckCircle2,
+  Clock,
+  TrendingUp, CheckCircle2,
   FileText, Receipt, ChevronRight,
   UserPlus, LayoutGrid, Wand2, Download, Minus,
   Cpu, Coins, Gavel,
 } from "lucide-react";
 import type { Metadata } from "next";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "SetuLix — AI Workspace for Indian Professionals",
@@ -236,41 +235,6 @@ const TESTIMONIALS = [
   },
 ];
 
-const FAQS = [
-  {
-    q: "What is the difference between a plan and credits?",
-    a: "Plans give you a monthly credit allowance — LITE: 200cr, PRO: 700cr, BUSINESS: 1500cr — plus benefits like output history and branded PDF downloads. Credit packs are one-time top-ups with no expiry. You can mix both.",
-  },
-  {
-    q: "What can I use for free without paying anything?",
-    a: "All SME tools — GST Invoice, Salary Slip, Expense Tracker, Quotation Generator, TDS Sheet, and QR Generator — are completely free, forever. You also get 10 free credits on signup to try any AI tool.",
-  },
-  {
-    q: "Do credits expire?",
-    a: "Purchased credit packs never expire. Monthly plan credits roll over based on your plan — LITE: 1 month, PRO: 2 months, BUSINESS: 3 months. Signup bonus credits are valid for 30 days.",
-  },
-  {
-    q: "Is my data safe? Who can see my outputs?",
-    a: "Your outputs are private to your account. We do not share or sell your data. Output history is retained based on your plan (FREE: not stored, LITE: 30 days, PRO: 90 days, BUSINESS: 1 year) and then permanently deleted.",
-  },
-  {
-    q: "Can I cancel my plan anytime?",
-    a: "Yes. Plans are monthly or annual — no lock-in contracts. If you cancel, you keep access until your billing period ends. Credit pack credits are yours to keep regardless.",
-  },
-  {
-    q: "Which AI models does SetuLix use?",
-    a: "Each tool uses the model best suited for its task — Claude Sonnet for legal documents and NDAs, GPT-4o for SEO audits, Gemini Flash for captions and hooks, and DALL-E 3 for thumbnails. You always get the best output, not the cheapest model.",
-  },
-  {
-    q: "Do I get a GST invoice for my purchase?",
-    a: "Yes. A proper GST tax invoice (CGST + SGST breakdown) is automatically generated after every payment and emailed to you. Add your GSTIN at checkout for business billing.",
-  },
-  {
-    q: "What happens when I run out of credits mid-month?",
-    a: "Buy a credit pack anytime — no need to upgrade your plan or wait for the month to reset. Credit packs stack on top of your monthly allowance and never expire.",
-  },
-];
-
 const STATS = [
   { value: "27+", label: "AI Tools" },
   { value: "5",   label: "Profession Kits" },
@@ -368,18 +332,6 @@ function CompareCell({
   return <Minus className="h-4 w-4 mx-auto text-amber-500" />;
 }
 
-function FaqItem({ q, a }: { q: string; a: string }) {
-  return (
-    <details className="group border border-border rounded-xl overflow-hidden">
-      <summary className="flex items-center justify-between p-4 cursor-pointer list-none hover:bg-muted/40 transition-colors">
-        <span className="text-sm font-medium text-foreground pr-4">{q}</span>
-        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0 transition-transform group-open:rotate-180" />
-      </summary>
-      <div className="px-4 pb-4 text-sm text-muted-foreground">{a}</div>
-    </details>
-  );
-}
-
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export default async function MarketingHomePage() {
@@ -421,79 +373,8 @@ export default async function MarketingHomePage() {
           }}
         />
 
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-
-            {/* Left: text content */}
-            <HeroCTA />
-
-            {/* Right: layered visual mockup */}
-            <div className="relative w-full max-w-sm mx-auto lg:ml-auto">
-
-              {/* Card 3 — farthest behind */}
-              <div className="absolute inset-0 -rotate-1 opacity-40 scale-95
-                bg-card border border-border rounded-2xl shadow-xl
-                translate-x-4 translate-y-4">
-                <div className="p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Receipt className="h-4 w-4 text-primary" />
-                    <span className="text-xs font-semibold text-foreground">GST Invoice</span>
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">Generated</div>
-                </div>
-              </div>
-
-              {/* Card 2 — middle */}
-              <div className="absolute inset-0 rotate-2 opacity-60 scale-97
-                bg-card border border-border rounded-2xl shadow-xl
-                translate-x-2 translate-y-2">
-                <div className="p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Gavel className="h-4 w-4 text-primary" />
-                    <span className="text-xs font-semibold text-foreground">Legal Notice</span>
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">Draft ready</div>
-                </div>
-              </div>
-
-              {/* Main card — front */}
-              <div className="relative bg-card border border-border rounded-2xl shadow-xl p-5 z-10">
-
-                {/* Header row */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold text-foreground">Blog Generator</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    generating...
-                  </div>
-                </div>
-
-                {/* Fake output preview */}
-                <div className="bg-muted/50 rounded-xl p-3 mb-4 space-y-1.5">
-                  <div className="h-2 bg-muted-foreground/20 rounded w-full" />
-                  <div className="h-2 bg-muted-foreground/20 rounded w-4/5" />
-                  <div className="h-2 bg-muted-foreground/20 rounded w-11/12" />
-                  <div className="h-2 bg-muted-foreground/20 rounded w-3/4" />
-                </div>
-
-                {/* Footer row */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    Output ready
-                  </div>
-                  <span className="text-xs border border-border rounded-lg px-2.5 py-1
-                    text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-                    Download PDF
-                  </span>
-                </div>
-              </div>
-            </div>
-
-          </div>
+        <div className="max-w-3xl mx-auto text-center">
+          <HeroCTA />
         </div>
       </section>
 
@@ -560,7 +441,7 @@ export default async function MarketingHomePage() {
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-auto">
                   {tools.slice(0, 3).map((t) => (
-                    <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                    <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-foreground">
                       {t}
                     </span>
                   ))}
@@ -604,7 +485,7 @@ export default async function MarketingHomePage() {
               <div className="flex flex-wrap gap-2 mt-4">
                 {["Creator Kit", "SME Kit", "HR Kit", "Legal Kit", "Marketing Kit"].map((pill) => (
                   <span key={pill}
-                    className="text-xs bg-muted text-muted-foreground px-2.5 py-1 rounded-full border border-border">
+                    className="text-xs bg-muted text-foreground px-2.5 py-1 rounded-full border border-border">
                     {pill}
                   </span>
                 ))}
@@ -688,11 +569,6 @@ export default async function MarketingHomePage() {
       <div className="border-t border-border" />
       <PersonaJourney />
       <div className="border-t border-border" />
-
-      {/* ══ SECTION 5 — TOOLS SHOWCASE ══════════════════════════════════════ */}
-      <section className="py-20">
-        <ToolsShowcaseSection />
-      </section>
 
       {/* ══ SECTION 6 — HOW IT WORKS (Issue 9 upgrade) ══════════════════════ */}
       <section className="relative overflow-hidden py-20 md:py-28
@@ -827,27 +703,34 @@ export default async function MarketingHomePage() {
             subtitle="Other tools are built for the US market and bolted on for India. SetuLix starts with Indian professionals in mind."
           />
 
-          <div className="overflow-x-auto rounded-2xl border border-border overflow-hidden">
-            <table className="min-w-[700px] w-full border-collapse text-sm">
+          <div className="rounded-2xl border border-border overflow-hidden overflow-x-auto">
+            <table className="min-w-[760px] w-full text-sm border-separate border-spacing-0">
               <thead>
                 <tr>
-                  <th className="text-left px-5 py-4 text-xs font-medium text-muted-foreground
-                    uppercase tracking-wider bg-muted/50 border-b border-border w-[35%]">
+                  {/* Feature label column */}
+                  <th className="sticky left-0 text-left px-5 py-4 text-xs font-semibold
+                    text-muted-foreground uppercase tracking-wider
+                    bg-muted/60 backdrop-blur border-b border-r border-border
+                    w-[32%] rounded-tl-2xl">
                     Feature
                   </th>
-                  <th className="px-5 py-4 text-center bg-primary border-b border-primary/50">
-                    <span className="flex flex-col items-center gap-1">
-                      <span className="text-sm font-bold text-primary-foreground">SetuLix</span>
-                      <span className="text-[10px] opacity-80 text-primary-foreground">
-                        ✦ Made for India
+                  {/* SetuLix — highlighted */}
+                  <th className="px-5 py-4 text-center bg-primary border-b border-primary/60 min-w-[120px]">
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-sm font-extrabold text-primary-foreground tracking-tight">SetuLix</span>
+                      <span className="inline-block text-[9px] font-bold uppercase tracking-widest
+                        bg-white/20 text-primary-foreground rounded-full px-2 py-0.5">
+                        ✦ India-first
                       </span>
-                    </span>
+                    </div>
                   </th>
-                  {COMPETITORS.slice(1).map((name) => (
+                  {/* Competitor columns */}
+                  {COMPETITORS.slice(1).map((name, i) => (
                     <th
                       key={name}
-                      className="px-4 py-4 text-xs font-medium text-muted-foreground
-                        text-center bg-muted/30 border-b border-border uppercase tracking-wide"
+                      className={`px-4 py-4 text-xs font-semibold text-muted-foreground
+                        text-center bg-muted/40 border-b border-border min-w-[100px]
+                        ${i === COMPETITORS.length - 2 ? "rounded-tr-2xl" : ""}`}
                     >
                       {name}
                     </th>
@@ -855,27 +738,39 @@ export default async function MarketingHomePage() {
                 </tr>
               </thead>
               <tbody>
-                {COMPARISON.map(({ feature, values }, rowIdx) => (
-                  <tr
-                    key={feature}
-                    className={cn(
-                      "border-b border-border last:border-0",
-                      rowIdx % 2 === 1 ? "bg-muted/10" : "bg-transparent"
-                    )}
-                  >
-                    <td className="px-5 py-3.5 text-sm font-medium text-foreground">
-                      {feature}
-                    </td>
-                    <td className="px-4 py-3.5 text-center bg-primary/5">
-                      <CompareCell value={values[0]} highlight={true} />
-                    </td>
-                    {values.slice(1).map((val, colIdx) => (
-                      <td key={colIdx} className="px-4 py-3.5 text-center">
-                        <CompareCell value={val} highlight={false} />
+                {COMPARISON.map(({ feature, values }, rowIdx) => {
+                  const isLast = rowIdx === COMPARISON.length - 1;
+                  return (
+                    <tr key={feature} className={rowIdx % 2 === 0 ? "bg-card" : "bg-muted/20"}>
+                      {/* Feature label */}
+                      <td className={`sticky left-0 px-5 py-3.5 text-sm font-medium text-foreground
+                        bg-inherit border-r border-border/60
+                        ${isLast ? "rounded-bl-2xl" : ""}`}>
+                        {feature}
                       </td>
-                    ))}
-                  </tr>
-                ))}
+                      {/* SetuLix cell — always true */}
+                      <td className="px-4 py-3.5 text-center bg-primary/8">
+                        <div className="flex justify-center">
+                          <CheckCircle2 className="h-5 w-5 text-primary" />
+                        </div>
+                      </td>
+                      {/* Competitor cells */}
+                      {values.slice(1).map((val, colIdx) => (
+                        <td
+                          key={colIdx}
+                          className={`px-4 py-3.5 text-center
+                            ${isLast && colIdx === values.length - 2 ? "rounded-br-2xl" : ""}`}
+                        >
+                          <div className="flex justify-center">
+                            {val === true && <Check className="h-5 w-5 text-emerald-500" />}
+                            {val === false && <X className="h-5 w-5 text-muted-foreground/30" />}
+                            {val === "partial" && <Minus className="h-5 w-5 text-amber-500" />}
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -913,18 +808,6 @@ export default async function MarketingHomePage() {
           subtitle="What Indian professionals say about SetuLix."
         />
         <TestimonialsCarousel testimonials={TESTIMONIALS} />
-      </section>
-
-      {/* ══ SECTION 10 — FAQ ═════════════════════════════════════════════════ */}
-      <section className="px-4 py-20 bg-card/30">
-        <div className="max-w-3xl mx-auto">
-          <SectionHeading eyebrow="FAQ" title="Frequently asked questions" />
-          <div className="space-y-3">
-            {FAQS.map(({ q, a }) => (
-              <FaqItem key={q} q={q} a={a} />
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* ══ SECTION 11 — FINAL CTA ═══════════════════════════════════════════ */}

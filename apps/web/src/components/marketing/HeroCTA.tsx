@@ -12,11 +12,11 @@ export function HeroCTA() {
   const openAuthModal = useAuthStore((s) => s.openAuthModal);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 items-center text-center">
 
       {/* Eyebrow badge with pulsing dot */}
       <div className="inline-flex items-center gap-2
-        self-start px-3 py-1.5 rounded-full border
+        px-3 py-1.5 rounded-full border
         border-primary/30 bg-primary/10 text-primary
         text-xs font-medium">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -42,7 +42,7 @@ export function HeroCTA() {
       </p>
 
       {/* CTA pair */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         <button
           onClick={() => openAuthModal("signup")}
           className="relative overflow-hidden inline-flex items-center gap-2
@@ -70,7 +70,7 @@ export function HeroCTA() {
       </div>
 
       {/* Social proof strip */}
-      <div className="flex items-center gap-3 mt-2">
+      <div className="flex items-center justify-center gap-3 mt-2">
         <div className="flex items-center">
           {[
             { init: "SP", bg: "bg-teal-500/20",   text: "text-teal-600 dark:text-teal-400"   },
