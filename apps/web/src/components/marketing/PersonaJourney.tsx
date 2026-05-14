@@ -78,7 +78,7 @@ export function PersonaJourney() {
                 'transition-all duration-200 border',
                 activeId === p.id
                   ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
+                  : 'bg-muted/30 text-foreground border-border hover:bg-muted transition-colors'
               )}
             >
               {p.tab}

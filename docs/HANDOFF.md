@@ -1,9 +1,132 @@
 # Handoff Note
-Updated: 2026-05-15 | Account: B | Session: B10-B | Features: Tools Showcase tabs, How It Works 4-step, Comparison Table redesign
+Updated: 2026-05-15 | Account: B | Session: B10-FIX | Features: 11-issue fix — tools sync, pricing sync, about redesign, hero premium, features premium, persona tabs, CTAs, centering, how-it-works, comparison, testimonials carousel
 
 ## Where We Are
-Session B10-B done. Tools Showcase, How It Works, and Comparison Table fully redesigned. **TypeScript: 0 errors (apps/web).**
-Note: `npx turbo build` fails with pre-existing `Cannot find module for page: /_document` error (not caused by any recent changes).
+Session B10-FIX done. All 11 issues resolved. **TypeScript: 0 errors (apps/web).**
+Note: `npx turbo build` fails with pre-existing `Cannot find module for page: /_document` error (not caused by any session changes).
+
+---
+
+## What Was Done (Session B10-FIX)
+
+### Issues resolved (all 11)
+
+#### Issue 1 — /tools page synced with homepage
+- Created `apps/web/src/data/tools-data.ts` — shared `TOOLS` (27 entries with slug/name/Icon/category/outcome/isFree) and `CATEGORIES` (6 entries with id/label/count/Icon)
+- `HeroCTA.tsx` now imports TOOLS + CATEGORIES from tools-data.ts (removed local declarations)
+- `apps/web/src/app/(marketing)/tools/page.tsx` fully rewritten:
+  - Uses shared TOOLS + CATEGORIES (no more credit costs)
+  - Shows outcome line + Free badge or AI Tool badge (no credit amounts)
+  - onClick → `router.push(/tools/[slug])` (public browsing page, no auth modal)
+  - Category tabs: same CATEGORIES array, centered flex-wrap layout
+
+#### Issue 2 — /pricing page synced with homepage
+- Homepage `page.tsx` now fetches plans/packs/rollover from DB (same logic as /pricing/page.tsx)
+- Homepage SECTION 8 replaced with `<PricingPage plans={...} packs={...} rollover={...} />`
+- Both routes now use the same shared `PricingPage` client component — no duplication
+
+#### Issue 3 — /about page premium redesign
+- `apps/web/src/app/(marketing)/about/page.tsx` fully rewritten (6 sections):
+  - Section 1: Hero with radial glow + grid overlay + "Our Story" eyebrow
+  - Section 2: 3 problem cards (Globe2 / IndianRupee / Users icons)
+  - Section 3: Founder block (DR avatar, blockquote, LinkedIn link)
+  - Section 4: Stats row (27+ tools / 500+ professionals / 5 kits / ₹0 to start)
+  - Section 5: 6-item principles grid (CheckCircle2 icons)
+  - Section 6: CTA block (bg-primary, white button via AboutCTA)
+- `AboutCTA.tsx` updated: white button "Start free today" → `openAuthModal("signup")`
+
+#### Issue 4 — Hero section premium upgrade
+- `HeroCTA.tsx` upgraded:
+  - Eyebrow: pulsing emerald dot + Zap icon + "Live · 500+ professionals using SetuLix"
+  - H1: added `xl:text-7xl`
+  - CTA primary button: shimmer animation via `after:` pseudo-element + `relative overflow-hidden`
+  - Social proof: colored avatar circles (per-persona teal/violet/amber/blue/pink) + updated text "Joined by 500+ Indian professionals this month"
+- Hero right column (`page.tsx`) upgraded to layered 3-card depth mockup:
+  - Main card: Blog Generator + fake output lines + "Output ready" dot + "Download PDF"
+  - Card 2 (rotate-2, opacity-60): Legal Notice
+  - Card 3 (-rotate-1, opacity-40): GST Invoice
+
+#### Issue 5 — Features section premium redesign
+- `page.tsx` Section 4 fully rewritten:
+  - Eyebrow "Why it works", new H2 + subtext
+  - Card 1: LayoutGrid — "Your kit. Your tools." + kit pills
+  - Card 2: Cpu — "Best AI for every job." (highlighted, ring-1 ring-primary/30) + model badges
+  - Card 3: Coins — "Pay for what you use." + credit example rows
+
+#### Issue 6 — PersonaJourney tab text fix
+- `PersonaJourney.tsx`: inactive tab changed from `bg-muted text-muted-foreground border-border hover:bg-muted/80` to `bg-muted/30 text-foreground border-border hover:bg-muted transition-colors`
+- Active tab stays: `bg-primary text-primary-foreground border-primary`
+
+#### Issue 7 — CTA buttons fixed
+- Created `apps/web/src/components/marketing/AuthModalOpener.tsx` ("use client"):
+  - Reads `?auth=signup|login` query param via `useSearchParams`
+  - Calls `openAuthModal("signup"|"login")` on mount
+- `page.tsx`: renders `<Suspense><AuthModalOpener /></Suspense>` at top of marketing page
+- `HeroCTA.tsx` hero button: changed from `<a href="/?auth=signup">` to `<button onClick={() => openAuthModal("signup")}>` — direct modal open
+- All auth-modal CTAs now work (hero button, FinalCTA, ToolsShowcaseSection all explicitly call openAuthModal)
+
+#### Issue 8 — Tools showcase header + tabs centered
+- `HeroCTA.tsx` ToolsShowcaseSection:
+  - Section header: `text-center mx-auto` 
+  - Category tabs wrapper: `flex gap-2 flex-wrap justify-center overflow-x-auto sm:overflow-visible pb-2 mb-8`
+
+#### Issue 9 — How It Works premium upgrade
+- `page.tsx` Section 6 upgraded:
+  - Outer: `relative overflow-hidden bg-background` + large blurred circle (bg-primary/5 blur-3xl)
+  - Step cards: `before:` gradient top border (via-primary/40), `bg-card/80 backdrop-blur-sm`
+  - Step number: `text-primary/6` (faint)
+  - Time badge per step (Clock icon): "30 sec" / "1 min" / "< 1 min" / "instant"
+  - Connector ChevronRight: `text-primary/30` between cards
+  - Section CTA below steps: "Start free, no card needed" → `/?auth=signup`
+
+#### Issue 10 — Comparison table premium redesign
+- `page.tsx` Section 7:
+  - Background: `bg-muted/20`
+  - Table wrapper: `overflow-x-auto`, `min-w-[700px]`
+  - SetuLix th: bg-primary + "✦ Made for India" sub-label
+  - Even rows: `bg-muted/10`
+  - CompareCell: uses `CheckCircle2` (highlight) / `Check` emerald / `X` muted/30 / `Minus` amber
+  - Below-table: explanatory text + "Start free — no card needed" CTA → `/?auth=signup`
+
+#### Issue 11 — Testimonials horizontal carousel
+- Created `apps/web/src/components/marketing/TestimonialsCarousel.tsx` ("use client"):
+  - Pure CSS scroll (no external lib) + snap-x snap-mandatory
+  - Left/right gradient fade overlays
+  - Card: w-[85vw] sm:w-[420px] lg:w-[380px] — avatar (per-color), stat chip, italic quote, Quote icon
+  - Navigation dots: pill → `w-6` active, `w-2` inactive
+  - Auto-scroll every 5s, pauses on hover (onMouseEnter/Leave)
+  - activeIndex tracked via onScroll event
+- `page.tsx` SECTION 9: replaced static grid with `<TestimonialsCarousel testimonials={TESTIMONIALS} />`
+
+#### Modified Files (B10-FIX)
+```
+apps/web/src/data/tools-data.ts                              — NEW
+apps/web/src/components/marketing/HeroCTA.tsx                — updated
+apps/web/src/components/marketing/AuthModalOpener.tsx        — NEW
+apps/web/src/components/marketing/TestimonialsCarousel.tsx   — NEW
+apps/web/src/app/(marketing)/page.tsx                        — updated
+apps/web/src/app/(marketing)/tools/page.tsx                  — updated
+apps/web/src/app/(marketing)/about/page.tsx                  — updated
+apps/web/src/app/(marketing)/about/AboutCTA.tsx              — updated
+apps/web/src/components/marketing/PersonaJourney.tsx         — updated (tab text fix)
+```
+
+#### Rules Verified
+- TypeScript: 0 errors
+- No emoji in UI (lucide-react icons only)
+- No hardcoded hex colors except semantic (emerald/amber/violet for AI model badges)
+- No dynamic Tailwind class interpolation
+- Semantic tokens throughout (bg-background, bg-card, text-foreground, etc.)
+- Dark + light theme: all components use semantic tokens or dark: variants
+- All "use client" components explicit at file top
+- No API calls added to static marketing sections (pricing fetched server-side)
+
+---
+
+## Next Session: B10-C
+- FAQ section redesign (premium accordion with animations)
+- Final CTA redesign (premium gradient)
+- Any remaining polish items
 
 ---
 

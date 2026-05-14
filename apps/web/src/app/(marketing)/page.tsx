@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import Link from "next/link";
@@ -5,13 +6,20 @@ import { HeroCTA, FinalCTA, ToolsShowcaseSection } from "@/components/marketing/
 import { DeletedAccountToast } from "@/components/marketing/DeletedAccountToast";
 import { PersonaJourney } from "@/components/marketing/PersonaJourney";
 import { TrustedByStrip } from "@/components/marketing/TrustedByStrip";
+import { AuthModalOpener } from "@/components/marketing/AuthModalOpener";
+import { TestimonialsCarousel } from "@/components/marketing/TestimonialsCarousel";
+import { PricingPage } from "@/components/pricing/PricingPage";
+import type { Plan, CreditPackData, RolloverConfig } from "@/components/pricing/PricingPage";
+import { connectDB, Plan as PlanModel, CreditPack, SiteConfig } from "@toolhub/db";
+import { getRedis } from "@toolhub/shared";
 import {
   Zap, ArrowRight, Check, X, ChevronDown,
   Sparkles, Building2, Users, Scale, Megaphone,
-  Star, Clock, UserCheck, LogIn,
-  TrendingUp, MapPin, Quote, CheckCircle,
+  Star, Clock, UserCheck,
+  TrendingUp, CheckCircle, CheckCircle2,
   FileText, Receipt, ChevronRight,
   UserPlus, LayoutGrid, Wand2, Download, Minus,
+  Cpu, Coins, Gavel,
 } from "lucide-react";
 import type { Metadata } from "next";
 import { cn } from "@/lib/utils";
@@ -22,8 +30,90 @@ export const metadata: Metadata = {
     "27 AI tools for Indian creators, businesses, HR teams, and legal professionals. Save 10+ hours every week. Free to start — no card needed.",
 };
 
-// ── Static data ───────────────────────────────────────────────────────────────
+// ── DB helpers (same as /pricing/page.tsx) ─────────────────────────────────────
 
+async function fetchPlans(): Promise<Plan[]> {
+  try {
+    try {
+      const redis = getRedis();
+      const cached = await redis.get("plans:public");
+      if (cached) {
+        const parsed = JSON.parse(cached as string) as Plan[];
+        if (parsed.length > 0) return parsed;
+        await redis.del("plans:public");
+      }
+    } catch { /* Redis unavailable */ }
+
+    await connectDB();
+    const plans = await PlanModel.find({ isActive: true }).sort({ order: 1 }).lean();
+    const withSavings = plans.map((p) => ({
+      ...p,
+      yearlySavings: (p.pricing.monthly.basePrice - p.pricing.yearly.basePrice) * 12,
+    }));
+
+    try {
+      const redis = getRedis();
+      await redis.set("plans:public", JSON.stringify(withSavings), { ex: 600 });
+    } catch { /* silent */ }
+
+    return withSavings as unknown as Plan[];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchPacks(): Promise<CreditPackData[]> {
+  try {
+    try {
+      const redis = getRedis();
+      const cached = await redis.get("credit-packs:public");
+      if (cached) return JSON.parse(cached as string) as CreditPackData[];
+    } catch { /* Redis unavailable */ }
+
+    await connectDB();
+    const packs = await CreditPack.find({ isActive: true }).sort({ order: 1 }).lean();
+
+    try {
+      const redis = getRedis();
+      await redis.set("credit-packs:public", JSON.stringify(packs), { ex: 600 });
+    } catch { /* silent */ }
+
+    return packs as unknown as CreditPackData[];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchRollover(): Promise<RolloverConfig> {
+  try {
+    try {
+      const redis = getRedis();
+      const cached = await redis.get("site-config:rollover");
+      if (cached) return JSON.parse(cached as string) as RolloverConfig;
+    } catch { /* Redis unavailable */ }
+
+    await connectDB();
+    const [enabledDoc, daysDoc] = await Promise.all([
+      SiteConfig.findOne({ key: "credit_rollover_enabled" }).lean(),
+      SiteConfig.findOne({ key: "credit_rollover_days" }).lean(),
+    ]);
+    const result: RolloverConfig = {
+      enabled: (enabledDoc?.value as boolean) ?? false,
+      maxDays: (daysDoc?.value as number) ?? 30,
+    };
+
+    try {
+      const redis = getRedis();
+      await redis.set("site-config:rollover", JSON.stringify(result), { ex: 300 });
+    } catch { /* silent */ }
+
+    return result;
+  } catch {
+    return { enabled: false, maxDays: 30 };
+  }
+}
+
+// ── Static data ────────────────────────────────────────────────────────────────
 
 const WHO_CARDS = [
   {
@@ -73,57 +163,24 @@ const WHO_CARDS = [
   },
 ];
 
-const FEATURES = [
-  {
-    icon: UserCheck,
-    title: "Your personalized kit",
-    desc: "Tell us your profession. SetuLix sets up a workspace with the tools you actually need — not 27 tabs of confusion.",
-    badge: "Smart onboarding",
-  },
-  {
-    icon: Zap,
-    title: "AI tools that work for India",
-    desc: "GST invoices, legal notices, Hindi-friendly scripts — built for how Indian professionals actually work.",
-    badge: "Built for India",
-  },
-  {
-    icon: Clock,
-    title: "Pay only for what you use",
-    desc: "No forced subscriptions. Start free. Buy credits when you need more. SME tools are free forever.",
-    badge: "Flexible pricing",
-  },
-];
-
 const COMPETITORS = ["SetuLix", "ChatGPT", "Canva", "Vyapar", "Jasper"];
 
 const COMPARISON: {
   feature: string;
   values: (boolean | "partial")[];
 }[] = [
-  { feature: "GST Invoice & TDS Sheet",
-    values: [true, false, false, true, false] },
-  { feature: "Legal Notice & NDA Generator",
-    values: [true, "partial", false, false, false] },
-  { feature: "YouTube Scripts & Hooks",
-    values: [true, "partial", false, false, true] },
-  { feature: "HR — JD & Resume Screening",
-    values: [true, "partial", false, false, false] },
-  { feature: "Indian payments (UPI/Paygic)",
-    values: [true, false, false, true, false] },
-  { feature: "Free tools — no login needed",
-    values: [true, false, "partial", "partial", false] },
-  { feature: "Pay-per-use credits",
-    values: [true, false, false, false, false] },
-  { feature: "Profession-specific kits",
-    values: [true, false, "partial", false, false] },
-  { feature: "Built specifically for India",
-    values: [true, false, false, true, false] },
-  { feature: "Hindi + English interface",
-    values: [true, false, false, false, false] },
-  { feature: "Indian tax tools (GST, TDS)",
-    values: [true, false, false, true, false] },
-  { feature: "Starts at ₹0",
-    values: [true, false, true, false, true] },
+  { feature: "GST Invoice & TDS Sheet",         values: [true, false, false, true, false]       },
+  { feature: "Legal Notice & NDA Generator",    values: [true, "partial", false, false, false]  },
+  { feature: "YouTube Scripts & Hooks",          values: [true, "partial", false, false, true]   },
+  { feature: "HR — JD & Resume Screening",       values: [true, "partial", false, false, false]  },
+  { feature: "Indian payments (UPI/Paygic)",     values: [true, false, false, true, false]       },
+  { feature: "Free tools — no login needed",     values: [true, false, "partial", "partial", false] },
+  { feature: "Pay-per-use credits",              values: [true, false, false, false, false]      },
+  { feature: "Profession-specific kits",         values: [true, false, "partial", false, false]  },
+  { feature: "Built specifically for India",     values: [true, false, false, true, false]       },
+  { feature: "Hindi + English interface",        values: [true, false, false, false, false]      },
+  { feature: "Indian tax tools (GST, TDS)",      values: [true, false, false, true, false]       },
+  { feature: "Starts at ₹0",                    values: [true, false, true, false, true]        },
 ];
 
 const TESTIMONIALS = [
@@ -221,7 +278,7 @@ const STATS = [
   { value: "₹0",  label: "To get started" },
 ];
 
-// ── Kit color map (complete class strings — never interpolate) ─────────────────
+// ── Kit color map ─────────────────────────────────────────────────────────────
 
 const KIT_COLOR_MAP: Record<string, {
   iconBg   : string
@@ -265,30 +322,26 @@ const KIT_COLOR_MAP: Record<string, {
     chipText : "text-pink-700 dark:text-pink-300",
     chipBorder: "border-pink-500/20",
   },
-}
+};
 
 // ── Components ────────────────────────────────────────────────────────────────
 
-function Badge({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary ${className}`}>
-      {children}
-    </span>
-  );
-}
-
 function SectionHeading({
-  badge,
+  eyebrow,
   title,
   subtitle,
 }: {
-  badge?: string;
+  eyebrow?: string;
   title: string;
   subtitle?: string;
 }) {
   return (
     <div className="text-center max-w-2xl mx-auto mb-12">
-      {badge && <Badge className="mb-4">{badge}</Badge>}
+      {eyebrow && (
+        <p className="text-xs font-bold uppercase tracking-widest text-primary mb-3">
+          {eyebrow}
+        </p>
+      )}
       <h2 className="text-3xl md:text-4xl font-bold text-foreground leading-tight mb-3">{title}</h2>
       {subtitle && <p className="text-muted-foreground text-base">{subtitle}</p>}
     </div>
@@ -304,18 +357,16 @@ function CompareCell({
 }) {
   if (value === true) {
     return highlight ? (
-      <CheckCircle className="h-4 w-4 mx-auto text-primary" />
+      <CheckCircle2 className="h-4 w-4 mx-auto text-primary" />
     ) : (
       <Check className="h-4 w-4 mx-auto text-emerald-500" />
-    )
+    );
   }
   if (value === false) {
-    return <X className="h-4 w-4 mx-auto text-muted-foreground/40" />
+    return <X className="h-4 w-4 mx-auto text-muted-foreground/30" />;
   }
-  return <Minus className="h-4 w-4 mx-auto text-amber-500" />
+  return <Minus className="h-4 w-4 mx-auto text-amber-500" />;
 }
-
-// ── Accordion FAQ ─────────────────────────────────────────────────────────────
 
 function FaqItem({ q, a }: { q: string; a: string }) {
   return (
@@ -329,141 +380,133 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-// ── Kit filter tabs (client island would be cleaner, but static works too) ───
-
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export default async function MarketingHomePage() {
-  // Logged-in users go straight to the app
   const session = await auth();
   if (session?.user) redirect("/dashboard");
+
+  const [plans, packs, rollover] = await Promise.all([
+    fetchPlans(),
+    fetchPacks(),
+    fetchRollover(),
+  ]);
 
   return (
     <div className="overflow-x-hidden">
       <DeletedAccountToast />
 
+      {/* AuthModalOpener: reads ?auth=signup|login from URL */}
+      <Suspense fallback={null}>
+        <AuthModalOpener />
+      </Suspense>
+
       {/* ══ SECTION 1 — HERO ══════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden
-        px-4 pt-24 pb-20 md:pt-32 md:pb-28">
+      <section className="relative overflow-hidden px-4 pt-24 pb-20 md:pt-32 md:pb-28">
 
         {/* Background: radial purple glow */}
-        <div className="absolute inset-0 -z-10"
+        <div
+          className="absolute inset-0 -z-10"
           style={{
-            background: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124,58,237,0.15), transparent)"
+            background: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124,58,237,0.15), transparent)",
           }}
         />
-
         {/* Subtle grid overlay */}
         <div
           className="absolute inset-0 -z-10 opacity-[0.03]"
           style={{
             backgroundImage:
               "linear-gradient(var(--color-border,#e5e7eb) 1px, transparent 1px), linear-gradient(90deg, var(--color-border,#e5e7eb) 1px, transparent 1px)",
-            backgroundSize: "60px 60px",
+            backgroundSize: "40px 40px",
           }}
         />
 
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2
-            gap-12 lg:gap-16 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
             {/* Left: text content */}
             <HeroCTA />
 
-            {/* Right: visual mockup */}
-            <div className="rounded-2xl border border-border
-              bg-card shadow-xl p-5 lg:ml-auto w-full
-              max-w-md">
+            {/* Right: layered visual mockup */}
+            <div className="relative w-full max-w-sm mx-auto lg:ml-auto">
 
-              {/* Header row */}
-              <div className="flex items-center
-                justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full
-                    bg-primary" />
-                  <span className="text-sm font-medium
-                    text-foreground">SetuLix AI</span>
-                </div>
-                <div className="flex items-center gap-1.5
-                  text-xs text-green-600
-                  dark:text-green-400">
-                  <div className="w-1.5 h-1.5 rounded-full
-                    bg-green-500 animate-pulse" />
-                  generating...
+              {/* Card 3 — farthest behind */}
+              <div className="absolute inset-0 -rotate-1 opacity-40 scale-95
+                bg-card border border-border rounded-2xl shadow-xl
+                translate-x-4 translate-y-4">
+                <div className="p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Receipt className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold text-foreground">GST Invoice</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">Generated</div>
                 </div>
               </div>
 
-              {/* Tool preview cards */}
-              {[
-                {
-                  icon: FileText,
-                  name: "JD Generator",
-                  stat: "6 min vs 3 hrs",
-                },
-                {
-                  icon: Scale,
-                  name: "Legal Notice",
-                  stat: "10 min vs 4 hrs",
-                },
-                {
-                  icon: Receipt,
-                  name: "GST Invoice",
-                  stat: "3 min · Free",
-                },
-              ].map(({ icon: Icon, name, stat }) => (
-                <div
-                  key={name}
-                  className="flex items-center
-                    justify-between bg-muted/50
-                    rounded-lg p-3 mt-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-3.5 w-3.5
-                      text-primary shrink-0" />
-                    <span className="text-xs font-medium
-                      text-foreground">{name}</span>
+              {/* Card 2 — middle */}
+              <div className="absolute inset-0 rotate-2 opacity-60 scale-97
+                bg-card border border-border rounded-2xl shadow-xl
+                translate-x-2 translate-y-2">
+                <div className="p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Gavel className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold text-foreground">Legal Notice</span>
                   </div>
-                  <span className="text-[10px] px-2 py-0.5
-                    rounded-full bg-primary/10
-                    text-primary font-medium shrink-0">
-                    {stat}
+                  <div className="text-[10px] text-muted-foreground">Draft ready</div>
+                </div>
+              </div>
+
+              {/* Main card — front */}
+              <div className="relative bg-card border border-border rounded-2xl shadow-xl p-5 z-10">
+
+                {/* Header row */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-foreground">Blog Generator</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    generating...
+                  </div>
+                </div>
+
+                {/* Fake output preview */}
+                <div className="bg-muted/50 rounded-xl p-3 mb-4 space-y-1.5">
+                  <div className="h-2 bg-muted-foreground/20 rounded w-full" />
+                  <div className="h-2 bg-muted-foreground/20 rounded w-4/5" />
+                  <div className="h-2 bg-muted-foreground/20 rounded w-11/12" />
+                  <div className="h-2 bg-muted-foreground/20 rounded w-3/4" />
+                </div>
+
+                {/* Footer row */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Output ready
+                  </div>
+                  <span className="text-xs border border-border rounded-lg px-2.5 py-1
+                    text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+                    Download PDF
                   </span>
                 </div>
-              ))}
-
-              {/* Footer row */}
-              <div className="flex items-center gap-2
-                mt-4 pt-3 border-t border-border">
-                <CheckCircle className="h-3.5 w-3.5
-                  text-green-500 shrink-0" />
-                <p className="text-xs text-muted-foreground">
-                  Credits deducted only after
-                  successful output
-                </p>
               </div>
-
             </div>
+
           </div>
         </div>
       </section>
 
       {/* ══ SECTION 2 — STATS BAR ════════════════════════════════════════════ */}
-      <section className="border-y border-border
-        bg-card/40">
+      <section className="border-y border-border bg-card/40">
         <div className="max-w-5xl mx-auto px-4 py-8">
-          <div className="grid grid-cols-2 md:grid-cols-4
-            gap-6 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {STATS.map(({ value, label }) => (
-              <div key={label}
-                className="flex flex-col
-                  items-center gap-1.5">
-                <div className="text-3xl md:text-4xl
-                  font-bold text-primary tabular-nums">
+              <div key={label} className="flex flex-col items-center gap-1.5">
+                <div className="text-3xl md:text-4xl font-bold text-primary tabular-nums">
                   {value}
                 </div>
-                <div className="text-xs font-medium
-                  text-muted-foreground uppercase
-                  tracking-wide">
+                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   {label}
                 </div>
               </div>
@@ -479,156 +522,169 @@ export default async function MarketingHomePage() {
       <section className="px-4 py-20 max-w-7xl mx-auto">
 
         <div className="text-center mb-10">
-          <span className="inline-block text-[10px]
-            font-bold uppercase tracking-widest
-            text-primary bg-primary/10 rounded-full
-            px-3 py-1 mb-3">
+          <span className="inline-block text-[10px] font-bold uppercase tracking-widest
+            text-primary bg-primary/10 rounded-full px-3 py-1 mb-3">
             5 Profession Kits
           </span>
-          <h2 className="text-3xl md:text-4xl font-bold
-            text-foreground mb-3">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
             Built for every Indian professional
           </h2>
-          <p className="text-base text-muted-foreground
-            max-w-xl mx-auto">
-            Pick your kit. Get a workspace with the tools
-            you actually need — not 27 tabs of confusion.
+          <p className="text-base text-muted-foreground max-w-xl mx-auto">
+            Pick your kit. Get a workspace with the tools you actually need — not 27 tabs of confusion.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2
-          lg:grid-cols-3 xl:grid-cols-5 gap-4">
-
-          {WHO_CARDS.map(({ kit, Icon, title, desc,
-                            outcome, tools, color }) => {
-            const c = KIT_COLOR_MAP[color]
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          {WHO_CARDS.map(({ kit, Icon, title, desc, outcome, tools, color }) => {
+            const c = KIT_COLOR_MAP[color];
             return (
               <Link
                 key={kit}
                 href={`/kits/${kit}`}
-                className="group rounded-2xl border
-                  border-border bg-card p-5 h-full
-                  hover:border-primary/30
-                  hover:shadow-md hover:shadow-primary/5
-                  transition-all duration-200
-                  flex flex-col gap-4"
+                className="group rounded-2xl border border-border bg-card p-5 h-full
+                  hover:border-primary/30 hover:shadow-md hover:shadow-primary/5
+                  transition-all duration-200 flex flex-col gap-4"
               >
-                {/* Icon */}
-                <div className={`w-10 h-10 rounded-xl
-                  flex items-center justify-center
-                  ${c.iconBg} transition-colors`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.iconBg} transition-colors`}>
                   <Icon className={`h-5 w-5 ${c.iconText}`} />
                 </div>
-
-                {/* Text */}
                 <div className="flex-1">
-                  <h3 className="text-sm font-bold
-                    text-foreground mb-1">{title}</h3>
-                  <p className="text-xs
-                    text-muted-foreground
-                    leading-relaxed">{desc}</p>
+                  <h3 className="text-sm font-bold text-foreground mb-1">{title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
                 </div>
-
-                {/* Outcome chip */}
-                <div className={`inline-flex items-center
-                  gap-1.5 text-[11px] font-medium
-                  px-2.5 py-1 rounded-full border
-                  self-start ${c.chipBg} ${c.chipText}
-                  ${c.chipBorder}`}>
+                <div className={`inline-flex items-center gap-1.5 text-[11px] font-medium
+                  px-2.5 py-1 rounded-full border self-start
+                  ${c.chipBg} ${c.chipText} ${c.chipBorder}`}>
                   <TrendingUp className="h-3 w-3" />
                   {outcome}
                 </div>
-
-                {/* Tool pills — top 3 + overflow count */}
-                <div className="flex flex-wrap
-                  gap-1.5 mt-auto">
-                  {tools.slice(0, 3).map(t => (
-                    <span
-                      key={t}
-                      className="text-[10px] px-2 py-0.5
-                        rounded-full bg-muted
-                        text-muted-foreground"
-                    >
+                <div className="flex flex-wrap gap-1.5 mt-auto">
+                  {tools.slice(0, 3).map((t) => (
+                    <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                       {t}
                     </span>
                   ))}
                   {tools.length > 3 && (
-                    <span className="text-[10px] px-2 py-0.5
-                      rounded-full bg-muted
-                      text-primary font-medium">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-primary font-medium">
                       +{tools.length - 3} more
                     </span>
                   )}
                 </div>
-
               </Link>
-            )
+            );
           })}
-
         </div>
       </section>
 
-      {/* ══ SECTION 4 — FEATURES ════════════════════════════════════════════ */}
-      <section id="features" className="py-20 bg-muted/30">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+      {/* ══ SECTION 4 — FEATURES (Issue 5 redesign) ══════════════════════════ */}
+      <section id="features" className="bg-muted/30 border-t border-b border-border py-20 md:py-28">
+        <div className="max-w-5xl mx-auto px-4">
 
-          {/* Heading */}
-          <div className="text-center mb-12">
-            <span className="inline-block text-[10px]
-              font-bold uppercase tracking-widest
-              text-primary bg-primary/10 rounded-full
-              px-3 py-1 mb-3">
-              Why SetuLix
-            </span>
-            <h2 className="text-3xl md:text-4xl font-bold
-              text-foreground mb-3">
-              One workspace. Everything you need.
-            </h2>
-            <p className="text-base text-muted-foreground
-              max-w-xl mx-auto">
-              Not a generic AI tool. A workspace built
-              around how Indian professionals actually work.
-            </p>
-          </div>
+          <SectionHeading
+            eyebrow="Why it works"
+            title="One workspace. Every professional need."
+            subtitle="Stop switching between tools. SetuLix gives you everything in one place — personalised to how you work."
+          />
 
-          {/* Cards */}
-          <div className="grid grid-cols-1
-            md:grid-cols-3 gap-6">
-            {FEATURES.map(({ icon: Icon, title,
-                             desc, badge }) => (
-              <div
-                key={title}
-                className="rounded-2xl border border-border
-                  bg-card p-6 flex flex-col gap-4
-                  hover:border-primary/20
-                  transition-colors"
-              >
-                <div className="w-11 h-11 rounded-xl
-                  bg-primary/10 flex items-center
-                  justify-center">
-                  <Icon className="h-5 w-5 text-primary" />
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-14">
 
-                <span className="text-[10px] font-bold
-                  uppercase tracking-widest text-primary
-                  bg-primary/10 rounded-full px-2.5 py-1
-                  self-start">
-                  {badge}
-                </span>
-
-                <h3 className="text-base font-bold
-                  text-foreground">{title}</h3>
-
-                <p className="text-sm text-muted-foreground
-                  leading-relaxed">{desc}</p>
+            {/* Card 1 — Personalised Kit */}
+            <div className="bg-card border border-border rounded-2xl p-8
+              hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5
+              transition-all duration-300">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10
+                flex items-center justify-center mb-6">
+                <LayoutGrid className="h-6 w-6 text-primary" />
               </div>
-            ))}
-          </div>
+              <h3 className="text-base font-bold text-foreground mb-3">Your kit. Your tools.</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Answer 4 questions during onboarding. SetuLix builds a personalised workspace
+                with only the tools you need — no clutter, no noise.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {["Creator Kit", "SME Kit", "HR Kit", "Legal Kit", "Marketing Kit"].map((pill) => (
+                  <span key={pill}
+                    className="text-xs bg-muted text-muted-foreground px-2.5 py-1 rounded-full border border-border">
+                    {pill}
+                  </span>
+                ))}
+              </div>
+            </div>
 
+            {/* Card 2 — AI Models (highlighted center) */}
+            <div className="bg-card border border-border rounded-2xl p-8
+              ring-1 ring-primary/30 shadow-lg shadow-primary/10
+              hover:shadow-xl hover:shadow-primary/15
+              transition-all duration-300">
+              <span className="inline-flex bg-primary text-primary-foreground
+                text-[10px] font-bold px-2.5 py-1 rounded-full mb-6">
+                Most powerful
+              </span>
+              <div className="w-14 h-14 rounded-2xl bg-primary/10
+                flex items-center justify-center mb-6">
+                <Cpu className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-base font-bold text-foreground mb-3">Best AI for every job.</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Legal docs use Claude Sonnet. SEO audits use GPT-4o. Captions use Gemini Flash.
+                You always get the right model — not the cheapest one.
+              </p>
+              <div className="flex gap-3 mt-4 flex-wrap">
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                  Claude Sonnet
+                </span>
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  GPT-4o
+                </span>
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  Gemini Flash
+                </span>
+              </div>
+            </div>
+
+            {/* Card 3 — Credits */}
+            <div className="bg-card border border-border rounded-2xl p-8
+              hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5
+              transition-all duration-300">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10
+                flex items-center justify-center mb-6">
+                <Coins className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-base font-bold text-foreground mb-3">Pay for what you use.</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                No monthly waste. Credits never expire on packs. Free tools stay free forever.
+                Upgrade your plan only when your volume demands it.
+              </p>
+              <div className="mt-4 bg-muted/50 rounded-xl p-3 space-y-0">
+                <div className="flex items-center justify-between py-1.5 border-b border-border text-xs">
+                  <div className="flex items-center gap-2">
+                    <Receipt className="h-4 w-4 text-emerald-500" />
+                    <span className="text-foreground">GST Invoice</span>
+                  </div>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">Free</span>
+                </div>
+                <div className="flex items-center justify-between py-1.5 border-b border-border text-xs">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="text-foreground">Blog post</span>
+                  </div>
+                  <span className="text-muted-foreground">3 credits</span>
+                </div>
+                <div className="flex items-center justify-between py-1.5 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Gavel className="h-4 w-4 text-primary" />
+                    <span className="text-foreground">Legal Notice</span>
+                  </div>
+                  <span className="text-muted-foreground">8 credits</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
       </section>
 
-      {/* ══ SECTION 4B — PERSONA JOURNEYS ═══════════════════════════════════ */}
+      {/* ══ SECTION 4B — PERSONA JOURNEYS ════════════════════════════════════ */}
       <div className="border-t border-border" />
       <PersonaJourney />
       <div className="border-t border-border" />
@@ -638,363 +694,231 @@ export default async function MarketingHomePage() {
         <ToolsShowcaseSection />
       </section>
 
-      {/* ══ SECTION 6 — HOW IT WORKS ════════════════════════════════════════ */}
-      <section className="py-20 md:py-28 border-t border-b border-border
-        bg-muted/30">
-        <div className="max-w-6xl mx-auto px-4">
+      {/* ══ SECTION 6 — HOW IT WORKS (Issue 9 upgrade) ══════════════════════ */}
+      <section className="relative overflow-hidden py-20 md:py-28
+        border-t border-b border-border bg-background">
+
+        {/* Decorative blur circle */}
+        <div className="absolute w-96 h-96 rounded-full bg-primary/5 blur-3xl
+          top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+
+        <div className="max-w-6xl mx-auto px-4 relative">
 
           {/* Heading */}
           <div className="text-center mb-14">
-            <p className="text-xs font-medium uppercase tracking-widest
-              text-primary mb-3">
+            <p className="text-xs font-medium uppercase tracking-widest text-primary mb-3">
               Simple by design
             </p>
-            <h2 className="text-3xl md:text-4xl font-bold
-              text-foreground mb-3">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
               From signup to output in under 3 minutes.
             </h2>
             <p className="text-base text-muted-foreground max-w-xl mx-auto">
-              No learning curve. No complex setup.
-              Just pick a tool and go.
+              No learning curve. No complex setup. Just pick a tool and go.
             </p>
           </div>
 
           {/* 4-step grid */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
 
-            {/* Step 1 */}
-            <div className="rounded-2xl border border-border bg-card p-6
-              flex flex-col relative overflow-hidden">
-              <span className="absolute top-4 right-4 text-5xl font-black
-                text-primary/10 leading-none select-none">
-                01
-              </span>
-              <div className="w-11 h-11 rounded-xl bg-primary/10
-                flex items-center justify-center shrink-0">
-                <UserPlus className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="text-lg font-bold text-foreground mt-4">
-                Create your free account
-              </h3>
-              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                Sign up with Google or email in 30 seconds. No credit card, no
-                commitments. You get{" "}
-                <span className="text-foreground font-medium">10 free credits</span>{" "}
-                on day one.
-              </p>
-            </div>
-
-            {/* Connector 1→2 */}
-            <div className="hidden md:flex items-center justify-center
-              absolute left-[25%] top-1/2 -translate-y-1/2 -translate-x-1/2 z-10">
-              <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
-            </div>
-
-            {/* Step 2 */}
-            <div className="rounded-2xl border border-border bg-card p-6
-              flex flex-col relative overflow-hidden">
-              <span className="absolute top-4 right-4 text-5xl font-black
-                text-primary/10 leading-none select-none">
-                02
-              </span>
-              <div className="w-11 h-11 rounded-xl bg-primary/10
-                flex items-center justify-center shrink-0">
-                <LayoutGrid className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="text-lg font-bold text-foreground mt-4">
-                Choose your kit
-              </h3>
-              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                Tell us what you do — creator, business owner, HR, or legal.
-                SetuLix builds a{" "}
-                <span className="text-foreground font-medium">personalised workspace</span>{" "}
-                for you instantly.
-              </p>
-            </div>
-
-            {/* Connector 2→3 */}
-            <div className="hidden md:flex items-center justify-center
-              absolute left-[50%] top-1/2 -translate-y-1/2 -translate-x-1/2 z-10">
-              <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
-            </div>
-
-            {/* Step 3 */}
-            <div className="rounded-2xl border border-border bg-card p-6
-              flex flex-col relative overflow-hidden">
-              <span className="absolute top-4 right-4 text-5xl font-black
-                text-primary/10 leading-none select-none">
-                03
-              </span>
-              <div className="w-11 h-11 rounded-xl bg-primary/10
-                flex items-center justify-center shrink-0">
-                <Wand2 className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="text-lg font-bold text-foreground mt-4">
-                Run any AI tool
-              </h3>
-              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                Pick a tool, fill in a few details, hit Generate. Powered by{" "}
-                <span className="text-foreground font-medium">
-                  Claude, GPT-4o, and Gemini
-                </span>{" "}
-                — the best model for each task.
-              </p>
-            </div>
-
-            {/* Connector 3→4 */}
-            <div className="hidden md:flex items-center justify-center
-              absolute left-[75%] top-1/2 -translate-y-1/2 -translate-x-1/2 z-10">
-              <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
-            </div>
-
-            {/* Step 4 */}
-            <div className="rounded-2xl border border-border bg-card p-6
-              flex flex-col relative overflow-hidden">
-              <span className="absolute top-4 right-4 text-5xl font-black
-                text-primary/10 leading-none select-none">
-                04
-              </span>
-              <div className="w-11 h-11 rounded-xl bg-primary/10
-                flex items-center justify-center shrink-0">
-                <Download className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="text-lg font-bold text-foreground mt-4">
-                Download or copy your output
-              </h3>
-              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                Copy the output, download as PDF, or save to your history.
-                PRO users get{" "}
-                <span className="text-foreground font-medium">branded PDFs</span>{" "}
-                with their logo and signature.
-              </p>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ══ SECTION 7 — COMPARISON TABLE ════════════════════════════════════ */}
-      <section className="px-4 py-20 max-w-5xl mx-auto">
-
-        {/* Section heading */}
-        <div className="text-center mb-12">
-          <p className="text-xs font-medium uppercase tracking-widest
-            text-primary mb-3">
-            Why SetuLix
-          </p>
-          <h2 className="text-3xl md:text-4xl font-bold
-            text-foreground mb-3">
-            Built for India. Not adapted for it.
-          </h2>
-          <p className="text-base text-muted-foreground max-w-2xl mx-auto">
-            Other tools are built for the US market and bolted on for India.
-            SetuLix starts with Indian professionals in mind.
-          </p>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto rounded-2xl border border-border
-          overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr>
-                {/* Feature column header */}
-                <th className="text-left px-4 py-4 text-xs font-medium
-                  text-muted-foreground uppercase tracking-wide
-                  bg-muted/50 border-b border-border w-[35%]">
-                  Feature
-                </th>
-
-                {/* SetuLix column — highlighted */}
-                <th className="px-4 py-4 text-center
-                  bg-primary border-b border-primary/50">
-                  <span className="flex flex-col items-center gap-1">
-                    <span className="text-sm font-bold
-                      text-primary-foreground">
-                      SetuLix
-                    </span>
-                    <span className="text-[10px] font-medium
-                      bg-white/20 text-primary-foreground
-                      rounded-full px-2 py-0.5">
-                      ✦ Best for India
-                    </span>
-                  </span>
-                </th>
-
-                {/* Competitor columns */}
-                {COMPETITORS.slice(1).map((name) => (
-                  <th
-                    key={name}
-                    className="px-4 py-4 text-xs font-medium
-                      text-muted-foreground text-center
-                      bg-muted/50 border-b border-border
-                      uppercase tracking-wide"
-                  >
-                    {name}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {COMPARISON.map(({ feature, values }, rowIdx) => (
-                <tr
-                  key={feature}
-                  className={rowIdx % 2 === 0
-                    ? "bg-transparent"
-                    : "bg-muted/20"}
-                >
-                  {/* Feature label */}
-                  <td className="px-4 py-3.5 text-sm font-medium
-                    text-foreground border-r border-border/50">
-                    {feature}
-                  </td>
-
-                  {/* SetuLix cell — always true, highlighted bg */}
-                  <td className="px-4 py-3.5 text-center bg-primary/5
-                    border-r border-border/50">
-                    <CompareCell value={values[0]} highlight={true} />
-                  </td>
-
-                  {/* Competitor cells */}
-                  {values.slice(1).map((val, colIdx) => (
-                    <td
-                      key={colIdx}
-                      className="px-4 py-3.5 text-center
-                        border-r border-border/50 last:border-r-0"
-                    >
-                      <CompareCell value={val} highlight={false} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Below-table CTA */}
-        <div className="mt-8 text-center">
-          <a
-            href="/?auth=signup"
-            className="inline-flex items-center gap-2 px-6 py-3
-              rounded-xl bg-primary text-primary-foreground
-              text-sm font-semibold hover:opacity-90
-              transition-opacity shadow-lg shadow-primary/20"
-          >
-            Ready to switch?
-            <ArrowRight className="h-4 w-4" />
-          </a>
-          <p className="text-xs text-muted-foreground mt-3">
-            Takes 30 seconds. Free forever on basic tools.
-          </p>
-        </div>
-
-      </section>
-
-      {/* ══ SECTION 8 — PRICING PREVIEW ═════════════════════════════════════ */}
-      <section className="px-4 py-20 bg-card/30">
-        <div className="max-w-4xl mx-auto">
-          <SectionHeading
-            badge="Pricing"
-            title="Simple, transparent pricing."
-            subtitle="Start free. Upgrade when you need more."
-          />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
-                name: "Starter",
-                credits: 100,
-                price: "₹99",
-                highlight: false,
-                perks: ["100 Credits", "All 27 tools access", "Credits never expire", "Email support"],
+                num: "01",
+                Icon: UserPlus,
+                title: "Create your free account",
+                body: "Sign up with Google or email in 30 seconds. No credit card, no commitments. You get",
+                highlight: "10 free credits",
+                tail: "on day one.",
+                time: "30 sec",
               },
               {
-                name: "Growth",
-                credits: 500,
-                price: "₹399",
-                highlight: true,
-                perks: ["500 Credits", "All 27 tools access", "Credits never expire", "Priority support", "Save 20%"],
+                num: "02",
+                Icon: LayoutGrid,
+                title: "Choose your kit",
+                body: "Tell us what you do — creator, business owner, HR, or legal. SetuLix builds a",
+                highlight: "personalised workspace",
+                tail: "for you instantly.",
+                time: "1 min",
               },
               {
-                name: "Pro",
-                credits: 1500,
-                price: "₹999",
-                highlight: false,
-                perks: ["1500 Credits", "All 27 tools access", "Credits never expire", "Priority support", "Save 33%"],
+                num: "03",
+                Icon: Wand2,
+                title: "Run any AI tool",
+                body: "Pick a tool, fill in a few details, hit Generate. Powered by",
+                highlight: "Claude, GPT-4o, and Gemini",
+                tail: "— the best model for each task.",
+                time: "< 1 min",
               },
-            ].map(({ name, price, highlight, perks }) => (
-              <div
-                key={name}
-                className={`rounded-2xl border p-6 ${highlight ? "border-primary bg-primary/5 shadow-lg shadow-primary/10" : "border-border bg-card"}`}
-              >
-                {highlight && (
-                  <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 rounded-full px-2.5 py-1 mb-3">
-                    Popular
-                  </span>
+              {
+                num: "04",
+                Icon: Download,
+                title: "Download your output",
+                body: "Copy the output, download as PDF, or save to your history. PRO users get",
+                highlight: "branded PDFs",
+                tail: "with their logo and signature.",
+                time: "instant",
+              },
+            ].map(({ num, Icon, title, body, highlight, tail, time }, idx, arr) => (
+              <div key={num} className="relative">
+                {/* Connector arrow (desktop) */}
+                {idx < arr.length - 1 && (
+                  <div className="hidden md:flex items-center justify-center
+                    absolute -right-3 top-1/3 z-10">
+                    <ChevronRight className="h-5 w-5 text-primary/30" />
+                  </div>
                 )}
-                <h3 className="text-lg font-bold text-foreground mb-1">{name}</h3>
-                <div className="text-3xl font-bold text-foreground mb-4">{price}</div>
-                <ul className="space-y-2 mb-6">
-                  {perks.map((p) => (
-                    <li key={p} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check className="h-4 w-4 text-green-500 shrink-0" />
-                      {p}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/pricing"
-                  className={`block w-full text-center rounded-xl py-2.5 text-sm font-semibold transition-opacity ${highlight ? "bg-primary text-white hover:opacity-90" : "border border-border text-foreground hover:bg-muted/50"}`}
-                >
-                  Get Started
-                </Link>
+
+                {/* Card with gradient top border */}
+                <div className="rounded-2xl border border-border bg-card/80 backdrop-blur-sm p-6
+                  flex flex-col relative overflow-hidden h-full
+                  before:absolute before:inset-x-0 before:top-0 before:h-px
+                  before:bg-gradient-to-r before:from-transparent before:via-primary/40 before:to-transparent">
+
+                  <span className="absolute top-4 right-4 text-5xl font-black
+                    text-primary/6 leading-none select-none">
+                    {num}
+                  </span>
+                  <div className="w-11 h-11 rounded-xl bg-primary/10
+                    flex items-center justify-center shrink-0">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-bold text-foreground mt-4">{title}</h3>
+                  <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                    {body}{" "}
+                    <span className="text-foreground font-medium">{highlight}</span>{" "}
+                    {tail}
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium
+                    text-muted-foreground mt-4 bg-muted px-2 py-0.5 rounded-full self-start">
+                    <Clock className="h-3 w-3" />
+                    {time}
+                  </span>
+                </div>
               </div>
             ))}
+
           </div>
-          <div className="mt-6 text-center">
-            <Link href="/pricing" className="text-sm text-primary hover:underline font-medium">
-              See all plans and compare →
-            </Link>
+
+          {/* Section CTA */}
+          <div className="mt-12 text-center">
+            <p className="text-sm text-muted-foreground mb-4">
+              Ready to save 10 hours this week?
+            </p>
+            <a
+              href="/?auth=signup"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl
+                bg-primary text-primary-foreground text-sm font-semibold
+                hover:opacity-90 transition-opacity"
+            >
+              Start free, no card needed
+              <ArrowRight className="h-4 w-4" />
+            </a>
           </div>
+
         </div>
       </section>
 
-      {/* ══ SECTION 9 — TESTIMONIALS ═════════════════════════════════════════ */}
+      {/* ══ SECTION 7 — COMPARISON TABLE (Issue 10 redesign) ════════════════ */}
+      <section className="px-4 py-20 bg-muted/20">
+        <div className="max-w-5xl mx-auto">
+
+          <SectionHeading
+            eyebrow="Why SetuLix"
+            title="Built for India. Not adapted for it."
+            subtitle="Other tools are built for the US market and bolted on for India. SetuLix starts with Indian professionals in mind."
+          />
+
+          <div className="overflow-x-auto rounded-2xl border border-border overflow-hidden">
+            <table className="min-w-[700px] w-full border-collapse text-sm">
+              <thead>
+                <tr>
+                  <th className="text-left px-5 py-4 text-xs font-medium text-muted-foreground
+                    uppercase tracking-wider bg-muted/50 border-b border-border w-[35%]">
+                    Feature
+                  </th>
+                  <th className="px-5 py-4 text-center bg-primary border-b border-primary/50">
+                    <span className="flex flex-col items-center gap-1">
+                      <span className="text-sm font-bold text-primary-foreground">SetuLix</span>
+                      <span className="text-[10px] opacity-80 text-primary-foreground">
+                        ✦ Made for India
+                      </span>
+                    </span>
+                  </th>
+                  {COMPETITORS.slice(1).map((name) => (
+                    <th
+                      key={name}
+                      className="px-4 py-4 text-xs font-medium text-muted-foreground
+                        text-center bg-muted/30 border-b border-border uppercase tracking-wide"
+                    >
+                      {name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARISON.map(({ feature, values }, rowIdx) => (
+                  <tr
+                    key={feature}
+                    className={cn(
+                      "border-b border-border last:border-0",
+                      rowIdx % 2 === 1 ? "bg-muted/10" : "bg-transparent"
+                    )}
+                  >
+                    <td className="px-5 py-3.5 text-sm font-medium text-foreground">
+                      {feature}
+                    </td>
+                    <td className="px-4 py-3.5 text-center bg-primary/5">
+                      <CompareCell value={values[0]} highlight={true} />
+                    </td>
+                    {values.slice(1).map((val, colIdx) => (
+                      <td key={colIdx} className="px-4 py-3.5 text-center">
+                        <CompareCell value={val} highlight={false} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Below table */}
+          <div className="mt-8 text-center">
+            <p className="text-xs text-muted-foreground max-w-lg mx-auto">
+              Each tool listed serves a different primary purpose. SetuLix is built specifically
+              for Indian professionals who need billing, legal, HR, and content tools in one place.
+            </p>
+            <a
+              href="/?auth=signup"
+              className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-xl
+                bg-primary text-primary-foreground text-sm font-semibold
+                hover:opacity-90 transition-opacity"
+            >
+              Start free — no card needed
+              <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ══ SECTION 8 — PRICING (Issue 2 — DB-driven via PricingPage) ════════ */}
+      <section id="pricing">
+        <PricingPage plans={plans} packs={packs} rollover={rollover} />
+      </section>
+
+      {/* ══ SECTION 9 — TESTIMONIALS (Issue 11 carousel) ════════════════════ */}
       <section className="px-4 py-20 max-w-5xl mx-auto">
         <SectionHeading
-          badge="Testimonials"
+          eyebrow="Testimonials"
           title="Real people. Real results."
           subtitle="What Indian professionals say about SetuLix."
         />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {TESTIMONIALS.map(({ name, role, avatar, quote }) => (
-            <div key={name} className="rounded-2xl border border-border bg-card p-6">
-              <div className="flex items-center gap-1 mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                ))}
-              </div>
-              <p className="text-sm text-foreground leading-relaxed mb-4 italic">&ldquo;{quote}&rdquo;</p>
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                  {avatar}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{name}</p>
-                  <p className="text-xs text-muted-foreground">{role}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <TestimonialsCarousel testimonials={TESTIMONIALS} />
       </section>
 
       {/* ══ SECTION 10 — FAQ ═════════════════════════════════════════════════ */}
       <section className="px-4 py-20 bg-card/30">
         <div className="max-w-3xl mx-auto">
-          <SectionHeading
-            badge="FAQ"
-            title="Frequently asked questions"
-          />
+          <SectionHeading eyebrow="FAQ" title="Frequently asked questions" />
           <div className="space-y-3">
             {FAQS.map(({ q, a }) => (
               <FaqItem key={q} q={q} a={a} />
@@ -1016,7 +940,7 @@ export default async function MarketingHomePage() {
         </div>
       </section>
 
-      {/* ══ SECTION 12 — FOOTER ═══════════════════════════════════════════════ */}
+      {/* ══ FOOTER ═══════════════════════════════════════════════════════════ */}
       <footer className="border-t border-border bg-card/50 px-4 py-12">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
@@ -1058,7 +982,6 @@ export default async function MarketingHomePage() {
               </ul>
             </div>
           </div>
-
           <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
               &copy; 2026 SetuLabsAI. All rights reserved.
