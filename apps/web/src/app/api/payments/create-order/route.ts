@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectDB, User, CreditPack, Plan, BillingProfile, Payment } from "@toolhub/db";
 import { z } from "zod";
-import { createCashfreeOrder } from "@/lib/cashfree";
 import { generateOrderId } from "@/lib/order-id";
+import { getActiveGateway, getActiveGatewaySlug } from "@/lib/gateways/manager";
 
 const billingDetailsSchema = z.object({
   accountType: z.enum(["individual", "business"]),
@@ -51,7 +51,6 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    // STEP 1 — Get user
     const user = await User.findById(session.user.id);
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -67,7 +66,6 @@ export async function POST(req: NextRequest) {
     let credits = 0;
     let orderNote = "";
 
-    // STEP 2 — Calculate amount
     if (data.type === "credit_pack") {
       const pack = await CreditPack.findById(data.packId);
       if (!pack || !pack.isActive) {
@@ -95,7 +93,6 @@ export async function POST(req: NextRequest) {
     const gstAmount = Math.round(subtotal * 0.18);
     const totalAmount = subtotal + gstAmount;
 
-    // STEP 3 — Save billing if requested
     if (saveBilling) {
       await BillingProfile.findOneAndUpdate(
         { userId: user._id },
@@ -115,28 +112,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // STEP 4 — Generate order ID
     const orderId = generateOrderId();
 
-    // STEP 5 — Return URL
+    const gatewaySlug = await getActiveGatewaySlug();
+    const gateway = await getActiveGateway();
+
+    const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/webhook/${gatewaySlug}`;
     const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/payment/return?order_id=${orderId}`;
 
-    // STEP 6 — Create Cashfree order
-    const cashfreeOrder = await createCashfreeOrder({
+    const orderResult = await gateway.createOrder({
       orderId,
       amount: totalAmount,
       customerName: billingDetails.fullName,
       customerEmail: user.email,
-      customerPhone: billingDetails.phone,
+      customerPhone: billingDetails.phone || "9999999999",
       orderNote,
       returnUrl,
+      callbackUrl,
     });
 
-    // STEP 7 — Save Payment doc
     await Payment.create({
       userId: user._id,
       orderId,
       cashfreeOrderId: orderId,
+      gatewaySlug,
+      gatewayOrderId: orderResult.gatewayOrderId,
       type: data.type,
       packId: data.type === "credit_pack" ? data.packId : undefined,
       credits,
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
       gstAmount,
       totalAmount,
       status: "created",
-      paymentSessionId: cashfreeOrder.payment_session_id,
+      paymentSessionId: orderResult.paymentSessionId || "",
       billingSnapshot: {
         accountType: billingDetails.accountType,
         fullName: billingDetails.fullName,
@@ -159,10 +159,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // STEP 8 — Return
     return NextResponse.json({
       orderId,
-      paymentSessionId: cashfreeOrder.payment_session_id,
+      gatewaySlug,
+      paymentSessionId: orderResult.paymentSessionId,
+      upiIntent: orderResult.upiIntent,
+      phonePeLink: orderResult.phonePeLink,
+      paytmLink: orderResult.paytmLink,
+      gpayLink: orderResult.gpayLink,
+      dynamicQR: orderResult.dynamicQR,
+      expiresIn: orderResult.expiresIn,
     });
   } catch (err) {
     console.error("[create-order]", err);

@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Lock, Shield, CheckCircle, Loader2,
-  Building2, User, ChevronDown,
+  Building2, User, ChevronDown, Smartphone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
+import { PaygicCheckoutModal } from "@/components/ui/PaygicCheckoutModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,16 @@ interface BillingProfile {
   businessName?: string;
   gstState?: string;
   contactPerson?: string;
+}
+
+interface PaygicOrderData {
+  orderId: string;
+  upiIntent?: string;
+  phonePeLink?: string;
+  paytmLink?: string;
+  gpayLink?: string;
+  dynamicQR?: string;
+  expiresIn?: number;
 }
 
 // Cashfree JS instance type (dynamic import)
@@ -75,6 +86,7 @@ const inputCls = "w-full rounded-lg border border-border bg-card px-3 py-2.5 tex
 // ── Checkout page ─────────────────────────────────────────────────────────────
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const type = searchParams.get("type") as "plan" | "pack" | null;
   const slug = searchParams.get("slug");
@@ -89,6 +101,11 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [payError, setPayError] = useState<string | null>(null);
   const [cashfree, setCashfree] = useState<CashfreeInstance>(null);
+  const [activeGateway, setActiveGateway] = useState<string>("cashfree");
+
+  // Paygic modal state
+  const [paygicModalOpen, setPaygicModalOpen] = useState(false);
+  const [paygicOrderData, setPaygicOrderData] = useState<PaygicOrderData | null>(null);
 
   // Individual fields
   const [fullName, setFullName] = useState("");
@@ -105,14 +122,23 @@ export default function CheckoutPage() {
   const [gstState, setGstState] = useState("");
   const [contactPerson, setContactPerson] = useState("");
 
-  // Initialize Cashfree JS SDK
+  // Fetch active gateway
   useEffect(() => {
+    fetch("/api/payments/active-gateway")
+      .then((r) => r.json())
+      .then((d) => setActiveGateway(d.gatewaySlug || "cashfree"))
+      .catch(() => null);
+  }, []);
+
+  // Initialize Cashfree JS SDK (only when needed)
+  useEffect(() => {
+    if (activeGateway !== "cashfree") return;
     import("@cashfreepayments/cashfree-js").then(({ load }) => {
       load({ mode: (process.env.NEXT_PUBLIC_CASHFREE_MODE as "sandbox" | "production") || "sandbox" })
         .then(setCashfree)
         .catch(() => console.error("Failed to load Cashfree JS"));
     });
-  }, []);
+  }, [activeGateway]);
 
   // Load item details
   useEffect(() => {
@@ -175,7 +201,8 @@ export default function CheckoutPage() {
     setPayError(null);
 
     if (!validate()) return;
-    if (!cashfree) {
+
+    if (activeGateway === "cashfree" && !cashfree) {
       setPayError("Payment gateway is loading. Please try again.");
       return;
     }
@@ -183,7 +210,6 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      // Build billing details
       const billingDetails = {
         accountType,
         fullName: accountType === "individual" ? fullName : contactPerson,
@@ -196,22 +222,10 @@ export default function CheckoutPage() {
         pincode,
       };
 
-      // Create order
       const orderPayload =
         type === "pack"
-          ? {
-              type: "credit_pack" as const,
-              packId: id!,
-              billingDetails,
-              saveBilling,
-            }
-          : {
-              type: "plan" as const,
-              planSlug: slug!,
-              billingCycle: cycle,
-              billingDetails,
-              saveBilling,
-            };
+          ? { type: "credit_pack" as const, packId: id!, billingDetails, saveBilling }
+          : { type: "plan" as const, planSlug: slug!, billingCycle: cycle, billingDetails, saveBilling };
 
       const res = await fetch("/api/payments/create-order", {
         method: "POST",
@@ -224,11 +238,18 @@ export default function CheckoutPage() {
         throw new Error(err.error || "Failed to create order");
       }
 
-      const { paymentSessionId } = await res.json();
+      const orderData = await res.json();
 
-      // Open Cashfree seamless popup
+      if (orderData.gatewaySlug === "paygic") {
+        setPaygicOrderData(orderData as PaygicOrderData);
+        setPaygicModalOpen(true);
+        setLoading(false);
+        return;
+      }
+
+      // Cashfree popup
       cashfree.checkout({
-        paymentSessionId,
+        paymentSessionId: orderData.paymentSessionId,
         redirectTarget: "_modal",
       });
     } catch (err) {
@@ -243,6 +264,15 @@ export default function CheckoutPage() {
       <p className="text-xs text-destructive mt-1">{errors[field]}</p>
     ) : null;
   }
+
+  const payButtonDisabled =
+    loading ||
+    !item ||
+    (activeGateway === "cashfree" && !cashfree);
+
+  const payButtonText = activeGateway === "paygic"
+    ? `Pay ₹${item?.total?.toFixed(2) ?? "..."} via UPI`
+    : `Pay ₹${item?.total?.toFixed(2) ?? "..."}`;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -452,7 +482,7 @@ export default function CheckoutPage() {
             {/* Pay button */}
             <button
               onClick={handlePayment}
-              disabled={loading || !cashfree || !item}
+              disabled={payButtonDisabled}
               className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -460,10 +490,15 @@ export default function CheckoutPage() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Processing...
                 </>
+              ) : activeGateway === "paygic" ? (
+                <>
+                  <Smartphone className="h-4 w-4" />
+                  {payButtonText}
+                </>
               ) : (
                 <>
                   <Lock className="h-4 w-4" />
-                  Pay ₹{item?.total?.toFixed(2) ?? "..."}
+                  {payButtonText}
                 </>
               )}
             </button>
@@ -475,10 +510,17 @@ export default function CheckoutPage() {
 
             {/* Trust indicators */}
             <div className="space-y-2 pt-1 border-t border-border">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Shield className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                <span>Secured by Cashfree</span>
-              </div>
+              {activeGateway === "paygic" ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Smartphone className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                  <span>Secured by Paygic — UPI Payment</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Shield className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                  <span>Secured by Cashfree</span>
+                </div>
+              )}
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Lock className="h-3.5 w-3.5 text-green-500 shrink-0" />
                 <span>256-bit SSL Encryption</span>
@@ -492,6 +534,37 @@ export default function CheckoutPage() {
         </div>
 
       </div>
+
+      {/* Paygic checkout modal */}
+      {paygicOrderData && (
+        <PaygicCheckoutModal
+          isOpen={paygicModalOpen}
+          onClose={() => {
+            setPaygicModalOpen(false);
+            setPaygicOrderData(null);
+          }}
+          orderId={paygicOrderData.orderId}
+          amount={item?.total || 0}
+          upiIntent={paygicOrderData.upiIntent || ""}
+          phonePeLink={paygicOrderData.phonePeLink || ""}
+          paytmLink={paygicOrderData.paytmLink || ""}
+          gpayLink={paygicOrderData.gpayLink || ""}
+          dynamicQR={paygicOrderData.dynamicQR || ""}
+          expiresIn={paygicOrderData.expiresIn || 300}
+          onSuccess={() => {
+            setPaygicModalOpen(false);
+            router.push(`/payment/return?order_id=${paygicOrderData.orderId}`);
+          }}
+          onFailure={() => {
+            setPaygicModalOpen(false);
+            setPayError("Payment failed. Please try again.");
+          }}
+          onExpired={() => {
+            setPaygicModalOpen(false);
+            setPayError("Payment link expired. Please try again.");
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -16,6 +16,8 @@ export interface IPayment extends Document {
   userId: Types.ObjectId;
   orderId: string;
   cashfreeOrderId: string;
+  gatewaySlug: string;
+  gatewayOrderId: string;
   type: "credit_pack" | "plan";
 
   // Credit pack
@@ -68,7 +70,9 @@ const PaymentSchema = new Schema<IPayment>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     orderId: { type: String, required: true, unique: true, index: true },
-    cashfreeOrderId: { type: String, required: true },
+    cashfreeOrderId: { type: String, default: "" },
+    gatewaySlug: { type: String, default: "cashfree" },
+    gatewayOrderId: { type: String, default: "" },
     type: { type: String, enum: ["credit_pack", "plan"], required: true },
 
     // Credit pack
@@ -92,8 +96,8 @@ const PaymentSchema = new Schema<IPayment>(
       default: "created",
     },
 
-    // Cashfree details
-    paymentSessionId: { type: String, required: true },
+    // Gateway details
+    paymentSessionId: { type: String, default: "" },
     cashfreePaymentId: { type: String, default: null },
     paymentMethod: { type: String, default: null },
 

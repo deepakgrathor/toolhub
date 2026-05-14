@@ -1,9 +1,203 @@
 # Handoff Note
-Updated: 2026-05-14 | Account: B | Session: B8-C-2-C | Features: Saved Presets — Wire into Tool Pages + Admin Overview
+Updated: 2026-05-14 | Account: B | Session: B8-D | Features: Multi-Payment Gateway System — Paygic (priority) + Cashfree
 
 ## Where We Are
-Session B8-C-2-C done. **TypeScript: 0 errors (apps/web).** Committed + pushed to main.
+Session B8-D done. **TypeScript: 0 errors (apps/web).** Committed + pushed to main.
 Note: `npx turbo build` fails with pre-existing `Cannot find module for page: /_document` error (not caused by any recent changes).
+
+---
+
+## What Was Done (Session B8-D)
+
+### TASK 1 — PaymentGateway Model
+- `packages/db/src/models/PaymentGateway.ts` — NEW
+  - Fields: slug (enum: cashfree/paygic/razorpay/payu), name, isActive, isDefault, priority, environment, config (apiKey/secretKey/merchantId/webhookSecret/token/tokenGeneratedAt/extraConfig), supports (upi/cards/netbanking/wallets/qr), description, logoUrl, timestamps
+- `packages/db/src/index.ts` — added export
+
+### TASK 2 — Seed Script
+- `apps/web/src/scripts/seed-gateways.ts` — NEW
+  - Seeds 2 gateways: Paygic (isDefault:true, priority:1, production) + Cashfree (isDefault:false, priority:2, sandbox)
+  - Run: `MONGODB_URI="$MONGODB_URI" npx tsx apps/web/src/scripts/seed-gateways.ts`
+
+### TASK 3 — Gateway Interface + Types
+- `apps/web/src/lib/gateways/types.ts` — NEW
+  - Exports: `IGateway`, `CreateOrderParams`, `OrderResult`, `VerifyResult`, `PaymentStatus`, `GatewayConfig`, `GatewayCheckoutPayload`
+
+### TASK 4 — Paygic Gateway
+- `apps/web/src/lib/gateways/paygic.ts` — NEW
+  - `PaygicGateway implements IGateway`
+  - `generateToken()` → POST /api/v3/createMerchantToken
+  - `createOrder()` → POST /api/v2/createPaymentRequest → returns UPI intent + QR + app links
+  - `verifyPayment()` → POST /api/v2/checkPaymentStatus
+  - `verifyWebhook()` → always true (verify via API instead)
+
+### TASK 5 — Cashfree Gateway Refactor
+- `apps/web/src/lib/gateways/cashfree.ts` — NEW
+  - `CashfreeGateway implements IGateway`
+  - Wraps existing Cashfree SDK (constructor pattern: `new Cashfree(env, appId, secretKey)`)
+  - `createOrder()`, `verifyPayment()`, `verifyWebhook()` (HMAC-SHA256)
+
+### TASK 6 — Stub Gateways
+- `apps/web/src/lib/gateways/razorpay.ts` — NEW (stub, throws "coming soon")
+- `apps/web/src/lib/gateways/payu.ts` — NEW (stub, throws "coming soon")
+
+### TASK 7 — Gateway Manager
+- `apps/web/src/lib/gateways/manager.ts` — NEW
+  - `getActiveGateway()` — fetches default+active gateway from DB, caches in Redis 5min (`SetuLix:active_gateway`)
+  - `buildGateway(slug, config)` — factory for all 4 gateways
+  - `buildGatewayFromDoc(doc)` — builds from DB document (used in webhook + verify)
+  - `invalidateGatewayCache()` — del Redis key
+  - `getActiveGatewaySlug()` — lightweight slug-only fetch
+  - `getPaygicGateway()` — specific Paygic instance with doc
+
+### TASK 8 — Paygic Token Management API
+- `apps/web/src/app/api/admin/gateways/paygic/generate-token/route.ts` — NEW
+  - POST, admin auth required
+  - Fetches MID + password from DB (fallback: env vars PAYGIC_MID / PAYGIC_PASSWORD)
+  - Calls `gateway.generateToken()` → saves to DB + invalidates cache
+  - Never returns the token in response
+
+### TASK 9 — create-order API (updated)
+- `apps/web/src/app/api/payments/create-order/route.ts` — UPDATED
+  - Replaced hardcoded Cashfree with `getActiveGateway()` + `getActiveGatewaySlug()`
+  - Passes `callbackUrl: /api/payments/webhook/{gatewaySlug}`
+  - Returns all gateway-specific fields: `gatewaySlug`, `paymentSessionId` (Cashfree), `upiIntent`/`phonePeLink`/`paytmLink`/`gpayLink`/`dynamicQR`/`expiresIn` (Paygic)
+- `packages/db/src/models/Payment.ts` — UPDATED
+  - Added: `gatewaySlug: String (default: 'cashfree')`, `gatewayOrderId: String (default: '')`
+  - Changed: `paymentSessionId` from required to `default: ''` (Paygic has no session ID)
+  - Changed: `cashfreeOrderId` from required to `default: ''`
+
+### TASK 10 — Per-Gateway Webhook Route
+- `apps/web/src/app/api/payments/webhook/[gateway]/route.ts` — NEW
+  - Handles both `/webhook/paygic` and `/webhook/cashfree`
+  - Paygic: `verifyWebhook` always true → double-verifies via `gateway.verifyPayment()` API
+  - Cashfree: HMAC signature check → reject on invalid
+  - Idempotent (already-paid orders skip)
+  - Old `/api/payments/webhook/route.ts` kept for backward compat
+
+### TASK 11 — Paygic Checkout Modal
+- `apps/web/src/components/ui/PaygicCheckoutModal.tsx` — NEW
+  - 5-minute countdown timer (green → amber → red)
+  - Polls `/api/payments/verify` every 3s
+  - Tab UI: Scan QR (shows `dynamicQR` image) | UPI Apps (PhonePe/GPay/Paytm links)
+  - States: polling / success / failed / expired
+  - Manual "I've completed the payment" check button
+  - Blocks backdrop click (user must cancel explicitly)
+
+### TASK 12 — Checkout Page (updated)
+- `apps/web/src/app/(site)/checkout/page.tsx` — UPDATED
+  - Fetches active gateway on mount: `GET /api/payments/active-gateway`
+  - Cashfree JS SDK only initialized when `activeGateway === 'cashfree'`
+  - Pay button: Lock icon (Cashfree) or Smartphone icon (Paygic)
+  - Trust badge: "Secured by Paygic — UPI Payment" vs "Secured by Cashfree"
+  - Paygic response → opens `PaygicCheckoutModal`
+  - On success → redirect to `/payment/return?order_id=...`
+- `apps/web/src/app/api/payments/active-gateway/route.ts` — NEW
+  - GET (no auth), returns `{ gatewaySlug, supports, name }`
+
+### TASK 13 — Verify API (updated)
+- `apps/web/src/app/api/payments/verify/route.ts` — UPDATED
+  - Uses `payment.gatewaySlug` to find correct gateway doc
+  - Calls `buildGatewayFromDoc()` → `gateway.verifyPayment()`
+  - Handles `expired` status → marks payment as failed
+  - Works for both Paygic and Cashfree
+
+### TASK 14 — Admin Payment Gateways Page
+- `apps/web/src/app/api/admin/gateways/route.ts` — NEW
+  - GET, admin auth — returns all gateways with masked secrets (last 4 chars visible, secretKey always "••••••••")
+- `apps/web/src/app/api/admin/gateways/[slug]/route.ts` — NEW
+  - PATCH, admin auth — updates env, config fields, isDefault (clears others), isActive
+  - Invalidates Redis cache + logs to audit_log
+- `apps/web/src/app/admin/payment-gateways/page.tsx` — NEW
+  - 2×2 grid of gateway cards (Paygic, Cashfree, Razorpay stub, PayU stub)
+  - Each card: name, DEFAULT badge, active dot, env badge, support tags, MID preview, token status
+  - Actions: Configure modal, Set Default, Generate Token (Paygic only), Test Connection
+  - Configure modal: per-gateway form fields, show/hide secrets, auto-generated callback URL
+  - Coming-soon gateways shown but disabled
+- `apps/web/src/app/admin/layout.tsx` — UPDATED
+  - Added "Gateways" nav item (Landmark icon) after Payments
+
+### TASK 15 — Gateway Test Connection API
+- `apps/web/src/app/api/admin/gateways/[slug]/test/route.ts` — NEW
+  - POST, admin auth
+  - Paygic: pings `/api/v2/checkPaymentStatus` with test ID → confirms API + token reachability
+  - Cashfree: checks if credentials are non-empty
+  - Razorpay/PayU: returns "coming soon"
+
+---
+
+## Architecture Notes
+
+### Multi-Gateway Payment Flow
+```
+Admin → /admin/payment-gateways
+  → Configure gateway (MID + secrets) + click Save
+  → For Paygic: click Generate Token → token saved to DB
+  → Set as Default → Redis cache invalidated
+
+User → /checkout
+  → GET /api/payments/active-gateway → gatewaySlug
+  → Fill form → click Pay
+  → POST /api/payments/create-order
+      → getActiveGateway() → DB + Redis cache
+      → gateway.createOrder() → gateway API
+      → Payment.create({ gatewaySlug, gatewayOrderId })
+      → return { gatewaySlug, ...gateway-specific-fields }
+
+  If Cashfree:
+    → cashfree.checkout({ paymentSessionId }) → popup
+    → Cashfree redirects to /payment/return
+    → GET /api/payments/verify → buildGatewayFromDoc → PGFetchOrder
+
+  If Paygic:
+    → PaygicCheckoutModal opens (QR + app links)
+    → Polls /api/payments/verify every 3s
+    → gateway.verifyPayment() → checkPaymentStatus API
+    → On success: redirect to /payment/return
+
+Webhook: POST /api/payments/webhook/{gatewaySlug}
+  → Paygic: verifyWebhook always true → double-verify via API
+  → Cashfree: HMAC signature check
+  → processCreditPackPayment OR processPlanPayment
+```
+
+### Gateway Cache (Redis)
+```
+Key: SetuLix:active_gateway
+TTL: 300s (5 min)
+Invalidated on: any PATCH to gateway config, generate-token
+Contains: { slug, config } — config includes live token
+```
+
+### New Files (Session B8-D)
+```
+packages/db/src/models/PaymentGateway.ts
+apps/web/src/scripts/seed-gateways.ts
+apps/web/src/lib/gateways/types.ts
+apps/web/src/lib/gateways/paygic.ts
+apps/web/src/lib/gateways/cashfree.ts
+apps/web/src/lib/gateways/razorpay.ts (stub)
+apps/web/src/lib/gateways/payu.ts (stub)
+apps/web/src/lib/gateways/manager.ts
+apps/web/src/app/api/admin/gateways/route.ts
+apps/web/src/app/api/admin/gateways/[slug]/route.ts
+apps/web/src/app/api/admin/gateways/[slug]/test/route.ts
+apps/web/src/app/api/admin/gateways/paygic/generate-token/route.ts
+apps/web/src/app/api/payments/active-gateway/route.ts
+apps/web/src/app/api/payments/webhook/[gateway]/route.ts
+apps/web/src/components/ui/PaygicCheckoutModal.tsx
+apps/web/src/app/admin/payment-gateways/page.tsx
+```
+
+### Modified Files (Session B8-D)
+```
+packages/db/src/index.ts — added PaymentGateway export
+packages/db/src/models/Payment.ts — added gatewaySlug, gatewayOrderId; relaxed required
+apps/web/src/app/api/payments/create-order/route.ts — gateway manager
+apps/web/src/app/api/payments/verify/route.ts — gateway-aware verify
+apps/web/src/app/(site)/checkout/page.tsx — Paygic modal + gateway detection
+apps/web/src/app/admin/layout.tsx — added Gateways nav item
+```
 
 ---
 

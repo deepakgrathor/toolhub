@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Wrench, Users, CreditCard, Settings,
-  ArrowLeft, ClipboardList, LogOut, Gift, Megaphone, Package, Receipt, LayoutGrid,
+  ArrowLeft, ClipboardList, LogOut, Gift, Megaphone, Package, Receipt, LayoutGrid, Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { href: "/admin/credit-packs", label: "Credit Packs", icon: Package, exact: false },
   { href: "/admin/referrals", label: "Referrals", icon: Gift, exact: false },
   { href: "/admin/payments", label: "Payments", icon: Receipt, exact: false },
+  { href: "/admin/payment-gateways", label: "Gateways", icon: Landmark, exact: false },
   { href: "/admin/notifications", label: "Notifications", icon: Megaphone, exact: false },
   { href: "/admin/audit", label: "Audit Log", icon: ClipboardList, exact: false },
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },
