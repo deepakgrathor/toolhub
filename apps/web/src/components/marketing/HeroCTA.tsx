@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowRight, Zap } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, Zap, Sparkles } from "lucide-react";
 import {
   FileText, Video, Image, Heading, MessageSquare,
   Receipt, Wallet, ClipboardList, Globe, QrCode,
@@ -115,59 +116,160 @@ export function FinalCTA() {
 }
 
 // ── Tools Showcase (homepage Section 5) ───────────────────────────────────────
-// Self-contained client component — no server-to-client icon passing
+
+const CATEGORIES = [
+  { id: "all",       label: "All Tools",  count: 27 },
+  { id: "creator",   label: "Creator",    count: 6  },
+  { id: "sme",       label: "SME",        count: 7  },
+  { id: "hr",        label: "HR",         count: 5  },
+  { id: "legal",     label: "Legal",      count: 5  },
+  { id: "marketing", label: "Marketing",  count: 4  },
+];
 
 const TOOLS = [
-  { slug: "blog-generator",     name: "Blog Generator",       Icon: FileText,        desc: "SEO blogs in seconds",         credit: 3 },
-  { slug: "yt-script",          name: "YT Script Writer",     Icon: Video,           desc: "Viral YouTube scripts",        credit: 3 },
-  { slug: "thumbnail-ai",       name: "Thumbnail AI",         Icon: Image,           desc: "AI thumbnail generation",      credit: 5 },
-  { slug: "title-generator",    name: "Title Generator",      Icon: Heading,         desc: "Click-worthy titles",          credit: 1 },
-  { slug: "hook-writer",        name: "Hook Writer",          Icon: Zap,             desc: "Attention-grabbing hooks",     credit: 1 },
-  { slug: "caption-generator",  name: "Caption Generator",    Icon: MessageSquare,   desc: "Social media captions",        credit: 1 },
-  { slug: "gst-invoice",        name: "GST Invoice",          Icon: Receipt,         desc: "Professional GST invoices",    credit: 2 },
-  { slug: "expense-tracker",    name: "Expense Tracker",      Icon: Wallet,          desc: "Smart expense summaries",      credit: 1 },
-  { slug: "quotation-generator",name: "Quotation Generator",  Icon: ClipboardList,   desc: "Professional quotations",      credit: 2 },
-  { slug: "website-generator",  name: "Website Generator",    Icon: Globe,           desc: "AI website copy generator",    credit: 4 },
-  { slug: "qr-generator",       name: "QR Generator",         Icon: QrCode,          desc: "Custom QR codes instantly",    credit: 0 },
-  { slug: "gst-calculator",     name: "GST Calculator",       Icon: Calculator,      desc: "Quick GST calculations",       credit: 0 },
-  { slug: "jd-generator",       name: "JD Generator",         Icon: Briefcase,       desc: "Job descriptions in minutes",  credit: 2 },
-  { slug: "resume-screener",    name: "Resume Screener",      Icon: FileSearch,      desc: "AI resume shortlisting",       credit: 3 },
-  { slug: "appraisal-draft",    name: "Appraisal Draft",      Icon: TrendingUp,      desc: "Performance appraisals",       credit: 2 },
-  { slug: "policy-generator",   name: "Policy Generator",     Icon: Shield,          desc: "HR policy documents",          credit: 2 },
-  { slug: "offer-letter",       name: "Offer Letter",         Icon: Mail,            desc: "Professional offer letters",   credit: 2 },
-  { slug: "salary-slip",        name: "Salary Slip",          Icon: Banknote,        desc: "Salary slips in seconds",      credit: 1 },
-  { slug: "legal-notice",       name: "Legal Notice",         Icon: Gavel,           desc: "Draft legal notices fast",     credit: 3 },
-  { slug: "nda-generator",      name: "NDA Generator",        Icon: Lock,            desc: "Non-disclosure agreements",    credit: 3 },
-  { slug: "legal-disclaimer",   name: "Legal Disclaimer",     Icon: AlertCircle,     desc: "Website legal disclaimers",    credit: 2 },
-  { slug: "tds-sheet",          name: "TDS Sheet",            Icon: Table2,          desc: "TDS calculations & sheets",    credit: 1 },
-  { slug: "whatsapp-bulk",      name: "WhatsApp Bulk",        Icon: MessageCircle,   desc: "Bulk message templates",       credit: 1 },
-  { slug: "ad-copy",            name: "Ad Copy",              Icon: BadgeDollarSign, desc: "High-converting ad copy",      credit: 2 },
-  { slug: "email-subject",      name: "Email Subject",        Icon: AtSign,          desc: "High open-rate subjects",      credit: 1 },
-  { slug: "linkedin-bio",       name: "LinkedIn Bio",         Icon: Linkedin,        desc: "Professional LinkedIn bios",   credit: 2 },
-  { slug: "seo-auditor",        name: "SEO Auditor",          Icon: BarChart2,       desc: "Quick SEO content audit",      credit: 3 },
+  // Creator (6)
+  { slug: "blog-generator",      name: "Blog Generator",      Icon: FileText,        category: "creator",   outcome: "Publish faster, rank higher",         isFree: false },
+  { slug: "yt-script",           name: "YT Script Writer",    Icon: Video,           category: "creator",   outcome: "Script a video in 2 minutes",         isFree: false },
+  { slug: "thumbnail-ai",        name: "Thumbnail AI",        Icon: Image,           category: "creator",   outcome: "Stop the scroll every time",          isFree: false },
+  { slug: "title-generator",     name: "Title Generator",     Icon: Heading,         category: "creator",   outcome: "3× more clicks guaranteed",           isFree: false },
+  { slug: "hook-writer",         name: "Hook Writer",         Icon: Zap,             category: "creator",   outcome: "First line that pulls readers in",    isFree: false },
+  { slug: "caption-generator",   name: "Caption Generator",   Icon: MessageSquare,   category: "creator",   outcome: "Post without staring at a blank box", isFree: false },
+  // SME (7)
+  { slug: "gst-invoice",         name: "GST Invoice",         Icon: Receipt,         category: "sme",       outcome: "Invoice sent in under 60 seconds",    isFree: true  },
+  { slug: "expense-tracker",     name: "Expense Tracker",     Icon: Wallet,          category: "sme",       outcome: "Know where every rupee went",         isFree: true  },
+  { slug: "quotation-generator", name: "Quotation Generator", Icon: ClipboardList,   category: "sme",       outcome: "Win clients with clean quotes",       isFree: true  },
+  { slug: "website-generator",   name: "Website Generator",   Icon: Globe,           category: "sme",       outcome: "Full website copy in one click",      isFree: false },
+  { slug: "qr-generator",        name: "QR Generator",        Icon: QrCode,          category: "sme",       outcome: "Instant QR, no app needed",          isFree: true  },
+  { slug: "gst-calculator",      name: "GST Calculator",      Icon: Calculator,      category: "sme",       outcome: "Right tax, zero confusion",           isFree: true  },
+  { slug: "salary-slip",         name: "Salary Slip",         Icon: Banknote,        category: "sme",       outcome: "Salary slips done in seconds",        isFree: true  },
+  // HR (5)
+  { slug: "jd-generator",        name: "JD Generator",        Icon: Briefcase,       category: "hr",        outcome: "Hire faster with sharp JDs",          isFree: false },
+  { slug: "resume-screener",     name: "Resume Screener",     Icon: FileSearch,      category: "hr",        outcome: "Shortlist in minutes, not hours",     isFree: false },
+  { slug: "appraisal-draft",     name: "Appraisal Draft",     Icon: TrendingUp,      category: "hr",        outcome: "Fair reviews, written fast",          isFree: false },
+  { slug: "policy-generator",    name: "Policy Generator",    Icon: Shield,          category: "hr",        outcome: "HR policies, zero legal risk",        isFree: false },
+  { slug: "offer-letter",        name: "Offer Letter",        Icon: Mail,            category: "hr",        outcome: "Professional letters, every time",    isFree: true  },
+  // Legal (5)
+  { slug: "legal-notice",        name: "Legal Notice",        Icon: Gavel,           category: "legal",     outcome: "Dispute-ready in 5 minutes",          isFree: false },
+  { slug: "nda-generator",       name: "NDA Generator",       Icon: Lock,            category: "legal",     outcome: "Protect your IP instantly",           isFree: false },
+  { slug: "legal-disclaimer",    name: "Legal Disclaimer",    Icon: AlertCircle,     category: "legal",     outcome: "Stay compliant on every page",        isFree: false },
+  { slug: "tds-sheet",           name: "TDS Sheet",           Icon: Table2,          category: "legal",     outcome: "TDS sorted, audit-ready",             isFree: true  },
+  { slug: "whatsapp-bulk",       name: "WhatsApp Bulk",       Icon: MessageCircle,   category: "legal",     outcome: "Reach 100s with one template",        isFree: false },
+  // Marketing (4)
+  { slug: "ad-copy",             name: "Ad Copy",             Icon: BadgeDollarSign, category: "marketing", outcome: "Copy that converts, not confuses",    isFree: false },
+  { slug: "email-subject",       name: "Email Subject",       Icon: AtSign,          category: "marketing", outcome: "Open rates that actually move",       isFree: false },
+  { slug: "linkedin-bio",        name: "LinkedIn Bio",        Icon: Linkedin,        category: "marketing", outcome: "Profile that gets you hired",         isFree: false },
+  { slug: "seo-auditor",         name: "SEO Auditor",         Icon: BarChart2,       category: "marketing", outcome: "Fix what Google penalises",           isFree: false },
 ];
 
 export function ToolsShowcaseSection() {
   const openAuthModal = useAuthStore((s) => s.openAuthModal);
+  const [activeCategory, setActiveCategory] = useState("all");
+
+  const filtered =
+    activeCategory === "all"
+      ? TOOLS
+      : TOOLS.filter((t) => t.category === activeCategory);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-      {TOOLS.map(({ slug, name, Icon, desc, credit }) => (
-        <button
-          key={slug}
-          onClick={() => openAuthModal("signup")}
-          className="group rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 transition-all duration-150 text-left"
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 mb-3 group-hover:bg-primary/20 transition-colors">
-            <Icon className="h-4 w-4 text-primary" />
-          </div>
-          <div className="text-xs font-semibold text-foreground mb-1 leading-tight">{name}</div>
-          <div className="text-[10px] text-muted-foreground leading-relaxed line-clamp-2">{desc}</div>
-          <div className="mt-2 text-[10px] font-bold text-primary">
-            {credit === 0 ? "Free" : `${credit} cr`}
-          </div>
-        </button>
-      ))}
+    <div className="max-w-7xl mx-auto px-4">
+
+      {/* Section header */}
+      <div className="text-center mb-10">
+        <span className="inline-block text-[10px] font-bold uppercase
+          tracking-widest text-primary bg-primary/10 rounded-full
+          px-3 py-1 mb-3">
+          27 AI tools
+        </span>
+        <h2 className="text-3xl md:text-4xl font-bold
+          text-foreground mb-3">
+          Everything you need. Nothing you don&apos;t.
+        </h2>
+        <p className="text-base text-muted-foreground max-w-xl mx-auto">
+          Pick a category or browse all 27 tools built for Indian professionals.
+        </p>
+      </div>
+
+      {/* Category filter tabs — horizontally scrollable on mobile */}
+      <div className="flex gap-2 overflow-x-auto pb-3 mb-8
+        [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            className={
+              activeCategory === cat.id
+                ? "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 whitespace-nowrap bg-primary text-primary-foreground"
+                : "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 whitespace-nowrap border border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+            }
+          >
+            {cat.label} ({cat.count})
+          </button>
+        ))}
+      </div>
+
+      {/* Tool cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3
+        lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        {filtered.map(({ slug, name, Icon, outcome, isFree }) => (
+          <button
+            key={slug}
+            onClick={() => openAuthModal("signup")}
+            className="group rounded-xl border border-border
+              bg-card p-4 text-left
+              hover:border-primary/40 hover:-translate-y-0.5
+              hover:shadow-md hover:shadow-primary/5
+              transition-all duration-200"
+          >
+            {/* Icon */}
+            <div className="w-9 h-9 rounded-lg bg-primary/10
+              flex items-center justify-center
+              group-hover:bg-primary/20 transition-colors">
+              <Icon className="h-4 w-4 text-primary" />
+            </div>
+
+            {/* Name */}
+            <div className="text-sm font-semibold
+              text-foreground mt-3 leading-tight">
+              {name}
+            </div>
+
+            {/* Outcome */}
+            <div className="text-xs text-muted-foreground
+              mt-1 leading-relaxed">
+              {outcome}
+            </div>
+
+            {/* Free / AI badge */}
+            <div className="mt-3">
+              {isFree ? (
+                <span className="inline-flex items-center
+                  text-[10px] font-medium px-1.5 py-0.5
+                  rounded-full bg-emerald-500/10
+                  text-emerald-600 dark:text-emerald-400">
+                  Free
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1
+                  text-[10px] text-primary/50">
+                  <Sparkles className="h-3 w-3" />
+                  AI
+                </span>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Below grid */}
+      <div className="mt-10 text-center">
+        <p className="text-sm text-muted-foreground mb-2">
+          Can&apos;t find what you need? More tools coming every month.
+        </p>
+        <a href="/tools" className="text-sm text-primary font-medium hover:underline">
+          See the full roadmap →
+        </a>
+      </div>
+
     </div>
   );
 }

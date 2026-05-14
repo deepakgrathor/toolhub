@@ -11,6 +11,7 @@ import {
   Star, Clock, UserCheck, LogIn,
   TrendingUp, MapPin, Quote, CheckCircle,
   FileText, Receipt, ChevronRight,
+  UserPlus, LayoutGrid, Wand2, Download, Minus,
 } from "lucide-react";
 import type { Metadata } from "next";
 import { cn } from "@/lib/utils";
@@ -117,6 +118,12 @@ const COMPARISON: {
     values: [true, false, "partial", false, false] },
   { feature: "Built specifically for India",
     values: [true, false, false, true, false] },
+  { feature: "Hindi + English interface",
+    values: [true, false, false, false, false] },
+  { feature: "Indian tax tools (GST, TDS)",
+    values: [true, false, false, true, false] },
+  { feature: "Starts at ₹0",
+    values: [true, false, true, false, true] },
 ];
 
 const TESTIMONIALS = [
@@ -296,27 +303,16 @@ function CompareCell({
   highlight?: boolean
 }) {
   if (value === true) {
-    return (
-      <Check
-        className={cn(
-          "h-4 w-4 mx-auto",
-          highlight ? "text-primary" : "text-green-500"
-        )}
-      />
+    return highlight ? (
+      <CheckCircle className="h-4 w-4 mx-auto text-primary" />
+    ) : (
+      <Check className="h-4 w-4 mx-auto text-emerald-500" />
     )
   }
   if (value === false) {
-    return (
-      <X className="h-4 w-4 mx-auto
-        text-muted-foreground/30" />
-    )
+    return <X className="h-4 w-4 mx-auto text-muted-foreground/40" />
   }
-  return (
-    <span className="text-[11px] font-medium
-      text-amber-600 dark:text-amber-400">
-      Partial
-    </span>
-  )
+  return <Minus className="h-4 w-4 mx-auto text-amber-500" />
 }
 
 // ── Accordion FAQ ─────────────────────────────────────────────────────────────
@@ -638,90 +634,203 @@ export default async function MarketingHomePage() {
       <div className="border-t border-border" />
 
       {/* ══ SECTION 5 — TOOLS SHOWCASE ══════════════════════════════════════ */}
-      <section className="px-4 py-20 max-w-7xl mx-auto">
-        <SectionHeading
-          badge="All Tools"
-          title="27 tools. 5 categories. One platform."
-          subtitle="Browse all tools — free and AI-powered."
-        />
+      <section className="py-20">
         <ToolsShowcaseSection />
-        <div className="mt-8 text-center">
-          <Link
-            href="/tools"
-            className="inline-flex items-center gap-2 rounded-xl border border-border px-6 py-3 text-sm font-semibold text-foreground hover:bg-muted/50 transition-colors"
-          >
-            Explore All Tools <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
       </section>
 
       {/* ══ SECTION 6 — HOW IT WORKS ════════════════════════════════════════ */}
-      <section className="px-4 py-20 bg-card/30">
-        <div className="max-w-4xl mx-auto">
-          <SectionHeading
-            badge="3 Steps"
-            title="How it works"
-            subtitle="Up and running in under a minute. Free."
-          />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            {[
-              { step: "01", Icon: LogIn,     title: "Sign Up Free",      desc: "30-second signup. Google or email. No card required." },
-              { step: "02", Icon: UserCheck,  title: "Set Up Workspace",  desc: "Tell us your profession. We set up a personalized workspace for you." },
-              { step: "03", Icon: Zap,        title: "Start Creating",    desc: "Pick a tool. Get your output. Credits deduct only on success." },
-            ].map(({ step, Icon, title, desc }) => (
-              <div key={step} className="flex flex-col items-center text-center">
-                <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 mb-4">
-                  <Icon className="h-7 w-7 text-primary" />
-                  <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
-                    {step}
-                  </span>
-                </div>
-                <h3 className="text-base font-bold text-foreground mb-2">{title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+      <section className="py-20 md:py-28 border-t border-b border-border
+        bg-muted/30">
+        <div className="max-w-6xl mx-auto px-4">
+
+          {/* Heading */}
+          <div className="text-center mb-14">
+            <p className="text-xs font-medium uppercase tracking-widest
+              text-primary mb-3">
+              Simple by design
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold
+              text-foreground mb-3">
+              From signup to output in under 3 minutes.
+            </h2>
+            <p className="text-base text-muted-foreground max-w-xl mx-auto">
+              No learning curve. No complex setup.
+              Just pick a tool and go.
+            </p>
+          </div>
+
+          {/* 4-step grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
+
+            {/* Step 1 */}
+            <div className="rounded-2xl border border-border bg-card p-6
+              flex flex-col relative overflow-hidden">
+              <span className="absolute top-4 right-4 text-5xl font-black
+                text-primary/10 leading-none select-none">
+                01
+              </span>
+              <div className="w-11 h-11 rounded-xl bg-primary/10
+                flex items-center justify-center shrink-0">
+                <UserPlus className="h-5 w-5 text-primary" />
               </div>
-            ))}
+              <h3 className="text-lg font-bold text-foreground mt-4">
+                Create your free account
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                Sign up with Google or email in 30 seconds. No credit card, no
+                commitments. You get{" "}
+                <span className="text-foreground font-medium">10 free credits</span>{" "}
+                on day one.
+              </p>
+            </div>
+
+            {/* Connector 1→2 */}
+            <div className="hidden md:flex items-center justify-center
+              absolute left-[25%] top-1/2 -translate-y-1/2 -translate-x-1/2 z-10">
+              <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+            </div>
+
+            {/* Step 2 */}
+            <div className="rounded-2xl border border-border bg-card p-6
+              flex flex-col relative overflow-hidden">
+              <span className="absolute top-4 right-4 text-5xl font-black
+                text-primary/10 leading-none select-none">
+                02
+              </span>
+              <div className="w-11 h-11 rounded-xl bg-primary/10
+                flex items-center justify-center shrink-0">
+                <LayoutGrid className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mt-4">
+                Choose your kit
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                Tell us what you do — creator, business owner, HR, or legal.
+                SetuLix builds a{" "}
+                <span className="text-foreground font-medium">personalised workspace</span>{" "}
+                for you instantly.
+              </p>
+            </div>
+
+            {/* Connector 2→3 */}
+            <div className="hidden md:flex items-center justify-center
+              absolute left-[50%] top-1/2 -translate-y-1/2 -translate-x-1/2 z-10">
+              <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+            </div>
+
+            {/* Step 3 */}
+            <div className="rounded-2xl border border-border bg-card p-6
+              flex flex-col relative overflow-hidden">
+              <span className="absolute top-4 right-4 text-5xl font-black
+                text-primary/10 leading-none select-none">
+                03
+              </span>
+              <div className="w-11 h-11 rounded-xl bg-primary/10
+                flex items-center justify-center shrink-0">
+                <Wand2 className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mt-4">
+                Run any AI tool
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                Pick a tool, fill in a few details, hit Generate. Powered by{" "}
+                <span className="text-foreground font-medium">
+                  Claude, GPT-4o, and Gemini
+                </span>{" "}
+                — the best model for each task.
+              </p>
+            </div>
+
+            {/* Connector 3→4 */}
+            <div className="hidden md:flex items-center justify-center
+              absolute left-[75%] top-1/2 -translate-y-1/2 -translate-x-1/2 z-10">
+              <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+            </div>
+
+            {/* Step 4 */}
+            <div className="rounded-2xl border border-border bg-card p-6
+              flex flex-col relative overflow-hidden">
+              <span className="absolute top-4 right-4 text-5xl font-black
+                text-primary/10 leading-none select-none">
+                04
+              </span>
+              <div className="w-11 h-11 rounded-xl bg-primary/10
+                flex items-center justify-center shrink-0">
+                <Download className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mt-4">
+                Download or copy your output
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                Copy the output, download as PDF, or save to your history.
+                PRO users get{" "}
+                <span className="text-foreground font-medium">branded PDFs</span>{" "}
+                with their logo and signature.
+              </p>
+            </div>
+
           </div>
         </div>
       </section>
 
       {/* ══ SECTION 7 — COMPARISON TABLE ════════════════════════════════════ */}
       <section className="px-4 py-20 max-w-5xl mx-auto">
-        <SectionHeading
-          badge="How SetuLix compares"
-          title="Built specifically for Indian professionals."
-          subtitle="Most tools are built for a global audience. SetuLix is built for how India works."
-        />
-        <div className="overflow-x-auto rounded-2xl border border-border">
+
+        {/* Section heading */}
+        <div className="text-center mb-12">
+          <p className="text-xs font-medium uppercase tracking-widest
+            text-primary mb-3">
+            Why SetuLix
+          </p>
+          <h2 className="text-3xl md:text-4xl font-bold
+            text-foreground mb-3">
+            Built for India. Not adapted for it.
+          </h2>
+          <p className="text-base text-muted-foreground max-w-2xl mx-auto">
+            Other tools are built for the US market and bolted on for India.
+            SetuLix starts with Indian professionals in mind.
+          </p>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto rounded-2xl border border-border
+          overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="text-left px-4 py-3 text-sm
-                  font-semibold text-foreground w-[35%]">
+              <tr>
+                {/* Feature column header */}
+                <th className="text-left px-4 py-4 text-xs font-medium
+                  text-muted-foreground uppercase tracking-wide
+                  bg-muted/50 border-b border-border w-[35%]">
                   Feature
                 </th>
-                {COMPETITORS.map((name, i) => (
+
+                {/* SetuLix column — highlighted */}
+                <th className="px-4 py-4 text-center
+                  bg-primary border-b border-primary/50">
+                  <span className="flex flex-col items-center gap-1">
+                    <span className="text-sm font-bold
+                      text-primary-foreground">
+                      SetuLix
+                    </span>
+                    <span className="text-[10px] font-medium
+                      bg-white/20 text-primary-foreground
+                      rounded-full px-2 py-0.5">
+                      ✦ Best for India
+                    </span>
+                  </span>
+                </th>
+
+                {/* Competitor columns */}
+                {COMPETITORS.slice(1).map((name) => (
                   <th
                     key={name}
-                    className={cn(
-                      "px-4 py-3 text-sm font-semibold text-center",
-                      i === 0
-                        ? "text-primary"
-                        : "text-muted-foreground"
-                    )}
+                    className="px-4 py-4 text-xs font-medium
+                      text-muted-foreground text-center
+                      bg-muted/50 border-b border-border
+                      uppercase tracking-wide"
                   >
-                    {i === 0 ? (
-                      <span className="flex flex-col
-                        items-center gap-1">
-                        {name}
-                        <span className="text-[9px] font-medium
-                          bg-primary/10 text-primary rounded-full
-                          px-2 py-0.5">
-                          ← Us
-                        </span>
-                      </span>
-                    ) : (
-                      name
-                    )}
+                    {name}
                   </th>
                 ))}
               </tr>
@@ -731,18 +840,29 @@ export default async function MarketingHomePage() {
                 <tr
                   key={feature}
                   className={rowIdx % 2 === 0
-                    ? "bg-background"
+                    ? "bg-transparent"
                     : "bg-muted/20"}
                 >
-                  <td className="px-4 py-3 text-sm
-                    text-foreground">{feature}</td>
-                  {values.map((val, colIdx) => (
-                    <td key={colIdx}
-                      className="px-4 py-3 text-center">
-                      <CompareCell
-                        value={val}
-                        highlight={colIdx === 0}
-                      />
+                  {/* Feature label */}
+                  <td className="px-4 py-3.5 text-sm font-medium
+                    text-foreground border-r border-border/50">
+                    {feature}
+                  </td>
+
+                  {/* SetuLix cell — always true, highlighted bg */}
+                  <td className="px-4 py-3.5 text-center bg-primary/5
+                    border-r border-border/50">
+                    <CompareCell value={values[0]} highlight={true} />
+                  </td>
+
+                  {/* Competitor cells */}
+                  {values.slice(1).map((val, colIdx) => (
+                    <td
+                      key={colIdx}
+                      className="px-4 py-3.5 text-center
+                        border-r border-border/50 last:border-r-0"
+                    >
+                      <CompareCell value={val} highlight={false} />
                     </td>
                   ))}
                 </tr>
@@ -750,12 +870,24 @@ export default async function MarketingHomePage() {
             </tbody>
           </table>
         </div>
-        <p className="text-center text-xs
-          text-muted-foreground mt-4 italic">
-          Each tool serves a different purpose.
-          SetuLix is built specifically for
-          Indian professionals.
-        </p>
+
+        {/* Below-table CTA */}
+        <div className="mt-8 text-center">
+          <a
+            href="/?auth=signup"
+            className="inline-flex items-center gap-2 px-6 py-3
+              rounded-xl bg-primary text-primary-foreground
+              text-sm font-semibold hover:opacity-90
+              transition-opacity shadow-lg shadow-primary/20"
+          >
+            Ready to switch?
+            <ArrowRight className="h-4 w-4" />
+          </a>
+          <p className="text-xs text-muted-foreground mt-3">
+            Takes 30 seconds. Free forever on basic tools.
+          </p>
+        </div>
+
       </section>
 
       {/* ══ SECTION 8 — PRICING PREVIEW ═════════════════════════════════════ */}

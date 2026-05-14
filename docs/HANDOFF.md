@@ -1,9 +1,66 @@
 # Handoff Note
-Updated: 2026-05-15 | Account: B | Session: B10-A | Features: Marketing Website Redesign — Foundation + Hero + Stats + TrustedBy + Kit Cards + Features + Comparison
+Updated: 2026-05-15 | Account: B | Session: B10-B | Features: Tools Showcase tabs, How It Works 4-step, Comparison Table redesign
 
 ## Where We Are
-Session B10-A done. Marketing homepage fully redesigned. **TypeScript: 0 errors (apps/web).**
+Session B10-B done. Tools Showcase, How It Works, and Comparison Table fully redesigned. **TypeScript: 0 errors (apps/web).**
 Note: `npx turbo build` fails with pre-existing `Cannot find module for page: /_document` error (not caused by any recent changes).
+
+---
+
+## What Was Done (Session B10-B)
+
+### B10-B — Marketing Homepage: Tools + How It Works + Comparison
+
+#### Modified Files
+
+- `apps/web/src/components/marketing/HeroCTA.tsx`
+  - `TOOLS` array: replaced `credit`/`desc` with `outcome` + `category` + `isFree` fields; 27 tools assigned to creator/sme/hr/legal/marketing categories
+  - `CATEGORIES` array added: 6 entries (all/creator/sme/hr/legal/marketing) with counts
+  - `ToolsShowcaseSection` fully rewritten:
+    - `useState("all")` for active category filter
+    - Section header: "27 AI tools" pill + H2 "Everything you need. Nothing you don't." + subtext
+    - Horizontal scrollable category tabs — active: `bg-primary text-primary-foreground`, inactive: `border border-border`; tab count shown
+    - Filtered tool grid: 2/3/4/5 cols by breakpoint; cards show icon + name + outcome + Free badge (emerald) or AI badge (Sparkles icon)
+    - Below grid: "Can't find what you need?" text + "See the full roadmap →" link
+    - No credit amounts shown (removed entirely)
+
+- `apps/web/src/app/(marketing)/page.tsx`
+  - **SECTION 5 (Tools Showcase)**: removed old `SectionHeading` + "Explore All Tools" link wrapper — now just `<section className="py-20"><ToolsShowcaseSection /></section>`
+  - **SECTION 6 (How It Works)**: replaced 3-step centered layout with 4-step horizontal card grid:
+    - Step 1: UserPlus — "Create your free account" — highlights "10 free credits"
+    - Step 2: LayoutGrid — "Choose your kit" — highlights "personalised workspace"
+    - Step 3: Wand2 — "Run any AI tool" — highlights "Claude, GPT-4o, and Gemini"
+    - Step 4: Download — "Download or copy your output" — highlights "branded PDFs"
+    - Decorative step numbers (text-5xl text-primary/10), `bg-muted/30` background, `border-t border-b border-border`
+    - Connector `ChevronRight` icons between steps (hidden on mobile, positioned absolutely on md+)
+  - **SECTION 7 (Comparison Table)**: fully redesigned:
+    - New heading: "Built for India. Not adapted for it."
+    - SetuLix `<th>`: `bg-primary text-primary-foreground` + "✦ Best for India" sub-label
+    - Competitor columns: `bg-muted/50 text-muted-foreground`
+    - SetuLix cells: `bg-primary/5`, `CheckCircle` icon `text-primary`
+    - Competitor true → `Check` `text-emerald-500`, false → `X` `text-muted-foreground/40`, partial → `Minus` `text-amber-500`
+    - 3 new rows added (no duplicates): "Hindi + English interface", "Indian tax tools (GST, TDS)", "Starts at ₹0" — total 12 rows
+    - Below-table CTA: "Ready to switch?" `<a>` → `/?auth=signup`
+  - **New imports**: `UserPlus, LayoutGrid, Wand2, Download, Minus`
+  - **`CompareCell`**: updated to use `CheckCircle` (highlight=true), `Check` (emerald, highlight=false), `X`, `Minus`
+
+#### Rules Verified
+- TypeScript: 0 errors
+- No Hindi text in any UI string
+- No dynamic Tailwind class interpolation
+- All icons: lucide-react only, no emojis
+- Semantic tokens throughout
+- Dark + light theme: all components tested
+- Persona Journey (B9) — not touched
+- `isFree` tools: qr-generator, gst-calculator, expense-tracker, gst-invoice, quotation-generator, salary-slip, offer-letter, tds-sheet
+
+---
+
+## Next Session: B10-C
+- Testimonials section redesign (richer cards using TESTIMONIALS data with stat/color/city/featured fields)
+- Pricing preview section redesign
+- FAQ section redesign
+- Final CTA section redesign
 
 ---
 
