@@ -255,7 +255,13 @@ function PlanCard({
 
 // ── Credit pack card ──────────────────────────────────────────────────────────
 
-function PackCard({ pack }: { pack: CreditPackData }) {
+function PackCard({
+  pack,
+  onBuy,
+}: {
+  pack: CreditPackData;
+  onBuy: (id: string) => void;
+}) {
   return (
     <div
       className={cn(
@@ -290,11 +296,10 @@ function PackCard({ pack }: { pack: CreditPackData }) {
       </div>
 
       <button
-        disabled
-        title="Payments coming soon"
-        className="w-full rounded-xl py-2 text-sm font-semibold text-center cursor-not-allowed opacity-50 bg-[#7c3aed] text-white"
+        onClick={() => onBuy(pack._id)}
+        className="w-full rounded-xl py-2 text-sm font-semibold text-center bg-[#7c3aed] text-white hover:opacity-90 transition-opacity"
       >
-        Coming Soon
+        Buy Now
       </button>
     </div>
   );
@@ -343,6 +348,15 @@ export function PricingPage({ plans, packs, rollover }: Props) {
         localStorage.setItem("pending_plan", slug);
         localStorage.setItem("pending_plan_cycle", cycle);
       }
+      openAuthModal("signup");
+    }
+  }
+
+  function handlePackBuy(packId: string) {
+    if (session) {
+      router.push(`/checkout?type=pack&id=${packId}`);
+    } else {
+      localStorage.setItem("pending_pack_id", packId);
       openAuthModal("signup");
     }
   }
@@ -407,7 +421,7 @@ export function PricingPage({ plans, packs, rollover }: Props) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-4xl mx-auto">
             {packs.map((pack) => (
-              <PackCard key={pack._id} pack={pack} />
+              <PackCard key={pack._id} pack={pack} onBuy={handlePackBuy} />
             ))}
           </div>
         </div>

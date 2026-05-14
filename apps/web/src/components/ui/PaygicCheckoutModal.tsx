@@ -1,8 +1,21 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CheckCircle, XCircle, Clock, Loader2, Smartphone, X } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Loader2, Smartphone, X, Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+function isMobileDevice() {
+  if (typeof navigator === "undefined") return false;
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function getQRSrc(dynamicQR: string, upiIntent: string): string {
+  if (dynamicQR) return dynamicQR;
+  if (upiIntent) {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiIntent)}`;
+  }
+  return "";
+}
 
 interface PaygicCheckoutModalProps {
   isOpen: boolean;
@@ -41,6 +54,8 @@ export function PaygicCheckoutModal({
   const [checking, setChecking] = useState(false);
   const [pollStatus, setPollStatus] = useState<PollStatus>("idle");
   const [activeTab, setActiveTab] = useState<"qr" | "apps">("qr");
+  const [copied, setCopied] = useState(false);
+  const isMobile = isMobileDevice();
   const pollIntervalRef = useRef<ReturnType<typeof setInterval>>();
   const countdownRef = useRef<ReturnType<typeof setInterval>>();
 
@@ -197,54 +212,83 @@ export function PaygicCheckoutModal({
             {/* QR tab */}
             {activeTab === "qr" && (
               <div className="flex flex-col items-center gap-3">
-                {dynamicQR ? (
-                  <img
-                    src={dynamicQR}
-                    alt="Payment QR Code"
-                    className="w-48 h-48 rounded-xl border border-border object-contain"
-                  />
-                ) : (
-                  <div className="w-48 h-48 rounded-xl border border-border bg-muted/30 flex items-center justify-center">
-                    <p className="text-xs text-muted-foreground text-center px-4">QR not available</p>
-                  </div>
-                )}
+                {(() => {
+                  const qrSrc = getQRSrc(dynamicQR, upiIntent);
+                  return qrSrc ? (
+                    <img
+                      src={qrSrc}
+                      alt="Payment QR Code"
+                      className="w-48 h-48 rounded-xl border border-border object-contain bg-white p-1"
+                    />
+                  ) : (
+                    <div className="w-48 h-48 rounded-xl border border-border bg-muted/30 flex items-center justify-center">
+                      <p className="text-xs text-muted-foreground text-center px-4">QR not available</p>
+                    </div>
+                  );
+                })()}
                 <p className="text-sm text-muted-foreground">Scan with any UPI app</p>
                 <p className="text-xs text-muted-foreground/60">PhonePe • GPay • Paytm • BHIM</p>
+                {/* Copy UPI ID fallback for desktop */}
+                {upiIntent && !isMobile && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(upiIntent);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied ? "Copied!" : "Copy UPI link"}
+                  </button>
+                )}
               </div>
             )}
 
             {/* Apps tab */}
             {activeTab === "apps" && (
               <div className="flex flex-col gap-3">
-                <a
-                  href={phonePeLink || upiIntent || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 w-full rounded-lg px-4 py-3 text-white font-medium text-sm transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: "#5f259f" }}
-                >
-                  <Smartphone className="h-4 w-4 shrink-0" />
-                  Pay with PhonePe
-                </a>
-                <a
-                  href={gpayLink || upiIntent || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 w-full rounded-lg border border-border px-4 py-3 text-foreground font-medium text-sm bg-card hover:bg-muted/50 transition-colors"
-                >
-                  <Smartphone className="h-4 w-4 shrink-0" />
-                  Pay with Google Pay
-                </a>
-                <a
-                  href={paytmLink || upiIntent || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 w-full rounded-lg px-4 py-3 text-white font-medium text-sm transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: "#00BAF2" }}
-                >
-                  <Smartphone className="h-4 w-4 shrink-0" />
-                  Pay with Paytm
-                </a>
+                {isMobile ? (
+                  <>
+                    <a
+                      href={phonePeLink || upiIntent || "#"}
+                      className="flex items-center gap-3 w-full rounded-lg px-4 py-3 text-white font-medium text-sm transition-opacity hover:opacity-90"
+                      style={{ backgroundColor: "#5f259f" }}
+                    >
+                      <Smartphone className="h-4 w-4 shrink-0" />
+                      Pay with PhonePe
+                    </a>
+                    <a
+                      href={gpayLink || upiIntent || "#"}
+                      className="flex items-center gap-3 w-full rounded-lg border border-border px-4 py-3 text-foreground font-medium text-sm bg-card hover:bg-muted/50 transition-colors"
+                    >
+                      <Smartphone className="h-4 w-4 shrink-0" />
+                      Pay with Google Pay
+                    </a>
+                    <a
+                      href={paytmLink || upiIntent || "#"}
+                      className="flex items-center gap-3 w-full rounded-lg px-4 py-3 text-white font-medium text-sm transition-opacity hover:opacity-90"
+                      style={{ backgroundColor: "#00BAF2" }}
+                    >
+                      <Smartphone className="h-4 w-4 shrink-0" />
+                      Pay with Paytm
+                    </a>
+                  </>
+                ) : (
+                  <div className="rounded-xl border border-border bg-muted/20 p-5 text-center space-y-3">
+                    <Smartphone className="h-8 w-8 text-muted-foreground mx-auto" />
+                    <p className="text-sm font-medium text-foreground">Open on your phone</p>
+                    <p className="text-xs text-muted-foreground">
+                      UPI app buttons work only on mobile. Use the QR code to pay from desktop.
+                    </p>
+                    <button
+                      onClick={() => setActiveTab("qr")}
+                      className="text-xs text-primary underline underline-offset-2"
+                    >
+                      Switch to QR tab
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
