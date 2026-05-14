@@ -1,9 +1,38 @@
 # Handoff Note
-Updated: 2026-05-14 | Account: B | Session: B8-D-2 | Features: Checkout bugfixes — Credits page Buy Credits link, checkout guard
+Updated: 2026-05-14 | Account: B | Session: B9 | Features: "Real Impact" Personas Section on marketing homepage
 
 ## Where We Are
-Session B8-D-2 done. Checkout flow bugs fixed. **TypeScript: 0 errors (apps/web).**
+Session B9 done. Persona Journey section built and integrated. **TypeScript: 0 errors (apps/web).**
 Note: `npx turbo build` fails with pre-existing `Cannot find module for page: /_document` error (not caused by any recent changes).
+
+---
+
+## What Was Done (Session B9)
+
+### B9 — "Real Impact" Personas Section (Marketing Homepage)
+
+#### New Files
+- `apps/web/src/data/personas.ts` — NEW
+  - TypeScript interfaces: `PersonaTool`, `PersonaStep`, `PersonaStat`, `Persona`
+  - 5 persona objects: `hr`, `creator`, `legal`, `sme`, `marketer`
+  - Exported: `personas: Persona[]`
+- `apps/web/src/components/marketing/PersonaJourney.tsx` — NEW
+  - `'use client'` component with Framer Motion tab animations
+  - Tab bar: 5 pills (horizontal-scroll on mobile), active = bg-primary
+  - AnimatePresence fade+slide (0.2s) on tab switch
+  - Section 1 — Hero Strip: avatar initials, name/role/city, kit badge, quote
+  - Section 2 — Pain Block: red-tinted card, pain story, chip pills
+  - Section 3 — Journey Steps: 4-step strip with numbered circles + chevrons
+  - Section 4 — Tool Grid: 2×2 cards with DynamicIcon, stat line, Free badge
+  - Section 5 — Stats Row: 2×4 metric cards with before (strikethrough) + after (accent)
+  - Section 6 — CTA Block: button → /?auth=signup, note text, SME gets CheckCircle icon
+  - Color system: per-persona accent (teal/violet/amber/blue/pink) across all sections
+  - Full dark + light theme via Tailwind utility classes
+
+#### Modified Files
+- `apps/web/src/app/(marketing)/page.tsx`
+  - Added `PersonaJourney` import
+  - Placed `<PersonaJourney />` between Features section and Tools Showcase section (with border-t dividers)
 
 ---
 

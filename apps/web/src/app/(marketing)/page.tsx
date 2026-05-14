@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import Link from "next/link";
 import { HeroCTA, FinalCTA, ToolsShowcaseSection } from "@/components/marketing/HeroCTA";
 import { DeletedAccountToast } from "@/components/marketing/DeletedAccountToast";
+import { PersonaJourney } from "@/components/marketing/PersonaJourney";
 import {
   Zap, ArrowRight, Check, X, ChevronDown,
   Sparkles, Building2, Users, Scale, Megaphone,
@@ -307,6 +308,11 @@ export default async function MarketingHomePage() {
           </div>
         </div>
       </section>
+
+      {/* ══ SECTION 4B — PERSONA JOURNEYS ═══════════════════════════════════ */}
+      <div className="border-t border-border" />
+      <PersonaJourney />
+      <div className="border-t border-border" />
 
       {/* ══ SECTION 5 — TOOLS SHOWCASE ══════════════════════════════════════ */}
       <section className="px-4 py-20 max-w-7xl mx-auto">
