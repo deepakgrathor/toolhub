@@ -1,8 +1,60 @@
 # Handoff Note
-Updated: 2026-05-14 | Account: B | Session: B8-C-2-A | Features: Saved Presets — Model + APIs + Store + Hook
+Updated: 2026-05-14 | Account: B | Session: B8-C-2-B | Features: Saved Presets — UI Components
 
 ## Where We Are
-Session B8-C-2-A done. **TypeScript: 0 errors (apps/web). Build: passing.** Committed to main.
+Session B8-C-2-B done. **TypeScript: 0 errors (apps/web).** Committed to main.
+Note: `npx turbo build` fails with pre-existing `Cannot find module for page: /_document` error (present before B8-C-2-B, not caused by these changes).
+
+---
+
+## What Was Done (Session B8-C-2-B)
+
+### TASK 1 — SavePresetModal
+- `apps/web/src/components/ui/SavePresetModal.tsx` — NEW
+  - Props: isOpen, onClose, onSave, currentInputs, planSlug, presetCount
+  - State reset on open (name, error, saving)
+  - Escape key closes modal
+  - PRO at limit (≥5) → AlertCircle limit state shown instead of form
+  - Inputs preview: shows filled fields (max 4 + "+N more")
+  - PRO slot counter: "X slot(s) remaining"
+  - Validation: empty name → error, >50 chars → error
+  - Save → toast.success + onClose on success
+  - Saving spinner state on button
+
+### TASK 2 — ManagePresetsModal
+- `apps/web/src/components/ui/ManagePresetsModal.tsx` — NEW
+  - Props: isOpen, onClose, presets, toolSlug, planSlug, onDelete, onSetDefault, onLoad
+  - Empty state: BookOpen icon + message
+  - Preset cards: name, date, input preview (3 fields + "+N more")
+  - Default preset: `border-primary bg-primary/5` highlight + "default" badge
+  - Load button: calls onLoad(preset.inputs) + onClose + toast
+  - Star toggle: filled amber when isDefault, outline when not; calls onSetDefault
+  - Delete: confirm step (confirmDeleteId) → "Yes, delete" → handleDelete → removed
+  - Loading spinners on delete and toggle buttons
+
+### TASK 3 — PresetSelector
+- `apps/web/src/components/ui/PresetSelector.tsx` — NEW
+  - Props: toolSlug, currentInputs, onPresetLoad, planSlug
+  - Uses usePresets hook; fetchPresets() on mount
+  - FREE/LITE: dashed locked badge with Lock icon + "/pricing" upgrade link
+  - PRO (no presets): only Save button visible
+  - PRO (with presets): Load dropdown + Save button + Settings icon
+  - Dropdown: opens/closes, closes on outside click (mousedown listener + ref)
+  - Preset in dropdown: name + first input preview + "default" label
+  - "Manage presets" option in dropdown footer → ManagePresetsModal
+  - Save button → SavePresetModal
+  - PRO counter: "X/5" (red when at limit)
+  - Settings icon → ManagePresetsModal (standalone, when presets exist)
+
+### TASK 4 — Exports
+- All 3 components use named `export function` pattern
+- Import paths:
+  - `@/components/ui/PresetSelector` → `{ PresetSelector }`
+  - `@/components/ui/SavePresetModal` → `{ SavePresetModal }`
+  - `@/components/ui/ManagePresetsModal` → `{ ManagePresetsModal }`
+- No barrel index.ts needed (consistent with existing codebase pattern)
+
+---
 
 ---
 
