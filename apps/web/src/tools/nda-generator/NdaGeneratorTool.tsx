@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ndaGeneratorSchema, type NdaGeneratorInput } from "./schema";
@@ -12,6 +12,8 @@ import { useSession } from "next-auth/react";
 import { useAuthStore } from "@/store/auth-store";
 import { usePaywallStore } from "@/store/paywall-store";
 import { useCreditStore } from "@/store/credits-store";
+import { PresetSelector } from "@/components/ui/PresetSelector";
+import { usePresets } from "@/hooks/usePresets";
 
 interface NdaOutput {
   ndaText: string;
@@ -66,6 +68,30 @@ export default function NdaGeneratorTool({ creditCost: creditCostProp }: { credi
 
   const selectedType = watch("ndaType");
   const selectedDuration = watch("durationMonths");
+  const formValues = watch() as unknown as Record<string, string>;
+
+  const [planSlug, setPlanSlug] = useState('free');
+  const { presets, isFetched, fetchPresets } = usePresets('nda-generator');
+  const defaultLoadedRef = useRef(false);
+
+  useEffect(() => {
+    fetch('/api/user/plan')
+      .then(r => r.json())
+      .then((d: { planSlug?: string }) => setPlanSlug(d.planSlug ?? 'free'))
+      .catch(() => null);
+  }, []);
+
+  useEffect(() => { fetchPresets(); }, [fetchPresets]);
+
+  useEffect(() => {
+    if (!isFetched || defaultLoadedRef.current) return;
+    const defaultPreset = presets.find(p => p.isDefault);
+    if (defaultPreset) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Object.entries(defaultPreset.inputs).forEach(([key, value]) => setValue(key as any, value as string, { shouldValidate: false }));
+      defaultLoadedRef.current = true;
+    }
+  }, [isFetched, presets, setValue]);
 
   const onSubmit = async (data: NdaGeneratorInput) => {
     if (status === "unauthenticated") { openAuthModal("login"); return; }
@@ -149,6 +175,18 @@ export default function NdaGeneratorTool({ creditCost: creditCostProp }: { credi
             </p>
           </div>
         </div>
+
+        {/* Preset selector */}
+        <PresetSelector
+          toolSlug="nda-generator"
+          currentInputs={formValues}
+          planSlug={planSlug}
+          onPresetLoad={(inputs) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            Object.entries(inputs).forEach(([key, value]) => setValue(key as any, value, { shouldValidate: false }));
+            toast.success('Preset loaded!');
+          }}
+        />
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           {/* Party A */}

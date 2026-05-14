@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Mail, Download, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
+import { PresetSelector } from "@/components/ui/PresetSelector";
+import { usePresets } from "@/hooks/usePresets";
 import { offerLetterConfig } from "./config";
 import { fmtInr } from "@/lib/utils";
 import { printDocument } from "@/lib/print-pdf";
@@ -48,6 +51,57 @@ export default function OfferLetterTool({ creditCost: _c }: { creditCost?: numbe
   const [date] = useState(today());
   const [ref] = useState(refNo());
 
+  const [planSlug, setPlanSlug] = useState('free');
+  const { presets, isFetched, fetchPresets } = usePresets('offer-letter');
+  const defaultLoadedRef = useRef(false);
+
+  useEffect(() => {
+    fetch('/api/user/plan')
+      .then(r => r.json())
+      .then((d: { planSlug?: string }) => setPlanSlug(d.planSlug ?? 'free'))
+      .catch(() => null);
+  }, []);
+
+  useEffect(() => { fetchPresets(); }, [fetchPresets]);
+
+  useEffect(() => {
+    if (!isFetched || defaultLoadedRef.current) return;
+    const defaultPreset = presets.find(p => p.isDefault);
+    if (defaultPreset) {
+      const inp = defaultPreset.inputs;
+      if (inp.companyName) setCompany(p => ({ ...p, name: inp.companyName }));
+      if (inp.companyAddress) setCompany(p => ({ ...p, address: inp.companyAddress }));
+      if (inp.hrName) setCompany(p => ({ ...p, hrName: inp.hrName }));
+      if (inp.hrDesignation) setCompany(p => ({ ...p, hrDesignation: inp.hrDesignation }));
+      if (inp.candidateName) setCandidate(p => ({ ...p, name: inp.candidateName }));
+      if (inp.candidateAddress) setCandidate(p => ({ ...p, address: inp.candidateAddress }));
+      if (inp.role) setOffer(p => ({ ...p, role: inp.role }));
+      if (inp.department) setOffer(p => ({ ...p, department: inp.department }));
+      if (inp.reportingTo) setOffer(p => ({ ...p, reportingTo: inp.reportingTo }));
+      if (inp.workLocation) setOffer(p => ({ ...p, workLocation: inp.workLocation }));
+      if (inp.workType) setOffer(p => ({ ...p, workType: inp.workType as typeof WORK_TYPES[number] }));
+      if (inp.ctc) setOffer(p => ({ ...p, ctc: inp.ctc }));
+      if (inp.probation) setOffer(p => ({ ...p, probation: inp.probation as typeof PROBATIONS[number] }));
+      defaultLoadedRef.current = true;
+    }
+  }, [isFetched, presets]);
+
+  const currentInputs: Record<string, string> = {
+    companyName: company.name,
+    companyAddress: company.address,
+    hrName: company.hrName,
+    hrDesignation: company.hrDesignation,
+    candidateName: candidate.name,
+    candidateAddress: candidate.address,
+    role: offer.role,
+    department: offer.department,
+    reportingTo: offer.reportingTo,
+    workLocation: offer.workLocation,
+    workType: offer.workType,
+    ctc: offer.ctc,
+    probation: offer.probation,
+  };
+
   const toggleBenefit = (b: string) => {
     setBenefits(prev => {
       const next = new Set(prev);
@@ -88,6 +142,29 @@ export default function OfferLetterTool({ creditCost: _c }: { creditCost?: numbe
             <p className="text-sm text-muted-foreground mt-1">{offerLetterConfig.description}</p>
           </div>
         </div>
+
+        {/* Preset selector */}
+        <PresetSelector
+          toolSlug="offer-letter"
+          currentInputs={currentInputs}
+          planSlug={planSlug}
+          onPresetLoad={(inputs) => {
+            if (inputs.companyName) setCompany(p => ({ ...p, name: inputs.companyName }));
+            if (inputs.companyAddress) setCompany(p => ({ ...p, address: inputs.companyAddress }));
+            if (inputs.hrName) setCompany(p => ({ ...p, hrName: inputs.hrName }));
+            if (inputs.hrDesignation) setCompany(p => ({ ...p, hrDesignation: inputs.hrDesignation }));
+            if (inputs.candidateName) setCandidate(p => ({ ...p, name: inputs.candidateName }));
+            if (inputs.candidateAddress) setCandidate(p => ({ ...p, address: inputs.candidateAddress }));
+            if (inputs.role) setOffer(p => ({ ...p, role: inputs.role }));
+            if (inputs.department) setOffer(p => ({ ...p, department: inputs.department }));
+            if (inputs.reportingTo) setOffer(p => ({ ...p, reportingTo: inputs.reportingTo }));
+            if (inputs.workLocation) setOffer(p => ({ ...p, workLocation: inputs.workLocation }));
+            if (inputs.workType) setOffer(p => ({ ...p, workType: inputs.workType as typeof WORK_TYPES[number] }));
+            if (inputs.ctc) setOffer(p => ({ ...p, ctc: inputs.ctc }));
+            if (inputs.probation) setOffer(p => ({ ...p, probation: inputs.probation as typeof PROBATIONS[number] }));
+            toast.success('Preset loaded!');
+          }}
+        />
 
         {/* Company */}
         <section className="space-y-3">

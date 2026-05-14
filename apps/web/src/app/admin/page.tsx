@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connectDB, User, ToolConfig, CreditTransaction, SiteConfig } from "@toolhub/db";
-import { Users, Wrench, Coins, TrendingUp, AlertTriangle, UserPlus } from "lucide-react";
+import { connectDB, User, ToolConfig, CreditTransaction, SiteConfig, Preset } from "@toolhub/db";
+import { Users, Wrench, Coins, TrendingUp, AlertTriangle, UserPlus, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnalyticsCharts } from "@/components/admin/AnalyticsCharts";
 import { SystemHealth } from "@/components/admin/SystemHealth";
@@ -35,6 +35,7 @@ async function getDashboardData() {
       lowCreditCount,
       announcementBanner,
       announcementVisible,
+      totalPresets,
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ lastSeen: { $gte: since30 } }),
@@ -47,6 +48,7 @@ async function getDashboardData() {
       User.countDocuments({ credits: { $lt: 5 }, role: "user" }),
       SiteConfig.findOne({ key: "announcement_banner" }).lean(),
       SiteConfig.findOne({ key: "announcement_visible" }).lean(),
+      Preset.countDocuments(),
     ]);
 
     return {
@@ -54,6 +56,7 @@ async function getDashboardData() {
       activeUsers,
       activeTools,
       creditsConsumed: Math.abs(creditsConsumedResult[0]?.total ?? 0),
+      totalPresets,
       recentUsers: recentUsers.map((u) => ({
         _id: u._id.toString(),
         name: u.name,
@@ -69,6 +72,7 @@ async function getDashboardData() {
   } catch {
     return {
       totalUsers: 0, activeUsers: 0, activeTools: 0, creditsConsumed: 0,
+      totalPresets: 0,
       recentUsers: [], lowCreditCount: 0, announcementText: "", announcementVisible: false,
     };
   }
@@ -114,6 +118,15 @@ export default async function AdminOverviewPage() {
       bg: "bg-orange-400/10",
       accent: "border-l-orange-400",
     },
+    {
+      label: "Saved Presets",
+      value: stats.totalPresets.toLocaleString("en-IN"),
+      sub: "across all PRO users",
+      icon: BookOpen,
+      color: "text-pink-400",
+      bg: "bg-pink-400/10",
+      accent: "border-l-pink-400",
+    },
   ];
 
   return (
@@ -124,7 +137,7 @@ export default async function AdminOverviewPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {CARDS.map(({ label, value, sub, icon: Icon, color, bg, accent }) => (
           <div key={label} className={cn("rounded-xl border border-border border-l-4 bg-card p-5", accent)}>
             <div className="flex items-start justify-between mb-3">

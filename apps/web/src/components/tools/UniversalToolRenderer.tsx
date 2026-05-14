@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { LoginBanner } from "@/components/tools/LoginBanner";
 import { PDFPreviewModal, type BrandAssets } from "@/components/ui/PDFPreviewModal";
+import { PresetSelector } from "@/components/ui/PresetSelector";
+import { usePresets } from "@/hooks/usePresets";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -320,6 +322,9 @@ export function UniversalToolRenderer({ slug }: { slug: string }) {
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [brandAssets, setBrandAssets] = useState<BrandAssets | null>(null);
 
+  const { presets, isFetched, fetchPresets } = usePresets(slug);
+  const defaultLoadedRef = useRef(false);
+
   // Fetch tool config + plan on mount
   useEffect(() => {
     if (!session) return;
@@ -354,6 +359,27 @@ export function UniversalToolRenderer({ slug }: { slug: string }) {
     const t = setTimeout(() => setCooldown(c => c - 1), 1000);
     return () => clearTimeout(t);
   }, [cooldown]);
+
+  // Fetch presets once session is ready
+  useEffect(() => {
+    if (!session) return;
+    fetchPresets();
+  }, [fetchPresets, session]);
+
+  // Auto-load default preset once after presets are fetched
+  useEffect(() => {
+    if (!isFetched || defaultLoadedRef.current) return;
+    const defaultPreset = presets.find(p => p.isDefault);
+    if (defaultPreset) {
+      setFormValues(prev => ({
+        ...prev,
+        ...Object.fromEntries(
+          Object.entries(defaultPreset.inputs).filter(([k]) => k in prev)
+        ),
+      }));
+      defaultLoadedRef.current = true;
+    }
+  }, [isFetched, presets]);
 
   function setField(key: string, val: string) {
     setFormValues(prev => ({ ...prev, [key]: val }));
@@ -519,6 +545,26 @@ export function UniversalToolRenderer({ slug }: { slug: string }) {
         </div>
 
         <LoginBanner />
+
+        {/* Preset selector — AI tools only */}
+        {config.type === 'ai' && (
+          <div className="mb-1">
+            <PresetSelector
+              toolSlug={slug}
+              currentInputs={formValues}
+              planSlug={planSlug}
+              onPresetLoad={(inputs) => {
+                setFormValues(prev => ({
+                  ...prev,
+                  ...Object.fromEntries(
+                    Object.entries(inputs).filter(([k]) => k in prev)
+                  ),
+                }));
+                import('sonner').then(({ toast }) => toast.success('Preset loaded!'));
+              }}
+            />
+          </div>
+        )}
 
         {/* Generated form fields */}
         {sortedFields.map(field => (
