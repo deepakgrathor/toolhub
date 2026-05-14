@@ -9,17 +9,42 @@ import { TrustedByStrip } from "@/components/marketing/TrustedByStrip";
 import { AuthModalOpener } from "@/components/marketing/AuthModalOpener";
 import { TestimonialsCarousel } from "@/components/marketing/TestimonialsCarousel";
 import { PricingPage } from "@/components/pricing/PricingPage";
-import type { Plan, CreditPackData, RolloverConfig } from "@/components/pricing/PricingPage";
-import { connectDB, Plan as PlanModel, CreditPack, SiteConfig } from "@toolhub/db";
+import type {
+  Plan,
+  CreditPackData,
+  RolloverConfig,
+} from "@/components/pricing/PricingPage";
+import {
+  connectDB,
+  Plan as PlanModel,
+  CreditPack,
+  SiteConfig,
+} from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 import {
-  ArrowRight, Check, X,
-  Sparkles, Building2, Users, Scale, Megaphone,
+  ArrowRight,
+  Check,
+  X,
+  Sparkles,
+  Building2,
+  Users,
+  Scale,
+  Megaphone,
   Clock,
-  TrendingUp, CheckCircle2,
-  FileText, Receipt, ChevronRight,
-  UserPlus, LayoutGrid, Wand2, Download, Minus,
-  Cpu, Coins, Gavel,
+  TrendingUp,
+  CheckCircle2,
+  FileText,
+  Receipt,
+  ChevronRight,
+  UserPlus,
+  LayoutGrid,
+  Wand2,
+  Download,
+  Minus,
+  Cpu,
+  Coins,
+  Gavel,
+  CheckCircle,
 } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -41,19 +66,26 @@ async function fetchPlans(): Promise<Plan[]> {
         if (parsed.length > 0) return parsed;
         await redis.del("plans:public");
       }
-    } catch { /* Redis unavailable */ }
+    } catch {
+      /* Redis unavailable */
+    }
 
     await connectDB();
-    const plans = await PlanModel.find({ isActive: true }).sort({ order: 1 }).lean();
+    const plans = await PlanModel.find({ isActive: true })
+      .sort({ order: 1 })
+      .lean();
     const withSavings = plans.map((p) => ({
       ...p,
-      yearlySavings: (p.pricing.monthly.basePrice - p.pricing.yearly.basePrice) * 12,
+      yearlySavings:
+        (p.pricing.monthly.basePrice - p.pricing.yearly.basePrice) * 12,
     }));
 
     try {
       const redis = getRedis();
       await redis.set("plans:public", JSON.stringify(withSavings), { ex: 600 });
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
 
     return withSavings as unknown as Plan[];
   } catch {
@@ -67,15 +99,23 @@ async function fetchPacks(): Promise<CreditPackData[]> {
       const redis = getRedis();
       const cached = await redis.get("credit-packs:public");
       if (cached) return JSON.parse(cached as string) as CreditPackData[];
-    } catch { /* Redis unavailable */ }
+    } catch {
+      /* Redis unavailable */
+    }
 
     await connectDB();
-    const packs = await CreditPack.find({ isActive: true }).sort({ order: 1 }).lean();
+    const packs = await CreditPack.find({ isActive: true })
+      .sort({ order: 1 })
+      .lean();
 
     try {
       const redis = getRedis();
-      await redis.set("credit-packs:public", JSON.stringify(packs), { ex: 600 });
-    } catch { /* silent */ }
+      await redis.set("credit-packs:public", JSON.stringify(packs), {
+        ex: 600,
+      });
+    } catch {
+      /* silent */
+    }
 
     return packs as unknown as CreditPackData[];
   } catch {
@@ -89,7 +129,9 @@ async function fetchRollover(): Promise<RolloverConfig> {
       const redis = getRedis();
       const cached = await redis.get("site-config:rollover");
       if (cached) return JSON.parse(cached as string) as RolloverConfig;
-    } catch { /* Redis unavailable */ }
+    } catch {
+      /* Redis unavailable */
+    }
 
     await connectDB();
     const [enabledDoc, daysDoc] = await Promise.all([
@@ -103,8 +145,12 @@ async function fetchRollover(): Promise<RolloverConfig> {
 
     try {
       const redis = getRedis();
-      await redis.set("site-config:rollover", JSON.stringify(result), { ex: 300 });
-    } catch { /* silent */ }
+      await redis.set("site-config:rollover", JSON.stringify(result), {
+        ex: 300,
+      });
+    } catch {
+      /* silent */
+    }
 
     return result;
   } catch {
@@ -121,7 +167,13 @@ const WHO_CARDS = [
     title: "Content Creator",
     desc: "Scripts, thumbnails, hooks, and captions — every content format, done in minutes.",
     outcome: "Save 6+ hours per video",
-    tools: ["YT Script Writer", "Thumbnail AI", "Hook Writer", "Blog Generator", "Title Generator"],
+    tools: [
+      "YT Script Writer",
+      "Thumbnail AI",
+      "Hook Writer",
+      "Blog Generator",
+      "Title Generator",
+    ],
     color: "violet",
   },
   {
@@ -130,7 +182,13 @@ const WHO_CARDS = [
     title: "Business Owner",
     desc: "GST invoices, salary slips, quotations, and expense tracking — all free.",
     outcome: "Cut back-office time by 80%",
-    tools: ["GST Invoice", "Salary Slip", "Quotation", "Expense Tracker", "TDS Sheet"],
+    tools: [
+      "GST Invoice",
+      "Salary Slip",
+      "Quotation",
+      "Expense Tracker",
+      "TDS Sheet",
+    ],
     color: "blue",
   },
   {
@@ -139,7 +197,12 @@ const WHO_CARDS = [
     title: "HR Professional",
     desc: "JDs, offer letters, appraisals, and policies — built for solo and team HR.",
     outcome: "Hire 3x faster",
-    tools: ["JD Generator", "Resume Screener", "Appraisal Draft", "Policy Generator"],
+    tools: [
+      "JD Generator",
+      "Resume Screener",
+      "Appraisal Draft",
+      "Policy Generator",
+    ],
     color: "teal",
   },
   {
@@ -148,7 +211,12 @@ const WHO_CARDS = [
     title: "CA & Legal Pro",
     desc: "Legal notices, NDAs, and disclaimers — AI-drafted, court-ready format.",
     outcome: "Handle 3x more clients",
-    tools: ["Legal Notice", "NDA Generator", "GST Calculator", "Legal Disclaimer"],
+    tools: [
+      "Legal Notice",
+      "NDA Generator",
+      "GST Calculator",
+      "Legal Disclaimer",
+    ],
     color: "amber",
   },
   {
@@ -168,18 +236,51 @@ const COMPARISON: {
   feature: string;
   values: (boolean | "partial")[];
 }[] = [
-  { feature: "GST Invoice & TDS Sheet",         values: [true, false, false, true, false]       },
-  { feature: "Legal Notice & NDA Generator",    values: [true, "partial", false, false, false]  },
-  { feature: "YouTube Scripts & Hooks",          values: [true, "partial", false, false, true]   },
-  { feature: "HR — JD & Resume Screening",       values: [true, "partial", false, false, false]  },
-  { feature: "Indian payments (UPI/Paygic)",     values: [true, false, false, true, false]       },
-  { feature: "Free tools — no login needed",     values: [true, false, "partial", "partial", false] },
-  { feature: "Pay-per-use credits",              values: [true, false, false, false, false]      },
-  { feature: "Profession-specific kits",         values: [true, false, "partial", false, false]  },
-  { feature: "Built specifically for India",     values: [true, false, false, true, false]       },
-  { feature: "Hindi + English interface",        values: [true, false, false, false, false]      },
-  { feature: "Indian tax tools (GST, TDS)",      values: [true, false, false, true, false]       },
-  { feature: "Starts at ₹0",                    values: [true, false, true, false, true]        },
+  {
+    feature: "GST Invoice & TDS Sheet",
+    values: [true, false, false, true, false],
+  },
+  {
+    feature: "Legal Notice & NDA Generator",
+    values: [true, "partial", false, false, false],
+  },
+  {
+    feature: "YouTube Scripts & Hooks",
+    values: [true, "partial", false, false, true],
+  },
+  {
+    feature: "HR — JD & Resume Screening",
+    values: [true, "partial", false, false, false],
+  },
+  {
+    feature: "Indian payments (UPI/Paygic)",
+    values: [true, false, false, true, false],
+  },
+  {
+    feature: "Free tools — no login needed",
+    values: [true, false, "partial", "partial", false],
+  },
+  {
+    feature: "Pay-per-use credits",
+    values: [true, false, false, false, false],
+  },
+  {
+    feature: "Profession-specific kits",
+    values: [true, false, "partial", false, false],
+  },
+  {
+    feature: "Built specifically for India",
+    values: [true, false, false, true, false],
+  },
+  {
+    feature: "Hindi + English interface",
+    values: [true, false, false, false, false],
+  },
+  {
+    feature: "Indian tax tools (GST, TDS)",
+    values: [true, false, false, true, false],
+  },
+  { feature: "Starts at ₹0", values: [true, false, true, false, true] },
 ];
 
 const TESTIMONIALS = [
@@ -190,7 +291,8 @@ const TESTIMONIALS = [
     avatar: "SP",
     color: "teal",
     stat: "Saved 38 hrs/month",
-    quote: "I was the only HR at a 12-person startup with three open roles. Writing JDs alone took my entire Monday. With SetuLix, I get a complete JD in 6 minutes, my shortlist is ranked before lunch, and my offer letters are error-free every time.",
+    quote:
+      "I was the only HR at a 12-person startup with three open roles. Writing JDs alone took my entire Monday. With SetuLix, I get a complete JD in 6 minutes, my shortlist is ranked before lunch, and my offer letters are error-free every time.",
     featured: true,
   },
   {
@@ -200,7 +302,8 @@ const TESTIMONIALS = [
     avatar: "RK",
     color: "violet",
     stat: "9 videos/month vs 4",
-    quote: "I was paying ₹4,000 a month just for thumbnails. SetuLix cut that to under ₹200. The YT Script Writer gave me my Monday mornings back. My upload consistency went from broken to 100%.",
+    quote:
+      "I was paying ₹4,000 a month just for thumbnails. SetuLix cut that to under ₹200. The YT Script Writer gave me my Monday mornings back. My upload consistency went from broken to 100%.",
     featured: false,
   },
   {
@@ -210,7 +313,8 @@ const TESTIMONIALS = [
     avatar: "AM",
     color: "amber",
     stat: "22 clients vs 8",
-    quote: "A legal notice used to take me four hours. I was turning away clients not because I lacked skill, but because I had no time. SetuLix drafts in 10 minutes. I review and send.",
+    quote:
+      "A legal notice used to take me four hours. I was turning away clients not because I lacked skill, but because I had no time. SetuLix drafts in 10 minutes. I review and send.",
     featured: false,
   },
   {
@@ -220,7 +324,8 @@ const TESTIMONIALS = [
     avatar: "VG",
     color: "blue",
     stat: "Saved ₹3,000/month",
-    quote: "I was paying my accountant ₹3,000 a month just for invoicing. Now I generate error-free GST invoices in 3 minutes, salary slips in 20. No accountant. No Tally. No stress.",
+    quote:
+      "I was paying my accountant ₹3,000 a month just for invoicing. Now I generate error-free GST invoices in 3 minutes, salary slips in 20. No accountant. No Tally. No stress.",
     featured: false,
   },
   {
@@ -230,60 +335,64 @@ const TESTIMONIALS = [
     avatar: "PS",
     color: "pink",
     stat: "11 clients vs 4",
-    quote: "My team was maxed at 4 clients. Ad copy alone took 3 hours per client. I turned away two new clients in one quarter — not because we didn't want the work, but because there was no capacity. SetuLix changed that.",
+    quote:
+      "My team was maxed at 4 clients. Ad copy alone took 3 hours per client. I turned away two new clients in one quarter — not because we didn't want the work, but because there was no capacity. SetuLix changed that.",
     featured: false,
   },
 ];
 
 const STATS = [
   { value: "27+", label: "AI Tools" },
-  { value: "5",   label: "Profession Kits" },
+  { value: "5", label: "Profession Kits" },
   { value: "10s", label: "To first output" },
-  { value: "₹0",  label: "To get started" },
+  { value: "₹0", label: "To get started" },
 ];
 
 // ── Kit color map ─────────────────────────────────────────────────────────────
 
-const KIT_COLOR_MAP: Record<string, {
-  iconBg   : string
-  iconText : string
-  chipBg   : string
-  chipText : string
-  chipBorder: string
-}> = {
+const KIT_COLOR_MAP: Record<
+  string,
+  {
+    iconBg: string;
+    iconText: string;
+    chipBg: string;
+    chipText: string;
+    chipBorder: string;
+  }
+> = {
   violet: {
-    iconBg   : "bg-violet-500/10",
-    iconText : "text-violet-600 dark:text-violet-400",
-    chipBg   : "bg-violet-500/10",
-    chipText : "text-violet-700 dark:text-violet-300",
+    iconBg: "bg-violet-500/10",
+    iconText: "text-violet-600 dark:text-violet-400",
+    chipBg: "bg-violet-500/10",
+    chipText: "text-violet-700 dark:text-violet-300",
     chipBorder: "border-violet-500/20",
   },
   blue: {
-    iconBg   : "bg-blue-500/10",
-    iconText : "text-blue-600 dark:text-blue-400",
-    chipBg   : "bg-blue-500/10",
-    chipText : "text-blue-700 dark:text-blue-300",
+    iconBg: "bg-blue-500/10",
+    iconText: "text-blue-600 dark:text-blue-400",
+    chipBg: "bg-blue-500/10",
+    chipText: "text-blue-700 dark:text-blue-300",
     chipBorder: "border-blue-500/20",
   },
   teal: {
-    iconBg   : "bg-teal-500/10",
-    iconText : "text-teal-600 dark:text-teal-400",
-    chipBg   : "bg-teal-500/10",
-    chipText : "text-teal-700 dark:text-teal-300",
+    iconBg: "bg-teal-500/10",
+    iconText: "text-teal-600 dark:text-teal-400",
+    chipBg: "bg-teal-500/10",
+    chipText: "text-teal-700 dark:text-teal-300",
     chipBorder: "border-teal-500/20",
   },
   amber: {
-    iconBg   : "bg-amber-500/10",
-    iconText : "text-amber-600 dark:text-amber-400",
-    chipBg   : "bg-amber-500/10",
-    chipText : "text-amber-700 dark:text-amber-300",
+    iconBg: "bg-amber-500/10",
+    iconText: "text-amber-600 dark:text-amber-400",
+    chipBg: "bg-amber-500/10",
+    chipText: "text-amber-700 dark:text-amber-300",
     chipBorder: "border-amber-500/20",
   },
   pink: {
-    iconBg   : "bg-pink-500/10",
-    iconText : "text-pink-600 dark:text-pink-400",
-    chipBg   : "bg-pink-500/10",
-    chipText : "text-pink-700 dark:text-pink-300",
+    iconBg: "bg-pink-500/10",
+    iconText: "text-pink-600 dark:text-pink-400",
+    chipBg: "bg-pink-500/10",
+    chipText: "text-pink-700 dark:text-pink-300",
     chipBorder: "border-pink-500/20",
   },
 };
@@ -306,8 +415,12 @@ function SectionHeading({
           {eyebrow}
         </p>
       )}
-      <h2 className="text-3xl md:text-4xl font-bold text-foreground leading-tight mb-3">{title}</h2>
-      {subtitle && <p className="text-muted-foreground text-base">{subtitle}</p>}
+      <h2 className="text-3xl md:text-4xl font-bold text-foreground leading-tight mb-3">
+        {title}
+      </h2>
+      {subtitle && (
+        <p className="text-muted-foreground text-base">{subtitle}</p>
+      )}
     </div>
   );
 }
@@ -316,8 +429,8 @@ function CompareCell({
   value,
   highlight = false,
 }: {
-  value: boolean | "partial"
-  highlight?: boolean
+  value: boolean | "partial";
+  highlight?: boolean;
 }) {
   if (value === true) {
     return highlight ? (
@@ -354,27 +467,134 @@ export default async function MarketingHomePage() {
       </Suspense>
 
       {/* ══ SECTION 1 — HERO ══════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden px-4 pt-24 pb-20 md:pt-32 md:pb-28">
-
+      <section
+        className="relative overflow-hidden
+        px-4 pt-24 pb-20 md:pt-32 md:pb-28"
+      >
         {/* Background: radial purple glow */}
         <div
           className="absolute inset-0 -z-10"
           style={{
-            background: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124,58,237,0.15), transparent)",
+            background:
+              "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124,58,237,0.15), transparent)",
           }}
         />
+
         {/* Subtle grid overlay */}
         <div
           className="absolute inset-0 -z-10 opacity-[0.03]"
           style={{
             backgroundImage:
               "linear-gradient(var(--color-border,#e5e7eb) 1px, transparent 1px), linear-gradient(90deg, var(--color-border,#e5e7eb) 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
+            backgroundSize: "60px 60px",
           }}
         />
 
-        <div className="max-w-3xl mx-auto text-center">
-          <HeroCTA />
+        <div className="max-w-6xl mx-auto">
+          <div
+            className="grid grid-cols-1 lg:grid-cols-2
+            gap-12 lg:gap-16 items-center"
+          >
+            {/* Left: text content */}
+            <HeroCTA />
+
+            {/* Right: visual mockup */}
+            <div
+              className="rounded-2xl border border-border
+              bg-card shadow-xl p-5 lg:ml-auto w-full
+              max-w-md"
+            >
+              {/* Header row */}
+              <div
+                className="flex items-center
+                justify-between mb-4"
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-2 h-2 rounded-full
+                    bg-primary"
+                  />
+                  <span
+                    className="text-sm font-medium
+                    text-foreground"
+                  >
+                    SetuLix AI
+                  </span>
+                </div>
+                <div
+                  className="flex items-center gap-1.5
+                  text-xs text-green-600
+                  dark:text-green-400"
+                >
+                  <div
+                    className="w-1.5 h-1.5 rounded-full
+                    bg-green-500 animate-pulse"
+                  />
+                  generating...
+                </div>
+              </div>
+
+              {/* Tool preview cards */}
+              {[
+                {
+                  icon: FileText,
+                  name: "JD Generator",
+                  stat: "6 min vs 3 hrs",
+                },
+                {
+                  icon: Scale,
+                  name: "Legal Notice",
+                  stat: "10 min vs 4 hrs",
+                },
+                {
+                  icon: Receipt,
+                  name: "GST Invoice",
+                  stat: "3 min · Free",
+                },
+              ].map(({ icon: Icon, name, stat }) => (
+                <div
+                  key={name}
+                  className="flex items-center
+                    justify-between bg-muted/50
+                    rounded-lg p-3 mt-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon
+                      className="h-3.5 w-3.5
+                      text-primary shrink-0"
+                    />
+                    <span
+                      className="text-xs font-medium
+                      text-foreground"
+                    >
+                      {name}
+                    </span>
+                  </div>
+                  <span
+                    className="text-[10px] px-2 py-0.5
+                    rounded-full bg-primary/10
+                    text-primary font-medium shrink-0"
+                  >
+                    {stat}
+                  </span>
+                </div>
+              ))}
+
+              {/* Footer row */}
+              <div
+                className="flex items-center gap-2
+                mt-4 pt-3 border-t border-border"
+              >
+                <CheckCircle
+                  className="h-3.5 w-3.5
+                  text-green-500 shrink-0"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Credits deducted only after successful output
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -401,66 +621,105 @@ export default async function MarketingHomePage() {
 
       {/* ══ SECTION 3 — WHO IS IT FOR ════════════════════════════════════════ */}
       <section className="px-4 py-20 max-w-7xl mx-auto">
-
         <div className="text-center mb-10">
-          <span className="inline-block text-[10px] font-bold uppercase tracking-widest
-            text-primary bg-primary/10 rounded-full px-3 py-1 mb-3">
+          <span
+            className="inline-block text-[10px] font-bold uppercase tracking-widest
+            text-primary bg-primary/10 rounded-full px-3 py-1 mb-3"
+          >
             5 Profession Kits
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
             Built for every Indian professional
           </h2>
           <p className="text-base text-muted-foreground max-w-xl mx-auto">
-            Pick your kit. Get a workspace with the tools you actually need — not 27 tabs of confusion.
+            Pick your kit. Get a workspace with the tools you actually need —
+            not 27 tabs of confusion.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {WHO_CARDS.map(({ kit, Icon, title, desc, outcome, tools, color }) => {
-            const c = KIT_COLOR_MAP[color];
-            return (
-              <Link
-                key={kit}
-                href={`/kits/${kit}`}
-                className="group rounded-2xl border border-border bg-card p-5 h-full
+          {WHO_CARDS.map(
+            ({ kit, Icon, title, desc, outcome, tools, color }) => {
+              const c = KIT_COLOR_MAP[color];
+              return (
+                <Link
+                  key={kit}
+                  href={`/kits/${kit}`}
+                  className="group rounded-2xl border border-border bg-card p-5 h-full
                   hover:border-primary/30 hover:shadow-md hover:shadow-primary/5
                   transition-all duration-200 flex flex-col gap-4"
-              >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.iconBg} transition-colors`}>
-                  <Icon className={`h-5 w-5 ${c.iconText}`} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-sm font-bold text-foreground mb-1">{title}</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
-                </div>
-                <div className={`inline-flex items-center gap-1.5 text-[11px] font-medium
+                >
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.iconBg} transition-colors`}
+                  >
+                    <Icon className={`h-5 w-5 ${c.iconText}`} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-bold text-foreground mb-1">
+                      {title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {desc}
+                    </p>
+                  </div>
+                  <div
+                    className={`inline-flex items-center gap-1.5 text-[11px] font-medium
                   px-2.5 py-1 rounded-full border self-start
-                  ${c.chipBg} ${c.chipText} ${c.chipBorder}`}>
-                  <TrendingUp className="h-3 w-3" />
-                  {outcome}
-                </div>
-                <div className="flex flex-wrap gap-1.5 mt-auto">
-                  {tools.slice(0, 3).map((t) => (
-                    <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-foreground">
-                      {t}
-                    </span>
-                  ))}
-                  {tools.length > 3 && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-primary font-medium">
-                      +{tools.length - 3} more
-                    </span>
-                  )}
-                </div>
-              </Link>
-            );
-          })}
+                  ${c.chipBg} ${c.chipText} ${c.chipBorder}`}
+                  >
+                    <TrendingUp className="h-3 w-3" />
+                    {outcome}
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-auto">
+                    {tools.slice(0, 3).map((t) => (
+                      <span
+                        key={t}
+                        className="
+    inline-flex items-center
+    rounded-full
+    border border-border/60
+    bg-background/80
+    px-3 py-1
+    text-xs font-medium
+    text-muted-foreground
+    backdrop-blur-sm
+    transition-colors duration-200
+    group-hover:border-primary/20
+    group-hover:text-foreground
+  "
+                      >
+                        {t}
+                      </span>
+                    ))}
+                    {tools.length > 3 && (
+                      <span
+                        className="
+    inline-flex items-center
+    rounded-full
+    border border-primary/10
+    bg-primary/5
+    px-3 py-1
+    text-xs font-semibold
+    text-primary
+  "
+                      >
+                        +{tools.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              );
+            },
+          )}
         </div>
       </section>
 
       {/* ══ SECTION 4 — FEATURES (Issue 5 redesign) ══════════════════════════ */}
-      <section id="features" className="bg-muted/30 border-t border-b border-border py-20 md:py-28">
+      <section
+        id="features"
+        className="bg-muted/10 border-t border-b border-border py-20 md:py-28"
+      >
         <div className="max-w-5xl mx-auto px-4">
-
           <SectionHeading
             eyebrow="Why it works"
             title="One workspace. Every professional need."
@@ -468,24 +727,50 @@ export default async function MarketingHomePage() {
           />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-14">
-
             {/* Card 1 — Personalised Kit */}
-            <div className="bg-card border border-border rounded-2xl p-8
+            <div
+              className="bg-card border border-border rounded-2xl p-8
               hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5
-              transition-all duration-300">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10
-                flex items-center justify-center mb-6">
+              transition-all duration-300"
+            >
+              <div
+                className="w-14 h-14 rounded-2xl bg-primary/10
+                flex items-center justify-center mb-6"
+              >
                 <LayoutGrid className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-base font-bold text-foreground mb-3">Your kit. Your tools.</h3>
+              <h3 className="text-base font-bold text-foreground mb-3">
+                Your kit. Your tools.
+              </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Answer 4 questions during onboarding. SetuLix builds a personalised workspace
-                with only the tools you need — no clutter, no noise.
+                Answer 4 questions during onboarding. SetuLix builds a
+                personalised workspace with only the tools you need — no
+                clutter, no noise.
               </p>
               <div className="flex flex-wrap gap-2 mt-4">
-                {["Creator Kit", "SME Kit", "HR Kit", "Legal Kit", "Marketing Kit"].map((pill) => (
-                  <span key={pill}
-                    className="text-xs bg-muted text-foreground px-2.5 py-1 rounded-full border border-border">
+                {[
+                  "Creator Kit",
+                  "SME Kit",
+                  "HR Kit",
+                  "Legal Kit",
+                  "Marketing Kit",
+                ].map((pill) => (
+                  <span
+                    key={pill}
+                    className="
+  inline-flex items-center
+  rounded-full
+  border border-border/60
+  bg-muted/5
+  px-3 py-1.5
+  text-xs font-medium
+  text-muted-foreground
+  backdrop-blur-sm
+  transition-colors duration-200
+  hover:border-primary/20
+  hover:text-foreground
+"
+                  >
                     {pill}
                   </span>
                 ))}
@@ -493,22 +778,31 @@ export default async function MarketingHomePage() {
             </div>
 
             {/* Card 2 — AI Models (highlighted center) */}
-            <div className="bg-card border border-border rounded-2xl p-8
+            <div
+              className="bg-card border border-border rounded-2xl p-8
               ring-1 ring-primary/30 shadow-lg shadow-primary/10
               hover:shadow-xl hover:shadow-primary/15
-              transition-all duration-300">
-              <span className="inline-flex bg-primary text-primary-foreground
-                text-[10px] font-bold px-2.5 py-1 rounded-full mb-6">
+              transition-all duration-300"
+            >
+              <span
+                className="inline-flex bg-primary text-primary-foreground
+                text-[10px] font-bold px-2.5 py-1 rounded-full mb-6"
+              >
                 Most powerful
               </span>
-              <div className="w-14 h-14 rounded-2xl bg-primary/10
-                flex items-center justify-center mb-6">
+              <div
+                className="w-14 h-14 rounded-2xl bg-primary/10
+                flex items-center justify-center mb-6"
+              >
                 <Cpu className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-base font-bold text-foreground mb-3">Best AI for every job.</h3>
+              <h3 className="text-base font-bold text-foreground mb-3">
+                Best AI for every job.
+              </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Legal docs use Claude Sonnet. SEO audits use GPT-4o. Captions use Gemini Flash.
-                You always get the right model — not the cheapest one.
+                Legal docs use Claude Sonnet. SEO audits use GPT-4o. Captions
+                use Gemini Flash. You always get the right model — not the
+                cheapest one.
               </p>
               <div className="flex gap-3 mt-4 flex-wrap">
                 <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400">
@@ -524,25 +818,34 @@ export default async function MarketingHomePage() {
             </div>
 
             {/* Card 3 — Credits */}
-            <div className="bg-card border border-border rounded-2xl p-8
+            <div
+              className="bg-card border border-border rounded-2xl p-8
               hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5
-              transition-all duration-300">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10
-                flex items-center justify-center mb-6">
+              transition-all duration-300"
+            >
+              <div
+                className="w-14 h-14 rounded-2xl bg-primary/10
+                flex items-center justify-center mb-6"
+              >
                 <Coins className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-base font-bold text-foreground mb-3">Pay for what you use.</h3>
+              <h3 className="text-base font-bold text-foreground mb-3">
+                Pay for what you use.
+              </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                No monthly waste. Credits never expire on packs. Free tools stay free forever.
-                Upgrade your plan only when your volume demands it.
+                No monthly waste. Credits never expire on packs. Free tools stay
+                free forever. Upgrade your plan only when your volume demands
+                it.
               </p>
-              <div className="mt-4 bg-muted/50 rounded-xl p-3 space-y-0">
+              <div className="mt-4 bg-muted/5 rounded-xl p-3 space-y-0">
                 <div className="flex items-center justify-between py-1.5 border-b border-border text-xs">
                   <div className="flex items-center gap-2">
                     <Receipt className="h-4 w-4 text-emerald-500" />
                     <span className="text-foreground">GST Invoice</span>
                   </div>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">Free</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                    Free
+                  </span>
                 </div>
                 <div className="flex items-center justify-between py-1.5 border-b border-border text-xs">
                   <div className="flex items-center gap-2">
@@ -560,7 +863,6 @@ export default async function MarketingHomePage() {
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </section>
@@ -571,15 +873,17 @@ export default async function MarketingHomePage() {
       <div className="border-t border-border" />
 
       {/* ══ SECTION 6 — HOW IT WORKS (Issue 9 upgrade) ══════════════════════ */}
-      <section className="relative overflow-hidden py-20 md:py-28
-        border-t border-b border-border bg-background">
-
+      <section
+        className="relative overflow-hidden py-20 md:py-28
+        border-t border-b border-border bg-background"
+      >
         {/* Decorative blur circle */}
-        <div className="absolute w-96 h-96 rounded-full bg-primary/5 blur-3xl
-          top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+        <div
+          className="absolute w-96 h-96 rounded-full bg-primary/5 blur-3xl
+          top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+        />
 
         <div className="max-w-6xl mx-auto px-4 relative">
-
           {/* Heading */}
           <div className="text-center mb-14">
             <p className="text-xs font-medium uppercase tracking-widest text-primary mb-3">
@@ -595,7 +899,6 @@ export default async function MarketingHomePage() {
 
           {/* 4-step grid */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
-
             {[
               {
                 num: "01",
@@ -633,45 +936,59 @@ export default async function MarketingHomePage() {
                 tail: "with their logo and signature.",
                 time: "instant",
               },
-            ].map(({ num, Icon, title, body, highlight, tail, time }, idx, arr) => (
-              <div key={num} className="relative">
-                {/* Connector arrow (desktop) */}
-                {idx < arr.length - 1 && (
-                  <div className="hidden md:flex items-center justify-center
-                    absolute -right-3 top-1/3 z-10">
-                    <ChevronRight className="h-5 w-5 text-primary/30" />
-                  </div>
-                )}
+            ].map(
+              ({ num, Icon, title, body, highlight, tail, time }, idx, arr) => (
+                <div key={num} className="relative">
+                  {/* Connector arrow (desktop) */}
+                  {idx < arr.length - 1 && (
+                    <div
+                      className="hidden md:flex items-center justify-center
+                    absolute -right-3 top-1/3 z-10"
+                    >
+                      <ChevronRight className="h-5 w-5 text-primary/30" />
+                    </div>
+                  )}
 
-                {/* Card with gradient top border */}
-                <div className="rounded-2xl border border-border bg-card/80 backdrop-blur-sm p-6
+                  {/* Card with gradient top border */}
+                  <div
+                    className="rounded-2xl border border-border bg-card/80 backdrop-blur-sm p-6
                   flex flex-col relative overflow-hidden h-full
                   before:absolute before:inset-x-0 before:top-0 before:h-px
-                  before:bg-gradient-to-r before:from-transparent before:via-primary/40 before:to-transparent">
-
-                  <span className="absolute top-4 right-4 text-5xl font-black
-                    text-primary/6 leading-none select-none">
-                    {num}
-                  </span>
-                  <div className="w-11 h-11 rounded-xl bg-primary/10
-                    flex items-center justify-center shrink-0">
-                    <Icon className="h-5 w-5 text-primary" />
+                  before:bg-gradient-to-r before:from-transparent before:via-primary/40 before:to-transparent"
+                  >
+                    <span
+                      className="absolute top-4 right-4 text-5xl font-black
+                    text-primary/6 leading-none select-none"
+                    >
+                      {num}
+                    </span>
+                    <div
+                      className="w-11 h-11 rounded-xl bg-primary/10
+                    flex items-center justify-center shrink-0"
+                    >
+                      <Icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-bold text-foreground mt-4">
+                      {title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                      {body}{" "}
+                      <span className="text-foreground font-medium">
+                        {highlight}
+                      </span>{" "}
+                      {tail}
+                    </p>
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-medium
+                    text-muted-foreground mt-4 bg-muted/10 px-2 py-0.5 rounded-full self-start"
+                    >
+                      <Clock className="h-3 w-3" />
+                      {time}
+                    </span>
                   </div>
-                  <h3 className="text-lg font-bold text-foreground mt-4">{title}</h3>
-                  <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                    {body}{" "}
-                    <span className="text-foreground font-medium">{highlight}</span>{" "}
-                    {tail}
-                  </p>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium
-                    text-muted-foreground mt-4 bg-muted px-2 py-0.5 rounded-full self-start">
-                    <Clock className="h-3 w-3" />
-                    {time}
-                  </span>
                 </div>
-              </div>
-            ))}
-
+              ),
+            )}
           </div>
 
           {/* Section CTA */}
@@ -689,14 +1006,12 @@ export default async function MarketingHomePage() {
               <ArrowRight className="h-4 w-4" />
             </a>
           </div>
-
         </div>
       </section>
 
       {/* ══ SECTION 7 — COMPARISON TABLE (Issue 10 redesign) ════════════════ */}
-      <section className="px-4 py-20 bg-muted/20">
+      <section className="px-4 py-20 bg-muted/10">
         <div className="max-w-5xl mx-auto">
-
           <SectionHeading
             eyebrow="Why SetuLix"
             title="Built for India. Not adapted for it."
@@ -708,18 +1023,24 @@ export default async function MarketingHomePage() {
               <thead>
                 <tr>
                   {/* Feature label column */}
-                  <th className="sticky left-0 text-left px-5 py-4 text-xs font-semibold
+                  <th
+                    className="sticky left-0 text-left px-5 py-4 text-xs font-semibold
                     text-muted-foreground uppercase tracking-wider
-                    bg-muted/60 backdrop-blur border-b border-r border-border
-                    w-[32%] rounded-tl-2xl">
+                    bg-muted/10 backdrop-blur border-b border-r border-border
+                    w-[32%] rounded-tl-2xl"
+                  >
                     Feature
                   </th>
                   {/* SetuLix — highlighted */}
                   <th className="px-5 py-4 text-center bg-primary border-b border-primary/60 min-w-[120px]">
                     <div className="flex flex-col items-center gap-1">
-                      <span className="text-sm font-extrabold text-primary-foreground tracking-tight">SetuLix</span>
-                      <span className="inline-block text-[9px] font-bold uppercase tracking-widest
-                        bg-white/20 text-primary-foreground rounded-full px-2 py-0.5">
+                      <span className="text-sm font-extrabold text-primary-foreground tracking-tight">
+                        SetuLix
+                      </span>
+                      <span
+                        className="inline-block text-[9px] font-bold uppercase tracking-widest
+                        bg-white/20 text-primary-foreground rounded-full px-2 py-0.5"
+                      >
                         ✦ India-first
                       </span>
                     </div>
@@ -729,7 +1050,7 @@ export default async function MarketingHomePage() {
                     <th
                       key={name}
                       className={`px-4 py-4 text-xs font-semibold text-muted-foreground
-                        text-center bg-muted/40 border-b border-border min-w-[100px]
+                        text-center bg-muted/10 border-b border-border min-w-[100px]
                         ${i === COMPETITORS.length - 2 ? "rounded-tr-2xl" : ""}`}
                     >
                       {name}
@@ -741,11 +1062,16 @@ export default async function MarketingHomePage() {
                 {COMPARISON.map(({ feature, values }, rowIdx) => {
                   const isLast = rowIdx === COMPARISON.length - 1;
                   return (
-                    <tr key={feature} className={rowIdx % 2 === 0 ? "bg-card" : "bg-muted/20"}>
+                    <tr
+                      key={feature}
+                      className={rowIdx % 2 === 0 ? "bg-card" : "bg-muted/1"}
+                    >
                       {/* Feature label */}
-                      <td className={`sticky left-0 px-5 py-3.5 text-sm font-medium text-foreground
+                      <td
+                        className={`sticky left-0 px-5 py-3.5 text-sm font-medium text-foreground
                         bg-inherit border-r border-border/60
-                        ${isLast ? "rounded-bl-2xl" : ""}`}>
+                        ${isLast ? "rounded-bl-2xl" : ""}`}
+                      >
                         {feature}
                       </td>
                       {/* SetuLix cell — always true */}
@@ -762,9 +1088,15 @@ export default async function MarketingHomePage() {
                             ${isLast && colIdx === values.length - 2 ? "rounded-br-2xl" : ""}`}
                         >
                           <div className="flex justify-center">
-                            {val === true && <Check className="h-5 w-5 text-emerald-500" />}
-                            {val === false && <X className="h-5 w-5 text-muted-foreground/30" />}
-                            {val === "partial" && <Minus className="h-5 w-5 text-amber-500" />}
+                            {val === true && (
+                              <Check className="h-5 w-5 text-emerald-500" />
+                            )}
+                            {val === false && (
+                              <X className="h-5 w-5 text-muted-foreground/30" />
+                            )}
+                            {val === "partial" && (
+                              <Minus className="h-5 w-5 text-amber-500" />
+                            )}
                           </div>
                         </td>
                       ))}
@@ -778,8 +1110,9 @@ export default async function MarketingHomePage() {
           {/* Below table */}
           <div className="mt-8 text-center">
             <p className="text-xs text-muted-foreground max-w-lg mx-auto">
-              Each tool listed serves a different primary purpose. SetuLix is built specifically
-              for Indian professionals who need billing, legal, HR, and content tools in one place.
+              Each tool listed serves a different primary purpose. SetuLix is
+              built specifically for Indian professionals who need billing,
+              legal, HR, and content tools in one place.
             </p>
             <a
               href="/?auth=signup"
@@ -791,7 +1124,6 @@ export default async function MarketingHomePage() {
               <ArrowRight className="h-4 w-4" />
             </a>
           </div>
-
         </div>
       </section>
 
@@ -830,37 +1162,102 @@ export default async function MarketingHomePage() {
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-3">
                 <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
-                  <rect x="4" y="4" width="18" height="8" rx="3" fill="#7c3aed" />
-                  <rect x="10" y="12" width="18" height="8" rx="3" fill="#7c3aed" opacity="0.7" />
-                  <rect x="4" y="20" width="18" height="8" rx="3" fill="#7c3aed" />
+                  <rect
+                    x="4"
+                    y="4"
+                    width="18"
+                    height="8"
+                    rx="3"
+                    fill="#7c3aed"
+                  />
+                  <rect
+                    x="10"
+                    y="12"
+                    width="18"
+                    height="8"
+                    rx="3"
+                    fill="#7c3aed"
+                    opacity="0.7"
+                  />
+                  <rect
+                    x="4"
+                    y="20"
+                    width="18"
+                    height="8"
+                    rx="3"
+                    fill="#7c3aed"
+                  />
                 </svg>
-                <span className="font-bold text-foreground">Setu<span className="text-primary">Lix</span></span>
+                <span className="font-bold text-foreground">
+                  Setu<span className="text-primary">Lix</span>
+                </span>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                AI workspace for every Indian professional. 27 tools. 5 kits. One platform.
+                AI workspace for every Indian professional. 27 tools. 5 kits.
+                One platform.
               </p>
             </div>
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Product</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
+                Product
+              </h4>
               <ul className="space-y-2">
-                {[["Tools", "/tools"], ["Pricing", "/pricing"], ["About", "/about"]].map(([l, h]) => (
-                  <li key={h}><Link href={h} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{l}</Link></li>
+                {[
+                  ["Tools", "/tools"],
+                  ["Pricing", "/pricing"],
+                  ["About", "/about"],
+                ].map(([l, h]) => (
+                  <li key={h}>
+                    <Link
+                      href={h}
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {l}
+                    </Link>
+                  </li>
                 ))}
               </ul>
             </div>
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Kits</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
+                Kits
+              </h4>
               <ul className="space-y-2">
-                {[["Creator", "/kits/creator"], ["SME", "/kits/sme"], ["HR", "/kits/hr"], ["Legal", "/kits/legal"], ["Marketing", "/kits/marketing"]].map(([l, h]) => (
-                  <li key={h}><Link href={h} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{l}</Link></li>
+                {[
+                  ["Creator", "/kits/creator"],
+                  ["SME", "/kits/sme"],
+                  ["HR", "/kits/hr"],
+                  ["Legal", "/kits/legal"],
+                  ["Marketing", "/kits/marketing"],
+                ].map(([l, h]) => (
+                  <li key={h}>
+                    <Link
+                      href={h}
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {l}
+                    </Link>
+                  </li>
                 ))}
               </ul>
             </div>
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Company</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
+                Company
+              </h4>
               <ul className="space-y-2">
-                {[["About", "/about"], ["Contact", "mailto:hello@setulix.com"]].map(([l, h]) => (
-                  <li key={h}><Link href={h} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{l}</Link></li>
+                {[
+                  ["About", "/about"],
+                  ["Contact", "mailto:hello@setulix.com"],
+                ].map(([l, h]) => (
+                  <li key={h}>
+                    <Link
+                      href={h}
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {l}
+                    </Link>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -870,7 +1267,8 @@ export default async function MarketingHomePage() {
               &copy; 2026 SetuLabsAI. All rights reserved.
             </p>
             <p className="text-xs text-muted-foreground text-center">
-              Designed &amp; built by SetuLabsAI · Founder &amp; CEO: Deepak Rathor · Made in India
+              Designed &amp; built by SetuLabsAI · Founder &amp; CEO: Deepak
+              Rathor · Made in India
             </p>
           </div>
         </div>

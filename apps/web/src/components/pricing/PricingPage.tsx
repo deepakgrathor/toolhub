@@ -68,7 +68,7 @@ function BillingToggle({
   onChange: (c: "monthly" | "yearly") => void;
 }) {
   return (
-    <div className="flex items-center justify-center gap-1 p-1 rounded-xl bg-muted/30 border border-border w-fit mx-auto">
+    <div className="flex items-center justify-center gap-1 p-1 rounded-xl bg-muted/20 border border-border w-fit mx-auto">
       {(["monthly", "yearly"] as const).map((c) => (
         <button
           key={c}
@@ -121,8 +121,8 @@ function PlanCard({
     >
       {/* Most Popular badge */}
       {plan.isPopular && (
-        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10">
-          <span className="inline-block rounded-full bg-gradient-to-r from-[#7c3aed] to-purple-400 px-3.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white shadow-sm">
+        <div className="absolute text-center -top-3.5 left-1/2 -translate-x-1/2 z-10">
+          <span className="inline-block rounded-full bg-gradient-to-r from-[#7c3aed] to-purple-400 px-3.5 py-1 text-[9px] font-bold uppercase tracking-widest text-white shadow-sm">
             Most Popular
           </span>
         </div>
@@ -242,7 +242,7 @@ function PlanCard({
           {plan.usageExamples.map((ex, i) => (
             <span
               key={i}
-              className="rounded-full bg-muted/40 text-muted-foreground text-xs px-2.5 py-1"
+              className="rounded-full bg-muted/10 text-muted-foreground text-xs px-2.5 py-1"
             >
               {ex}
             </span>
@@ -309,7 +309,7 @@ function PackCard({
 
 function PlanLockNote() {
   return (
-    <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground max-w-xl mx-auto">
+    <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/10 px-4 py-3 text-xs text-muted-foreground max-w-xl mx-auto">
       <Lock className="h-3.5 w-3.5 shrink-0 mt-0.5" />
       <span>
         Fair usage applies. Credits reset monthly on billing date. One-time pack credits never expire.

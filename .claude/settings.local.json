@@ -72,7 +72,14 @@
       "Bash(Write-Host \"cleared\")",
       "Bash(sleep 12 && cat \"C:\\\\Users\\\\DEEPAK~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\F--2026-AI-Project-toolhub\\\\14b6873e-214a-47ba-9a4a-ddc6472cefdb\\\\tasks\\\\bli4q0r49.output\" 2>/dev/null || cat /c/Users/DEEPAK~1/AppData/Local/Temp/claude/F--2026-AI-Project-toolhub/14b6873e-214a-47ba-9a4a-ddc6472cefdb/tasks/bli4q0r49.output 2>/dev/null)",
       "Bash(curl -s http://localhost:3000/)",
-      "Bash(curl -s http://localhost:3001/)"
+      "Bash(curl -s http://localhost:3001/)",
+      "Bash(mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\tools\\\\presets\\\\[id]\" 2>&1 && echo \"done\")",
+      "Bash(git stash *)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\admin\\\\presets\\\\stats\")",
+      "Bash(New-Item -ItemType Directory -Force -Path \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\admin\\\\users\\\\[userId]\\\\presets\")",
+      "Bash(mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\payments\\\\webhook\\\\[gateway]\")",
+      "Bash(grep -rn '`bg-\\\\${' \"apps/web/src/app/\\(marketing\\)/page.tsx\")",
+      "Bash(grep -rn '`text-\\\\${' \"apps/web/src/app/\\(marketing\\)/page.tsx\")"
     ]
   }
 }
