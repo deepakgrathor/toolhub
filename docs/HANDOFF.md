@@ -1,9 +1,66 @@
 # Handoff Note
-Updated: 2026-05-14 | Account: B | Session: B8-C-2-B | Features: Saved Presets — UI Components
+Updated: 2026-05-14 | Account: B | Session: B8-C-2-C | Features: Saved Presets — Wire into Tool Pages + Admin Overview
 
 ## Where We Are
-Session B8-C-2-B done. **TypeScript: 0 errors (apps/web).** Committed to main.
-Note: `npx turbo build` fails with pre-existing `Cannot find module for page: /_document` error (present before B8-C-2-B, not caused by these changes).
+Session B8-C-2-C done. **TypeScript: 0 errors (apps/web).** Committed + pushed to main.
+Note: `npx turbo build` fails with pre-existing `Cannot find module for page: /_document` error (not caused by any recent changes).
+
+---
+
+## What Was Done (Session B8-C-2-C)
+
+### TASK 1 — UniversalToolRenderer wired
+- `apps/web/src/components/tools/UniversalToolRenderer.tsx` — UPDATED
+  - Added `useRef` import, `PresetSelector` + `usePresets` imports
+  - `const { presets, isFetched, fetchPresets } = usePresets(slug)` + `defaultLoadedRef`
+  - Effect to call `fetchPresets()` once session is ready
+  - Effect to auto-load default preset into `formValues` on first fetch
+  - `<PresetSelector>` rendered between LoginBanner and form fields (only when `config.type === 'ai'`)
+  - `onPresetLoad` merges preset inputs into formValues (filtered to existing keys only)
+
+### TASK 2 — Batch 1 (5 tools) wired
+- `blog-generator`, `yt-script`, `jd-generator`, `legal-notice`, `ad-copy`
+- Pattern: added `useRef`, `formValues = watch() as unknown as Record<string,string>`, `planSlug` state, `usePresets(slug)`, `defaultLoadedRef`, 3 effects, `<PresetSelector>` before form tag
+
+### TASK 3 — Batch 2 (5 tools) wired
+- `linkedin-bio`, `resume-screener`, `appraisal-draft`, `policy-generator`, `nda-generator`
+- `linkedin-bio` + `resume-screener`: also added `watch, setValue` to useForm destructuring (previously missing)
+
+### TASK 4 — Batch 3 (10 tools) wired
+- `hook-writer`, `caption-generator`, `title-generator`, `email-subject`, `whatsapp-bulk`, `legal-disclaimer`, `seo-auditor`, `offer-letter`, `website-generator`, `thumbnail-ai`
+- `seo-auditor`: added `watch, setValue` to useForm destructuring (previously missing)
+- `offer-letter`: special useState pattern — `currentInputs` flat Record built from nested state; `onPresetLoad` sets each state individually
+- `thumbnail-ai`: PresetSelector placed before the correct form (uses `handleSubmit(generate)`, not `handleSubmit(onSubmit)`)
+
+### TASK 5 — useToolPresets hook created
+- `apps/web/src/hooks/useToolPresets.ts` — NEW
+  - Wraps `usePresets` with auto-fetch + auto-load default preset logic
+  - Props: `toolSlug`, `onDefaultLoad?`
+  - Prevents double-load via `defaultLoadedRef`
+  - Re-exports full `hookResult` for drop-in use
+
+### TASK 6 — Admin Preset Stats APIs
+- `apps/web/src/app/api/admin/presets/stats/route.ts` — NEW
+  - GET, admin auth required
+  - Aggregates: `totalPresets`, `usersWithPresets`, `topTools` (top 5 by count), `avgPresetsPerUser`
+- `apps/web/src/app/api/admin/users/[userId]/presets/route.ts` — NEW
+  - GET, admin auth required
+  - Returns: `{ totalPresets, byTool: [{ toolSlug, count, hasDefault }] }`
+
+### TASK 7 — Admin Dashboard preset card
+- `apps/web/src/app/admin/page.tsx` — UPDATED
+  - Added `Preset` import from `@toolhub/db`, `BookOpen` from lucide-react
+  - Fetches `totalPresets` in parallel with other dashboard stats
+  - New "Saved Presets" stat card (pink accent, BookOpen icon, "across all PRO users" sub)
+  - Grid changed from `lg:grid-cols-4` → `lg:grid-cols-5` for 5 cards
+
+### TASK 8 — PDF FREE user fix (verified)
+- `apps/web/src/app/api/tools/download-pdf/route.tsx` — No change needed
+  - Already allows all plans (no 403 gate for FREE)
+  - FREE → `LitePDFTemplate` with `showWatermark={true}`
+  - LITE → `LitePDFTemplate` with `showWatermark={false}`
+  - PRO+ → `ProPDFTemplate` (branded)
+  - UniversalToolRenderer PDF button already enabled for all plans
 
 ---
 
