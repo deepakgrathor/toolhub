@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "crypto";
 import { connectDB, OtpToken, User, AuditLog } from "@toolhub/db";
+import { verifyOtp } from "@/lib/otp-utils";
 import { createAdminToken } from "@/lib/admin-auth";
 import { z } from "zod";
 
@@ -51,9 +51,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check OTP — compare against stored SHA-256 hash
-    const otpHash = createHash("sha256").update(otp).digest("hex");
-    if (otpRecord.otp !== otpHash) {
+    // Check OTP — HMAC-SHA256 + timing-safe comparison
+    if (!verifyOtp(otp, otpRecord.otp)) {
       await OtpToken.updateOne(
         { _id: otpRecord._id },
         { $inc: { attempts: 1 } },

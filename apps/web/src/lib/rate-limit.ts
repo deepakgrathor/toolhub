@@ -1,31 +1,31 @@
-interface RateLimitOptions {
-  windowMs: number;
-  max: number;
-}
+import { getRedis } from "@toolhub/shared";
 
-interface RateLimitResult {
-  allowed: boolean;
-  remaining: number;
-  resetAt: number;
-}
+export async function rateLimit(
+  identifier: string,
+  limit: number,
+  windowSeconds: number
+): Promise<{ success: boolean; remaining: number; reset: number }> {
+  const key = `rl:${identifier}`;
 
-export function createRateLimit(options: RateLimitOptions) {
-  const store = new Map<string, { count: number; resetAt: number }>();
+  try {
+    const redis = getRedis();
+    const current = await redis.incr(key);
 
-  return function rateLimit(key: string): RateLimitResult {
-    const now = Date.now();
-    const entry = store.get(key);
-
-    if (!entry || now > entry.resetAt) {
-      store.set(key, { count: 1, resetAt: now + options.windowMs });
-      return { allowed: true, remaining: options.max - 1, resetAt: now + options.windowMs };
+    if (current === 1) {
+      await redis.expire(key, windowSeconds);
     }
 
-    if (entry.count >= options.max) {
-      return { allowed: false, remaining: 0, resetAt: entry.resetAt };
-    }
+    const ttl = await redis.ttl(key);
+    const remaining = Math.max(0, limit - current);
 
-    entry.count++;
-    return { allowed: true, remaining: options.max - entry.count, resetAt: entry.resetAt };
-  };
+    return {
+      success: current <= limit,
+      remaining,
+      reset: Date.now() + ttl * 1000,
+    };
+  } catch (error) {
+    // Redis down — fail open so users are never blocked due to infra issues
+    console.error("[rate-limit] Redis error:", error);
+    return { success: true, remaining: 1, reset: Date.now() + windowSeconds * 1000 };
+  }
 }

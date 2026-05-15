@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { createHash } from "crypto";
 import { connectDB, User, OtpToken, Referral } from "@toolhub/db";
 import { generateReferralCode } from "@toolhub/shared";
 import { z } from "zod";
-import { createRateLimit } from "@/lib/rate-limit";
-
-const signupLimiter = createRateLimit({ windowMs: 3_600_000, max: 5 });
+import { rateLimit } from "@/lib/rate-limit";
+import { hashOtp } from "@/lib/otp-utils";
 
 const signupSchema = z.object({
   name: z.string().min(2).max(60).trim(),
@@ -28,8 +26,8 @@ export async function POST(req: NextRequest) {
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       req.headers.get("x-real-ip") ??
       "unknown";
-    const limit = signupLimiter(ip);
-    if (!limit.allowed) {
+    const limit = await rateLimit(ip, 5, 3600);
+    if (!limit.success) {
       return NextResponse.json(
         { error: "Too many signup attempts. Try again later." },
         { status: 429 }
@@ -50,8 +48,8 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    // Verify OTP — compare against stored hash
-    const otpHash = createHash("sha256").update(otp).digest("hex");
+    // Verify OTP — compare against stored HMAC hash
+    const otpHash = hashOtp(otp);
     const token = await OtpToken.findOne({
       email,
       otp: otpHash,

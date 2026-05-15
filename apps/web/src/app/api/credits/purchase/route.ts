@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectDB, CreditPack } from "@toolhub/db";
 import { z } from "zod";
-import { createRateLimit } from "@/lib/rate-limit";
-
-const purchaseLimiter = createRateLimit({ windowMs: 3_600_000, max: 10 });
+import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +14,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const limit = purchaseLimiter(session.user.id);
-  if (!limit.allowed) {
+  const limit = await rateLimit(session.user.id, 10, 3600);
+  if (!limit.success) {
     return NextResponse.json(
       { error: "Too many purchase attempts. Try again later." },
       { status: 429 }

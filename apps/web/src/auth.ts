@@ -52,6 +52,17 @@ const config: NextAuthConfig = {
   ],
 
   callbacks: {
+    async signIn({ account, profile }) {
+      // Reject Google sign-ins where the email has not been verified by Google
+      if (account?.provider === "google") {
+        const googleProfile = profile as { email_verified?: boolean } | undefined;
+        if (!googleProfile?.email_verified) {
+          return false;
+        }
+      }
+      return true;
+    },
+
     async jwt({ token, user, account, trigger, session }) {
       if (account && user) {
         if (account.provider === "google") {
@@ -165,7 +176,7 @@ const config: NextAuthConfig = {
     },
   },
 
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60 },
 
   pages: {
     signIn: "/",

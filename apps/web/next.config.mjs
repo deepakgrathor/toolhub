@@ -4,18 +4,60 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
+const securityHeaders = [
+  { key: "X-DNS-Prefetch-Control", value: "on" },
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains; preload",
+  },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=()",
+  },
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      // Next.js requires 'unsafe-inline' + 'unsafe-eval'; Cashfree JS SDK + PostHog
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.cashfree.com https://us.i.posthog.com",
+      "style-src 'self' 'unsafe-inline'",
+      // R2 public bucket, Google avatars (NextAuth)
+      "img-src 'self' blob: data: https://*.r2.cloudflarestorage.com https://lh3.googleusercontent.com",
+      // next/font/google self-hosts fonts at build time — no external font CDN needed
+      "font-src 'self'",
+      "connect-src 'self' https://us.i.posthog.com https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com",
+      "frame-src 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "upgrade-insecure-requests",
+    ].join("; "),
+  },
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@toolhub/shared", "@toolhub/db"],
 
   compress: true,
 
-  // Block search engines from indexing admin routes
   async headers() {
     return [
       {
+        // Security headers on every route
+        source: "/:path*",
+        headers: securityHeaders,
+      },
+      {
+        // Admin routes: all security headers + no-index
         source: "/admin/:path*",
-        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+        headers: [
+          ...securityHeaders,
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
       },
     ];
   },

@@ -1,9 +1,82 @@
 # Handoff Note
-Updated: 2026-05-15 | Account: B | Session: BSec-2 | Features: payment security — timing-safe HMAC, atomic credit dedup, magic-byte file validation, gateway secrets out of Redis
+Updated: 2026-05-15 | Account: B | Session: BSec-3 | Features: security headers, Google email_verified, Redis rate limiter, HMAC OTP, JWT maxAge
 
 ## Where We Are
-Session BSec-2 done. **TypeScript: 0 errors (apps/web). Build: passing (75/75 static pages — pre-existing Windows ENOENT on build trace collection is unrelated to code changes).**
-Master Context: v7.3 — BFix-1 + BFix-2 + BFix-3 + BSec-1 + BSec-2 all complete.
+Session BSec-3 done. **TypeScript: 0 errors (apps/web).**
+Master Context: v7.4 — BFix-1 + BFix-2 + BFix-3 + BSec-1 + BSec-2 + BSec-3 all complete.
+
+---
+
+## What Was Done (Session BSec-3)
+
+### Fix 1 — Security Headers: next.config.mjs
+
+- `apps/web/next.config.mjs`
+  - Added `securityHeaders` array applied to all routes `/:path*`
+  - `X-DNS-Prefetch-Control: on`
+  - `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` — 2-year HSTS
+  - `X-Frame-Options: SAMEORIGIN` — clickjacking protection on payment/checkout pages
+  - `X-Content-Type-Options: nosniff` — prevents MIME sniffing
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+  - `Content-Security-Policy` — `script-src` allows Cashfree SDK + PostHog; `img-src` allows R2 + Google avatars; `font-src 'self'` sufficient (next/font/google self-hosts fonts at build time); `frame-src 'none'`; `object-src 'none'`
+  - Admin routes `/admin/:path*`: all security headers + existing `X-Robots-Tag: noindex, nofollow`
+
+### Fix 2 — Google OAuth: email_verified Check + JWT maxAge
+
+- `apps/web/src/auth.ts`
+  - Added `signIn` callback (runs before `jwt`) — rejects Google sign-ins where `profile.email_verified !== true`; returns `false` → NextAuth shows error page automatically, no internal details exposed
+  - Changed `session: { strategy: 'jwt' }` → `session: { strategy: 'jwt', maxAge: 7 * 24 * 60 * 60 }` — 7-day session; stolen tokens are limited to 7-day window
+
+### Fix 3 — Redis-Backed Rate Limiter
+
+- `apps/web/src/lib/rate-limit.ts` — **full rewrite**
+  - **Before**: `createRateLimit()` returned a sync function backed by an in-memory `Map` — ineffective on Vercel serverless (each lambda has its own Map)
+  - **After**: `rateLimit(identifier, limit, windowSeconds)` — async, uses `getRedis()` from `@toolhub/shared` (Upstash Redis)
+  - Pattern: `INCR rl:{identifier}` → if count===1 set `EXPIRE windowSeconds` → `TTL` → return `{ success, remaining, reset }`
+  - Fails open on Redis errors — users never blocked due to infrastructure issues
+  - Key prefix `rl:` is consistent across all callers
+- Updated all 4 callers (module-level limiter removed, switched to `await rateLimit(...)`):
+  - `apps/web/src/app/api/auth/signup/route.ts` — `rateLimit(ip, 5, 3600)` — 5/hour per IP
+  - `apps/web/src/app/api/admin-auth/send-otp/route.ts` — `rateLimit(ip, 5, 15 * 60)` — 5/15 min per IP
+  - `apps/web/src/app/api/credits/purchase/route.ts` — `rateLimit(userId, 10, 3600)` — 10/hour per user
+  - `apps/web/src/app/api/jobs/create/route.ts` — `rateLimit(userId, 50, 3600)` — 50/hour per user
+  - `send-otp/route.ts` (web OTP) already used inline Redis rate limiting — untouched
+
+### Fix 4 — OTP Security: HMAC-SHA256 + Timing-Safe Comparison
+
+- `apps/web/src/lib/otp-utils.ts` — **NEW**
+  - `hashOtp(otp)` — HMAC-SHA256 keyed on `AUTH_SECRET` / `NEXTAUTH_SECRET`; rainbow tables are useless without the server secret (unlike plain SHA-256)
+  - `verifyOtp(submittedOtp, storedHash)` — hashes submission, does constant-time `timingSafeEqual` comparison; prevents timing side-channel on OTP verification
+- Applied across all OTP files:
+  - `apps/web/src/app/api/auth/send-otp/route.ts` — `hashOtp(otp)` replaces `createHash("sha256")`
+  - `apps/web/src/app/api/auth/signup/route.ts` — `hashOtp(otp)` replaces `createHash("sha256")`
+  - `apps/web/src/app/api/admin-auth/send-otp/route.ts` — `hashOtp(otp)` replaces `await import("crypto").createHash("sha256")`
+  - `apps/web/src/app/api/admin-auth/verify-otp/route.ts` — `verifyOtp(otp, otpRecord.otp)` replaces `createHash + !==` comparison
+- **Note**: existing SHA-256 hashed OTPs in DB will fail verification after this change (users request a new OTP) — no migration logic added
+
+#### Modified Files (BSec-3)
+```
+apps/web/next.config.mjs                                    — security headers
+apps/web/src/auth.ts                                        — email_verified + maxAge
+apps/web/src/lib/rate-limit.ts                              — full rewrite: Redis async
+apps/web/src/lib/otp-utils.ts                               — NEW: hashOtp + verifyOtp
+apps/web/src/app/api/auth/send-otp/route.ts                 — hashOtp
+apps/web/src/app/api/auth/signup/route.ts                   — rateLimit + hashOtp
+apps/web/src/app/api/admin-auth/send-otp/route.ts           — rateLimit + hashOtp
+apps/web/src/app/api/admin-auth/verify-otp/route.ts         — verifyOtp
+apps/web/src/app/api/credits/purchase/route.ts              — rateLimit
+apps/web/src/app/api/jobs/create/route.ts                   — rateLimit
+```
+
+#### Rules Verified
+- TypeScript: 0 errors (apps/web)
+- No business logic changed — only security mechanisms
+- All rate limiters fail open on Redis errors
+- SVG/HTML still rejected (BSec-2 unchanged)
+- Gateway secrets still out of Redis (BSec-2 unchanged)
+
+---
 
 ---
 

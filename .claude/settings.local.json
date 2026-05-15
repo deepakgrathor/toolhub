@@ -79,7 +79,15 @@
       "Bash(New-Item -ItemType Directory -Force -Path \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\admin\\\\users\\\\[userId]\\\\presets\")",
       "Bash(mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\payments\\\\webhook\\\\[gateway]\")",
       "Bash(grep -rn '`bg-\\\\${' \"apps/web/src/app/\\(marketing\\)/page.tsx\")",
-      "Bash(grep -rn '`text-\\\\${' \"apps/web/src/app/\\(marketing\\)/page.tsx\")"
+      "Bash(grep -rn '`text-\\\\${' \"apps/web/src/app/\\(marketing\\)/page.tsx\")",
+      "PowerShell(Get-Command npm, npx, pnpm, node -ErrorAction SilentlyContinue)",
+      "PowerShell($env:PATH -split ';' | Where-Object { $_ -ne '' } | Select-Object -First 20)",
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\nodejs\\\\\" | Select-Object Name; Get-ChildItem \"$env:LOCALAPPDATA\\\\pnpm\\\\\" -ErrorAction SilentlyContinue | Select-Object Name -First 5)",
+      "PowerShell(Test-Path \"C:\\\\Users\\\\Deepak_Rathor\\\\AppData\\\\Roaming\\\\npm\"; [System.IO.Directory]::GetFiles\\(\"C:\\\\Users\\\\Deepak_Rathor\\\\AppData\\\\Roaming\\\\npm\"\\))",
+      "PowerShell($env:PATH = \"C:\\\\Users\\\\Deepak_Rathor\\\\AppData\\\\Roaming\\\\npm;\" + $env:PATH; Set-Location \"F:\\\\2026\\\\AI_Project\\\\toolhub\"; pnpm tsc --noEmit 2>&1)",
+      "Bash(pnpm tsc *)",
+      "PowerShell(cd \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\"; npx tsc --noEmit; echo \"Exit: $LASTEXITCODE\")",
+      "PowerShell(Get-Command node, npm, npx, pnpm -ErrorAction SilentlyContinue)"
     ]
   }
 }

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomInt, createHash } from "crypto";
+import { randomInt } from "crypto";
 import { connectDB, OtpToken, User } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
+import { hashOtp } from "@/lib/otp-utils";
 import { z } from "zod";
 
 const schema = z.object({
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
     }
 
     const otp = generateOtp();
-    const otpHash = createHash("sha256").update(otp).digest("hex");
+    const otpHash = hashOtp(otp);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     // Invalidate previous OTPs for this email
