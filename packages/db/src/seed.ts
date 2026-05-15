@@ -518,6 +518,7 @@ const SITE_CONFIGS = [
   { key: "maintenance_mode", value: false },
   { key: "announcement_banner", value: "" },
   { key: "announcement_visible", value: false },
+  { key: "welcome_bonus_credits", value: 10 },
 ];
 
 // ── Main ────────────────────────────────────────────────────────────────────

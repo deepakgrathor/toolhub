@@ -2,6 +2,7 @@
 // These are FALLBACK values only — real values always come from DB/Redis
 
 export const DEFAULT_CREDIT_COST = 5;
+// @deprecated — welcome bonus credits are now read from SiteConfig key 'welcome_bonus_credits'
 export const FREE_CREDITS_ON_SIGNUP = 10;
 
 // ── Cache TTLs (seconds) ──────────────────────────────────────────────────────
