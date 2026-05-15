@@ -3,8 +3,9 @@ import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
-import { connectDB, User, applyReferral, SiteConfig } from "@toolhub/db";
+import { connectDB, User, applyReferral } from "@toolhub/db";
 import { generateReferralCode } from "@toolhub/shared";
+import { getSiteConfigValue } from "@/lib/site-config-cache";
 import type { NextAuthConfig } from "next-auth";
 
 const config: NextAuthConfig = {
@@ -79,8 +80,7 @@ const config: NextAuthConfig = {
           if (!dbUser) {
             // First Google login — create user with referral code
             const referralCode = generateReferralCode();
-            const welcomeCfg = await SiteConfig.findOne({ key: "welcome_bonus_credits" }).lean();
-            const welcomeCredits = (welcomeCfg?.value as number) ?? 10;
+            const welcomeCredits = await getSiteConfigValue('welcome_bonus_credits', 10) as number;
             dbUser = await User.create({
               name: user.name ?? "User",
               email: user.email!,

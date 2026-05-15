@@ -13,7 +13,11 @@ export async function GET() {
     try {
       const redis = getRedis();
       const cached = await redis.get(CACHE_KEY);
-      if (cached) return NextResponse.json({ kits: cached });
+      if (cached) {
+        const response = NextResponse.json({ kits: cached });
+        response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+        return response;
+      }
     } catch {
       // Redis unavailable — continue to DB
     }
@@ -29,7 +33,9 @@ export async function GET() {
       // silent
     }
 
-    return NextResponse.json({ kits });
+    const response = NextResponse.json({ kits });
+    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    return response;
   } catch (err) {
     console.error("[GET /api/public/kits]", err);
     return NextResponse.json({ error: "Failed to fetch kits" }, { status: 500 });

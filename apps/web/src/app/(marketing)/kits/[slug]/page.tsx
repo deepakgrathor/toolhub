@@ -9,6 +9,16 @@ import { getToolsByKit } from "@/lib/tool-registry";
 
 export const revalidate = 3600;
 
+export async function generateStaticParams() {
+  return [
+    { slug: 'creator' },
+    { slug: 'sme' },
+    { slug: 'hr' },
+    { slug: 'legal' },
+    { slug: 'marketing' },
+  ];
+}
+
 // ── Kit icon map (URL slug → lucide component) ───────────────────────────────
 const KIT_ICONS: Record<string, React.ElementType> = {
   creator: Sparkles,

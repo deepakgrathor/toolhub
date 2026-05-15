@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { connectDB, SiteConfig, AuditLog } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 import { z } from "zod";
+import { invalidateSiteConfigCache } from "@/lib/site-config-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,7 @@ export async function PATCH(req: NextRequest) {
         { $set: { value: updates[key] } },
         { upsert: true, new: true }
       );
+      await invalidateSiteConfigCache(key);
     })
   );
 

@@ -158,7 +158,9 @@ export async function POST(req: NextRequest) {
 
     // ── STEP 2 — Fetch tool from DB ──────────────────────────────────────────
     await connectDB();
-    const toolRaw = await Tool.findOne({ slug: toolSlug }).lean();
+    const toolRaw = await Tool.findOne({ slug: toolSlug })
+      .select('slug name type kitSlug systemPrompt promptTemplate formFields outputType aiModel aiProvider maxOutputTokens temperature isActive')
+      .lean();
     if (!toolRaw) {
       return NextResponse.json({ error: "Tool not found" }, { status: 404 });
     }

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     "Start free with all non-AI tools. Upgrade to unlock AI credits for blog writing, invoices, HR docs, legal notices, and more. No hidden fees.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600 // Revalidate every 1 hour
 
 async function fetchPlans(): Promise<Plan[]> {
   try {

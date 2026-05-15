@@ -11,7 +11,9 @@ export async function GET() {
     const redis = getRedis();
     const cached = await redis.get(CACHE_KEY);
     if (cached) {
-      return NextResponse.json({ tools: JSON.parse(cached as string) });
+      const response = NextResponse.json({ tools: JSON.parse(cached as string) });
+      response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      return response;
     }
   } catch {
     // Redis unavailable
@@ -33,7 +35,9 @@ export async function GET() {
       // silent
     }
 
-    return NextResponse.json({ tools });
+    const response = NextResponse.json({ tools });
+    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    return response;
   } catch {
     return NextResponse.json({ tools: [], error: "DB unavailable" }, { status: 200 });
   }

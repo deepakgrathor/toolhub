@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB, Referral, User, CreditTransaction, SiteConfig } from "@toolhub/db";
+import { connectDB, Referral, User, CreditTransaction } from "@toolhub/db";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getRedis } from "@toolhub/shared";
 import { createNotification } from "@/lib/notifications";
+import { getSiteConfigValue } from "@/lib/site-config-cache";
 
 export async function POST(
   req: NextRequest,
@@ -14,8 +15,7 @@ export async function POST(
   const { id } = await params;
   await connectDB();
 
-  const configDoc = await SiteConfig.findOne({ key: "referral_reward_credits" });
-  const referralCredit = (configDoc?.value as number) ?? 10;
+  const referralCredit = await getSiteConfigValue('referral_reward_credits', 10) as number;
 
   const referral = await Referral.findById(id);
   if (!referral) return NextResponse.json({ error: "Not found" }, { status: 404 });

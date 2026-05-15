@@ -12,7 +12,9 @@ export async function GET() {
     if (cached) {
       const parsed = JSON.parse(cached as string) as unknown[];
       if (parsed.length > 0) {
-        return NextResponse.json({ plans: parsed });
+        const response = NextResponse.json({ plans: parsed });
+        response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+        return response;
       }
       // Empty cached array means seed hadn't run yet — fall through to DB
       await redis.del(CACHE_KEY);
@@ -43,7 +45,9 @@ export async function GET() {
       // silent
     }
 
-    return NextResponse.json({ plans: plansWithSavings });
+    const response = NextResponse.json({ plans: plansWithSavings });
+    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    return response;
   } catch {
     return NextResponse.json(
       { plans: [], error: "DB unavailable" },

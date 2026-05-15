@@ -1,3 +1,5 @@
+export const revalidate = 86400 // Revalidate daily
+
 import type { Metadata } from "next";
 import Link from "next/link";
 import {

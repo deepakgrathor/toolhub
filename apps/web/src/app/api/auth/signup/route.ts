@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { connectDB, User, OtpToken, Referral, SiteConfig, CreditTransaction } from "@toolhub/db";
+import { connectDB, User, OtpToken, Referral, CreditTransaction } from "@toolhub/db";
 import { generateReferralCode } from "@toolhub/shared";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rate-limit";
 import { hashOtp } from "@/lib/otp-utils";
+import { getSiteConfigValue } from "@/lib/site-config-cache";
 
 const signupSchema = z.object({
   name: z.string().min(2).max(60).trim(),
@@ -99,8 +100,7 @@ export async function POST(req: NextRequest) {
     // Welcome credits for direct (non-referred) email signups
     if (!refCode) {
       try {
-        const configDoc = await SiteConfig.findOne({ key: "welcome_bonus_credits" });
-        const welcomeCredits = (configDoc?.value as number) ?? 10;
+        const welcomeCredits = await getSiteConfigValue('welcome_bonus_credits', 10) as number;
 
         if (welcomeCredits > 0) {
           await User.findByIdAndUpdate(newUser._id, {
