@@ -20,11 +20,12 @@ export async function GET(req: NextRequest) {
     const plan = await Plan.findOne({ slug, isActive: true }).lean();
     if (!plan) return NextResponse.json({ error: "Plan not found" }, { status: 404 });
 
-    const basePrice = cycle === "yearly"
+    // yearly.basePrice is stored as per-month rate; bill annually (×12)
+    const monthlyRate = cycle === "yearly"
       ? plan.pricing.yearly.basePrice
       : plan.pricing.monthly.basePrice;
+    const subtotal = cycle === "yearly" ? monthlyRate * 12 : monthlyRate;
 
-    const subtotal = basePrice;
     const gstAmount = Math.round(subtotal * GST_RATE * 100) / 100;
     const total = subtotal + gstAmount;
 
@@ -37,6 +38,7 @@ export async function GET(req: NextRequest) {
       name: plan.name,
       credits,
       cycle,
+      monthlyRate: cycle === "yearly" ? monthlyRate : null,
       subtotal,
       gstAmount,
       total,

@@ -18,6 +18,7 @@ interface ItemDetails {
   name: string;
   credits: number;
   cycle: "monthly" | "yearly" | null;
+  monthlyRate: number | null;
   subtotal: number;
   gstAmount: number;
   total: number;
@@ -476,6 +477,11 @@ export default function CheckoutPage() {
                     {item.credits} credits
                     {item.cycle ? ` / ${item.cycle}` : ""}
                   </p>
+                  {item.cycle === "yearly" && item.monthlyRate != null && (
+                    <p className="text-xs text-primary mt-1 font-medium">
+                      ₹{item.monthlyRate}/mo × 12 months
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2 pt-1">
