@@ -1,10 +1,68 @@
 # Handoff Note
-Updated: 2026-05-15 | Account: B | Session: BFix-3 | Features: security fixes — error message sanitization, OTP IP rate limiting, webhook order verification
+Updated: 2026-05-15 | Account: B | Session: BSec-1 | Features: critical security fixes — credit deduct from ToolConfig, disabled tool guard, Redis concurrent request lock, admin credit cap
 
 ## Where We Are
-Session BFix-3 done. **TypeScript: 0 errors (all packages). Build: passing (75/75 pages).**
-Master Context: v7.1 — BFix-1 (indexes, N+1, LiteLLM) + BFix-2 (hardcoded values) + BFix-3 (security) all complete.
-Note: pre-existing prisma/opentelemetry warning and verify-payment static render note in build output — both existed before this session.
+Session BSec-1 done. **TypeScript: 0 errors (apps/web). Build: passing.**
+Master Context: v7.2 — BFix-1 (indexes, N+1, LiteLLM) + BFix-2 (hardcoded values) + BFix-3 (security) + BSec-1 (credit security) all complete.
+
+---
+
+## What Was Done (Session BSec-1)
+
+### Fix 1 — Credit Deduct Endpoint: Amount from ToolConfig
+
+- `apps/web/src/app/api/user/credits/deduct/route.ts`
+  - **Before**: schema accepted `{ toolSlug, amount }` — any user could send `amount: 1` for any tool
+  - **After**: schema accepts only `{ toolSlug }`, no `amount` field
+  - Fetches `ToolConfig.findOne({ toolSlug })` → uses `toolConfig.creditCost` as the authoritative amount
+  - If tool not found in ToolConfig → 404
+  - If `creditCost === 0` → returns `{ success: true }` immediately (no deduction)
+  - Never trusts any amount from the request body
+
+### Fix 2 — Disabled Tool Guard
+
+- `apps/web/src/app/api/tools/run/route.ts`
+  - After fetching ToolConfig (STEP 4), added: `if (config && !config.isActive) → 403 "Tool is not available"`
+  - Admin can now disable any tool and direct API calls will be blocked
+- `apps/web/src/app/api/tools/blog-generator/stream/route.ts`
+  - Added `isActive` to `.select()` on ToolConfig query
+  - Added same check after fetch: `if (toolConfigDoc && !toolConfigDoc.isActive) → 403`
+
+### Fix 3 — Redis Per-User Concurrent Request Lock
+
+- `apps/web/src/app/api/tools/run/route.ts`
+  - Added Redis lock between prompt build (STEP 8) and AI call (STEP 10)
+  - Lock key: `tool:lock:{userId}` — per user, blocks ALL simultaneous tool runs
+  - TTL: 10 seconds — covers any AI call duration
+  - `redis.set(lockKey, "1", { nx: true, ex: 10 })` — atomic set-if-not-exists
+  - If lock already held → 429 "Another request is in progress. Please wait."
+  - Lock always released in `finally` block (even on AI error)
+  - Reuses existing `getRedis()` singleton already imported in the file
+  - Architecture rule #2 (credits deduct AFTER AI success) preserved — deduction still inside the locked try block, after AI call
+
+### Fix 4 — Admin Credit Add: 10,000 Cap
+
+- `apps/web/src/app/api/admin/users/[userId]/credits/route.ts`
+  - Added `MAX_CREDIT_ADD = 10000` constant
+  - Zod schema: `amount: z.number().int().positive().max(MAX_CREDIT_ADD)`
+  - Validation failure now returns specific message for cap violation: "Maximum 10,000 credits can be added in a single transaction"
+  - Non-cap validation failures still return "Invalid request"
+  - Existing AuditLog entry unchanged
+
+#### Modified Files (BSec-1)
+```
+apps/web/src/app/api/user/credits/deduct/route.ts         — amount from ToolConfig, not request body
+apps/web/src/app/api/tools/run/route.ts                   — isActive guard + Redis concurrent lock
+apps/web/src/app/api/tools/blog-generator/stream/route.ts — isActive guard
+apps/web/src/app/api/admin/users/[userId]/credits/route.ts — 10k cap + specific error
+```
+
+#### Rules Verified
+- TypeScript: 0 errors (apps/web)
+- Build: passing
+- No internal error messages sent to client
+- Architecture rule #2 preserved (credits deduct after AI success)
+- Admin audit log intact
 
 ---
 

@@ -192,6 +192,13 @@ export async function POST(req: NextRequest) {
     const config = await ToolConfig.findOne({ toolSlug }).lean();
     const creditCost = config?.creditCost ?? 0;
 
+    if (config && !config.isActive) {
+      return NextResponse.json(
+        { error: "Tool is not available" },
+        { status: 403 }
+      );
+    }
+
     // ── STEP 5 — Credit check ─────────────────────────────────────────────────
     const userCredits: number = (userDoc as { credits?: number }).credits ?? 0;
     if (userCredits < creditCost) {
@@ -234,50 +241,63 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Prompt template is empty" }, { status: 400 });
     }
 
-    // ── STEP 9 — Call AI model ────────────────────────────────────────────────
-    const aiOutput = await callModel(tool as ToolDoc, prompt);
-
-    if (!aiOutput || aiOutput.trim() === "") {
-      throw new Error("Empty AI response");
+    // ── STEP 9 — Per-user concurrent request lock ─────────────────────────────
+    const lockKey = `tool:lock:${userId}`;
+    const redis = getRedis();
+    const locked = await redis.set(lockKey, "1", { nx: true, ex: 10 });
+    if (!locked) {
+      return NextResponse.json(
+        { error: "Another request is in progress. Please wait." },
+        { status: 429 }
+      );
     }
-
-    // ── STEP 10 — Apply watermark ─────────────────────────────────────────────
-    const userPlan = await getUserPlan(userId);
-    const output = applyWatermark(aiOutput, userPlan, toolSlug);
-
-    // ── STEP 11 — Deduct credits ──────────────────────────────────────────────
-    const newBalance = userCredits - creditCost;
-    await User.findByIdAndUpdate(userId, { $inc: { credits: -creditCost } });
-
-    const toolName: string = (tool as { name?: string }).name ?? toolSlug;
-    await CreditTransaction.create({
-      userId,
-      type: "tool_usage",
-      amount: -creditCost,
-      note: `${toolName} generation`,
-      toolName,
-      toolSlug,
-      balanceAfter: newBalance,
-      output,
-      outputPreview: output.replace(/<[^>]*>/g, "").slice(0, 100),
-    });
-
-    // Invalidate caches
     try {
-      const redis = getRedis();
-      await Promise.all([
-        redis.del(`balance:${userId}`),
-        redis.del(`sidebar:${userId}`),
-      ]);
-    } catch {
-      // silent
+      // ── STEP 10 — Call AI model ────────────────────────────────────────────
+      const aiOutput = await callModel(tool as ToolDoc, prompt);
+
+      if (!aiOutput || aiOutput.trim() === "") {
+        throw new Error("Empty AI response");
+      }
+
+      // ── STEP 11 — Apply watermark ──────────────────────────────────────────
+      const userPlan = await getUserPlan(userId);
+      const output = applyWatermark(aiOutput, userPlan, toolSlug);
+
+      // ── STEP 12 — Deduct credits ───────────────────────────────────────────
+      const newBalance = userCredits - creditCost;
+      await User.findByIdAndUpdate(userId, { $inc: { credits: -creditCost } });
+
+      const toolName: string = (tool as { name?: string }).name ?? toolSlug;
+      await CreditTransaction.create({
+        userId,
+        type: "tool_usage",
+        amount: -creditCost,
+        note: `${toolName} generation`,
+        toolName,
+        toolSlug,
+        balanceAfter: newBalance,
+        output,
+        outputPreview: output.replace(/<[^>]*>/g, "").slice(0, 100),
+      });
+
+      // Invalidate caches
+      try {
+        await Promise.all([
+          redis.del(`balance:${userId}`),
+          redis.del(`sidebar:${userId}`),
+        ]);
+      } catch {
+        // silent
+      }
+
+      // ── STEP 13 — Low credit alert (fire-and-forget) ───────────────────────
+      checkAndSendCreditAlert(userId, newBalance, userPlan).catch(console.error);
+
+      // ── STEP 14 — Return ───────────────────────────────────────────────────
+      return NextResponse.json({ output, creditsUsed: creditCost, newBalance });
+    } finally {
+      await redis.del(lockKey);
     }
-
-    // ── STEP 12 — Low credit alert (fire-and-forget) ──────────────────────────
-    checkAndSendCreditAlert(userId, newBalance, userPlan).catch(console.error);
-
-    // ── STEP 13 — Return ──────────────────────────────────────────────────────
-    return NextResponse.json({ output, creditsUsed: creditCost, newBalance });
 
   } catch (err) {
     console.error("[tool-runner]", err);

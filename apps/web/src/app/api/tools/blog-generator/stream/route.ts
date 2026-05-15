@@ -73,8 +73,16 @@ export async function POST(req: NextRequest) {
   await connectDB();
 
   const toolConfigDoc = await ToolConfig.findOne({ toolSlug: "blog-generator" })
-    .select("creditCost aiModel aiProvider")
+    .select("creditCost aiModel aiProvider isActive")
     .lean();
+
+  if (toolConfigDoc && !toolConfigDoc.isActive) {
+    return new Response(
+      JSON.stringify({ error: "Tool is not available" }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   const creditCost = toolConfigDoc?.creditCost ?? 3;
   const aiModel = toolConfigDoc?.aiModel ?? "gpt-4o-mini";
   const aiProvider = toolConfigDoc?.aiProvider ?? "openai";

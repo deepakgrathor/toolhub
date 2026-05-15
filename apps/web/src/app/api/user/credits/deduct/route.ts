@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { connectDB, CreditService, InsufficientCreditsError, User } from "@toolhub/db";
+import { connectDB, CreditService, InsufficientCreditsError, User, ToolConfig } from "@toolhub/db";
 import { z } from "zod";
 import { invalidateBalance, invalidateDashStats } from "@/lib/credit-cache";
 import { checkAndSendCreditAlert } from "@/lib/credit-alerts";
 
 const deductSchema = z.object({
   toolSlug: z.string().min(1),
-  amount: z.number().int().positive(),
 });
 
 export async function POST(req: NextRequest) {
@@ -25,9 +24,19 @@ export async function POST(req: NextRequest) {
   await connectDB();
 
   try {
+    const toolConfig = await ToolConfig.findOne({ toolSlug: parsed.data.toolSlug }).lean();
+    if (!toolConfig) {
+      return NextResponse.json({ error: "Tool not found" }, { status: 404 });
+    }
+    const amount = toolConfig.creditCost;
+
+    if (amount === 0) {
+      return NextResponse.json({ success: true });
+    }
+
     const { newBalance } = await CreditService.deductCredits(
       session.user.id,
-      parsed.data.amount,
+      amount,
       parsed.data.toolSlug
     );
 
