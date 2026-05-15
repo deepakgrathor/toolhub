@@ -1,15 +1,28 @@
 # Handoff Note
-Updated: 2026-05-16 | Account: B | Session: SEO-1 | Features: brand fix, root metadata, robots, sitemap, JSON-LD, llms.txt, kit metadata, OG image, webmanifest
+Updated: 2026-05-16 | Account: B | Session: SEO-2 | Features: 27 individual tool public pages, JSON-LD schemas (SoftwareApplication + FAQPage + BreadcrumbList + HowTo), conditional session-based rendering, generateMetadata + generateStaticParams per tool
 
 ## Where We Are
-Session SEO-1 done. **TypeScript: 0 errors (apps/web). Build: clean (79 routes). Pre-existing build failures on /dashboard/history and /admin/credit-packs are gone — build is now fully clean.**
-Master Context: v8.0 — Full security audit (BSec-1→4) + Full performance audit (BPerf-1→3) + Foundation SEO (SEO-1) complete.
+Session SEO-2 done. **TypeScript: 0 errors (apps/web).**
+Master Context: v9.0 — Full security audit (BSec-1→4) + Full performance audit (BPerf-1→3) + Foundation SEO (SEO-1) + Individual tool SEO pages (SEO-2) complete.
+
+### SEO State After SEO-2
+- `apps/web/src/data/tool-seo.ts`: 27 tools with full SEO data (metaTitle, metaDescription, h1, description, howItWorks×3, useCases×3, faqs×6, relatedSlugs)
+- `(site)/tools/[slug]/page.tsx`: session check at top — logged-out users see ToolPublicPage, logged-in users see unchanged tool UI
+- `ToolPublicPage.tsx`: server component — breadcrumb, hero+CTA, how-it-works (3 cards), use-cases (3 cards), FAQ accordion (shadcn), related tools, bottom CTA
+- `ToolJsonLd.tsx`: server component — @graph with SoftwareApplication + FAQPage + BreadcrumbList + HowTo schemas
+- `generateMetadata`: per-tool rich metadata with canonical, OG, twitter from toolSeoMap
+- `generateStaticParams`: all 27 tool slugs from toolSeoData (static generation)
+- `revalidate = 3600`: ISR — tool pages rebuild hourly
+- `sitemap.ts`: now imports toolSeoData as single source of truth for tool URLs
+- `globals.css`: accordion-down + accordion-up keyframe animations added for shadcn Accordion
+- Accordion component: installed via `npx shadcn@latest add accordion`
+- Auth: uses NextAuth v5 `auth()` (not v4 `getServerSession`) — adapted from spec
 
 ### SEO State After SEO-1
 - Brand: all "Toolspire"/"ToolHub" occurrences replaced with "SetuLix" across all files
 - Root layout: full metadata (OG image, twitter image, keywords, authors, icons, webmanifest, googleBot)
 - robots.ts: disallows 10 auth-gated routes + explicit AI bot allow rules
-- sitemap.ts: 27 explicit tool slugs + 5 kits + /tools listing + lastModified timestamps
+- sitemap.ts: 27 tool slugs from toolSeoData + 5 kits + /tools listing + lastModified timestamps
 - JSON-LD: Organization + WebSite schema injected on homepage
 - /tools page: metadata provided via (marketing)/tools/layout.tsx (bypasses "use client" limitation)
 - /kits/[slug]: rich generateMetadata with per-kit descriptions, OG/twitter images, canonicals
@@ -17,9 +30,8 @@ Master Context: v8.0 — Full security audit (BSec-1→4) + Full performance aud
 - Remaining: favicon PNG files (see FAVICON_TODO.md), og-default.png (needs sharp or online converter)
 
 ### Next SEO Sessions
-- SEO-2: Individual tool public landing pages — create (marketing)/tools/[slug]/page.tsx with rich content
-- SEO-3: Tool-level JSON-LD (SoftwareApplication schema per tool)
-- SEO-4: FAQ structured data on kit pages
+- SEO-3: Kit landing page content (currently kits have metadata but no rich public page like tools)
+- SEO-4: FAQ structured data on kit pages (FAQPage schema per kit)
 
 ---
 

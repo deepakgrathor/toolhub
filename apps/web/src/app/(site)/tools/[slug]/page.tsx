@@ -3,11 +3,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ChevronRight, WifiOff } from "lucide-react";
+import { auth } from "@/auth";
 import { getToolBySlug } from "@/lib/tool-registry";
 import { getToolIcon } from "@/lib/tool-icons";
 import { ToolPageSkeleton } from "@/components/ui/skeletons";
 import { ToolErrorBoundary } from "@/components/tools/ToolErrorBoundary";
 import { UniversalToolRenderer } from "@/components/tools/UniversalToolRenderer";
+import { ToolPublicPage } from "@/components/seo/ToolPublicPage";
+import { toolSeoMap, toolSeoData } from "@/data/tool-seo";
 
 // ── Dynamic tool component map ────────────────────────────────────────────────
 // Add new tools here as they are built. Each entry is code-split automatically.
@@ -132,12 +135,45 @@ interface Props {
   params: { slug: string };
 }
 
+export async function generateStaticParams() {
+  return toolSeoData.map((t) => ({ slug: t.slug }));
+}
+
+export const revalidate = 3600;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const tool = await getToolBySlug(params.slug);
-  if (!tool) return { title: "Tool Not Found — SetuLix" };
+  const seoData = toolSeoMap[params.slug];
+
+  if (!seoData) {
+    return { title: "Tool Not Found | SetuLix" };
+  }
+
   return {
-    title: `${tool.name} — SetuLix`,
-    description: tool.description,
+    title: seoData.metaTitle,
+    description: seoData.metaDescription,
+    alternates: {
+      canonical: `https://setulix.com/tools/${params.slug}`,
+    },
+    openGraph: {
+      title: seoData.metaTitle,
+      description: seoData.metaDescription,
+      url: `https://setulix.com/tools/${params.slug}`,
+      type: "website",
+      images: [
+        {
+          url: `/og-default.png`,
+          width: 1200,
+          height: 630,
+          alt: seoData.h1,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: seoData.metaTitle,
+      description: seoData.metaDescription,
+      images: ["/og-default.png"],
+    },
   };
 }
 
@@ -164,6 +200,20 @@ function ToolUnavailableCard({ name }: { name: string }) {
 }
 
 export default async function ToolPage({ params }: Props) {
+  // Check session — show SEO public page to logged-out visitors
+  let session = null;
+  try {
+    session = await auth();
+  } catch {
+    // Session check failed — fall through to tool UI as safe fallback
+  }
+
+  if (!session) {
+    const seoData = toolSeoMap[params.slug];
+    if (!seoData) notFound();
+    return <ToolPublicPage seoData={seoData} />;
+  }
+
   const tool = await getToolBySlug(params.slug);
   if (!tool) notFound();
 

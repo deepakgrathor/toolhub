@@ -1,22 +1,14 @@
 import { MetadataRoute } from "next";
-
-const TOOL_SLUGS = [
-  "blog-generator", "yt-script", "thumbnail-ai",
-  "title-generator", "hook-writer", "caption-generator",
-  "gst-invoice", "expense-tracker", "quotation-generator",
-  "salary-slip", "offer-letter", "tds-sheet", "qr-generator",
-  "jd-generator", "resume-screener", "appraisal-draft",
-  "policy-generator", "legal-notice", "nda-generator",
-  "legal-disclaimer", "gst-calculator", "whatsapp-bulk",
-  "ad-copy", "email-subject", "linkedin-bio",
-  "seo-auditor", "website-generator",
-];
+import { toolSeoData } from "@/data/tool-seo";
 
 const KIT_SLUGS = ["creator", "sme", "hr", "legal", "marketing"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://setulix.com";
   const now = new Date();
+
+  // Tool slugs sourced from toolSeoData (single source of truth for all 27 tools)
+  const toolSlugs = toolSeoData.map((t) => t.slug);
 
   return [
     // Homepage
@@ -31,7 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
 
     // Individual tool pages
-    ...TOOL_SLUGS.map((slug) => ({
+    ...toolSlugs.map((slug) => ({
       url: `${base}/tools/${slug}`,
       lastModified: now,
       changeFrequency: "weekly" as const,
