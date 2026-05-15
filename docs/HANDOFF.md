@@ -1,9 +1,96 @@
 # Handoff Note
-Updated: 2026-05-15 | Account: B | Session: BSec-4 | Features: prompt injection sanitization, email signup credits, referral SiteConfig, notification limits, misc security hardening
+Updated: 2026-05-15 | Account: B | Session: BPerf-1 | Features: Cache-Control headers, DB projections, ISR, generateStaticParams, SiteConfig Redis cache
 
 ## Where We Are
-Session BSec-4 done. **TypeScript: 0 errors (apps/web). Build: passing.**
-Master Context: v7.2 — Full security audit complete. BFix-1 + BFix-2 + BFix-3 + BSec-1 + BSec-2 + BSec-3 + BSec-4 all complete.
+Session BPerf-1 done. **TypeScript: 0 errors (apps/web). Build: passing.**
+Master Context: v7.3 — Full security audit complete + BPerf-1 performance pass. BFix-1 + BFix-2 + BFix-3 + BSec-1 + BSec-2 + BSec-3 + BSec-4 + BPerf-1 all complete.
+
+---
+
+## What Was Done (Session BPerf-1)
+
+### Fix 1 — Cache-Control Headers on Public API Routes
+
+- `apps/web/src/app/api/public/tools/route.ts`
+  - Added `Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400` header on both Redis cache-hit and DB fallback responses
+- `apps/web/src/app/api/public/plans/route.ts`
+  - Same Cache-Control header on cache-hit and DB responses
+- `apps/web/src/app/api/public/kits/route.ts`
+  - Same Cache-Control header on cache-hit and DB responses
+  - All three routes: Vercel CDN now caches for 1hr, serves stale for 24hr while revalidating
+  - Never applied to authenticated or user-specific routes
+
+### Fix 2 — DB Query Projections (.select())
+
+#### Fix 2a — tools/run/route.ts
+- `Tool.findOne({ slug: toolSlug })` now includes `.select('slug name type kitSlug systemPrompt promptTemplate formFields outputType aiModel aiProvider maxOutputTokens temperature isActive')` + `.lean()`
+- Reduces document fetch from 18+ fields to 13 needed fields
+
+#### Fix 2b — blog-generator stream route
+- Already done in BSec-1 — `.select("creditCost aiModel aiProvider isActive")` was already present; no change needed
+
+#### Fix 2c — signup route
+- Replaced `SiteConfig.findOne({ key: 'welcome_bonus_credits' })` direct call with `getSiteConfigValue('welcome_bonus_credits', 10)` via the new site-config-cache utility (Fix 5)
+
+### Fix 3 — ISR on Marketing Pages
+
+- `apps/web/src/app/(marketing)/page.tsx`
+  - Added `export const revalidate = 3600` at file top
+- `apps/web/src/app/(marketing)/pricing/page.tsx`
+  - Removed `export const dynamic = "force-dynamic"` (was preventing any caching)
+  - Added `export const revalidate = 3600`
+- `apps/web/src/app/(marketing)/about/page.tsx`
+  - Added `export const revalidate = 86400` (daily revalidation for about page)
+
+### Fix 4 — generateStaticParams on Kit Pages
+
+- `apps/web/src/app/(marketing)/kits/[slug]/page.tsx`
+  - Already had `export const revalidate = 3600` from BFix-2
+  - Added `generateStaticParams()` returning 5 known kit slugs: creator, sme, hr, legal, marketing
+  - Build output confirms: `/kits/[slug]` now shows `●` (SSG) with all 5 paths pre-rendered at build time
+
+### Fix 5 — SiteConfig Redis Cache Utility
+
+- `apps/web/src/lib/site-config-cache.ts` — **NEW**
+  - `getSiteConfigValue(key, defaultValue)` — Redis cache first (`site-config:{key}`, 1hr TTL) → DB fallback → always returns safe default on error; never throws
+  - `invalidateSiteConfigCache(key)` — deletes `site-config:{key}` from Redis; non-critical (silent on error)
+  - Uses `getRedis()` from `@toolhub/shared` (no separate `@/lib/redis` file in this project)
+- `apps/web/src/app/api/auth/signup/route.ts`
+  - Replaced direct `SiteConfig.findOne({ key: 'welcome_bonus_credits' })` with `getSiteConfigValue('welcome_bonus_credits', 10)`
+  - Removed `SiteConfig` from `@toolhub/db` import (no longer needed directly)
+- `apps/web/src/auth.ts`
+  - Replaced `SiteConfig.findOne({ key: 'welcome_bonus_credits' })` in Google OAuth jwt callback with `getSiteConfigValue('welcome_bonus_credits', 10)`
+  - Removed `SiteConfig` from `@toolhub/db` import
+- `apps/web/src/app/api/admin/referrals/[id]/approve/route.ts`
+  - Replaced `SiteConfig.findOne({ key: 'referral_reward_credits' })` with `getSiteConfigValue('referral_reward_credits', 10)`
+  - Removed `SiteConfig` from `@toolhub/db` import
+- `apps/web/src/app/api/admin/settings/route.ts`
+  - Added `invalidateSiteConfigCache(key)` call after every `SiteConfig.findOneAndUpdate` — admin changes reflect within seconds, not 1 hour
+
+#### Modified Files (BPerf-1)
+```
+apps/web/src/app/api/public/tools/route.ts                    — Cache-Control header
+apps/web/src/app/api/public/plans/route.ts                    — Cache-Control header
+apps/web/src/app/api/public/kits/route.ts                     — Cache-Control header
+apps/web/src/app/api/tools/run/route.ts                       — .select() projection on Tool
+apps/web/src/app/api/auth/signup/route.ts                     — getSiteConfigValue
+apps/web/src/app/(marketing)/page.tsx                         — revalidate = 3600
+apps/web/src/app/(marketing)/pricing/page.tsx                 — removed force-dynamic, revalidate = 3600
+apps/web/src/app/(marketing)/about/page.tsx                   — revalidate = 86400
+apps/web/src/app/(marketing)/kits/[slug]/page.tsx             — generateStaticParams added
+apps/web/src/lib/site-config-cache.ts                         — NEW: getSiteConfigValue + invalidateSiteConfigCache
+apps/web/src/auth.ts                                          — getSiteConfigValue
+apps/web/src/app/api/admin/referrals/[id]/approve/route.ts   — getSiteConfigValue
+apps/web/src/app/api/admin/settings/route.ts                  — invalidateSiteConfigCache after each SiteConfig update
+```
+
+#### Rules Verified
+- TypeScript: 0 errors (apps/web)
+- Build: passing — `/kits/[slug]` shows ● (SSG) with 5 pre-rendered paths
+- No business logic changed — only performance optimizations
+- getSiteConfigValue fails open — always returns defaultValue on Redis + DB failure
+- Cache-Control only on public routes — never on authenticated or user-specific routes
+- invalidateSiteConfigCache ensures admin changes reflect within seconds
 
 ---
 
