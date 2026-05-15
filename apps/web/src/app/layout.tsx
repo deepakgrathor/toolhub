@@ -47,6 +47,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://setulix.com",
   },
+  verification: {
+    google: "6Nw9qdasZSvQZ12ys8coxt2-ku485J2C9MV_LWA71wM",
+  },
   robots: {
     index: true,
     follow: true,
