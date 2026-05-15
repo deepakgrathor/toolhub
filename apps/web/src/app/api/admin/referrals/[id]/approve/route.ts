@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB, Referral, User, CreditTransaction } from "@toolhub/db";
+import { connectDB, Referral, User, CreditTransaction, SiteConfig } from "@toolhub/db";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getRedis } from "@toolhub/shared";
 import { createNotification } from "@/lib/notifications";
-
-const REFERRAL_CREDIT = 10;
 
 export async function POST(
   req: NextRequest,
@@ -15,6 +13,9 @@ export async function POST(
 
   const { id } = await params;
   await connectDB();
+
+  const configDoc = await SiteConfig.findOne({ key: "referral_reward_credits" });
+  const referralCredit = (configDoc?.value as number) ?? 10;
 
   const referral = await Referral.findById(id);
   if (!referral) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -33,14 +34,14 @@ export async function POST(
 
   // Credit referred user (only if not yet given)
   if (!referredUser.welcomeCreditGiven) {
-    referredUser.credits += REFERRAL_CREDIT;
+    referredUser.credits += referralCredit;
     referredUser.welcomeCreditGiven = true;
     await referredUser.save();
 
     await CreditTransaction.create({
       userId: referredUser._id,
       type: "referral_bonus",
-      amount: REFERRAL_CREDIT,
+      amount: referralCredit,
       balanceAfter: referredUser.credits,
       meta: { referredBy: referral.referrerId.toString(), approvedByAdmin: true },
     });
@@ -49,18 +50,18 @@ export async function POST(
       userId: referredUser._id.toString(),
       type: "credit_added",
       title: "Welcome Credits",
-      message: `You got ${REFERRAL_CREDIT} credits for joining SetuLix`,
+      message: `You got ${referralCredit} credits for joining SetuLix`,
     });
   }
 
   // Credit referrer
-  referrer.credits += REFERRAL_CREDIT;
+  referrer.credits += referralCredit;
   await referrer.save();
 
   await CreditTransaction.create({
     userId: referrer._id,
     type: "referral_reward",
-    amount: REFERRAL_CREDIT,
+    amount: referralCredit,
     balanceAfter: referrer.credits,
     meta: { referredUser: referral.referredId.toString(), approvedByAdmin: true },
   });
@@ -70,7 +71,7 @@ export async function POST(
     userId: referrer._id.toString(),
     type: "referral_joined",
     title: "Friend Joined!",
-    message: `${firstName} joined SetuLix using your referral link. You got ${REFERRAL_CREDIT} credits!`,
+    message: `${firstName} joined SetuLix using your referral link. You got ${referralCredit} credits!`,
   });
 
   await Referral.findByIdAndUpdate(id, { status: "completed", completedAt: new Date() });

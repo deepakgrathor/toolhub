@@ -28,6 +28,14 @@ export async function POST(req: NextRequest) {
 
     const { toolSlug, toolName, content } = body;
 
+    const MAX_PDF_CONTENT = 50000;
+    if (!content || typeof content !== "string" || content.length > MAX_PDF_CONTENT) {
+      return NextResponse.json(
+        { error: "Content too large for PDF generation" },
+        { status: 400 }
+      );
+    }
+
     // STEP 2 — Fetch brand assets (PRO+ only)
     const isProPlus = planSlug !== "free" && planSlug !== "lite";
     let brandAssets: {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { connectDB, User, OtpToken, Referral } from "@toolhub/db";
+import { connectDB, User, OtpToken, Referral, SiteConfig, CreditTransaction } from "@toolhub/db";
 import { generateReferralCode } from "@toolhub/shared";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rate-limit";
@@ -94,6 +94,32 @@ export async function POST(req: NextRequest) {
     const refCode = req.cookies.get("ref")?.value;
     if (refCode) {
       await createPendingReferral(newUser._id.toString(), refCode, ip);
+    }
+
+    // Welcome credits for direct (non-referred) email signups
+    if (!refCode) {
+      try {
+        const configDoc = await SiteConfig.findOne({ key: "welcome_bonus_credits" });
+        const welcomeCredits = (configDoc?.value as number) ?? 10;
+
+        if (welcomeCredits > 0) {
+          await User.findByIdAndUpdate(newUser._id, {
+            $inc: { credits: welcomeCredits },
+            welcomeCreditGiven: true,
+          });
+
+          await CreditTransaction.create({
+            userId: newUser._id,
+            type: "welcome_bonus",
+            amount: welcomeCredits,
+            description: "Welcome credits",
+            balanceAfter: welcomeCredits,
+          });
+        }
+      } catch (err) {
+        // Silent fail — never break signup on credit error
+        console.error("[signup/welcome-credits]", err);
+      }
     }
 
     return NextResponse.json({ success: true }, { status: 201 });

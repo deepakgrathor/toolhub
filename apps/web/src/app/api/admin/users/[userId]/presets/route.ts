@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isValidObjectId } from "mongoose";
 import { requireAdmin } from "@/lib/admin-auth";
 import { connectDB, Preset } from "@toolhub/db";
 
@@ -14,6 +15,11 @@ export async function GET(
   }
 
   const { userId } = params;
+
+  if (!isValidObjectId(userId)) {
+    return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+  }
+
   await connectDB();
 
   const byToolAgg = await Preset.aggregate([

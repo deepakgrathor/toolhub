@@ -1,24 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { connectDB, User, Notification } from "@toolhub/db";
 import { requireAdmin } from "@/lib/admin-auth";
 
-interface PushBody {
-  target: "all" | "specific";
-  email?: string;
-  title: string;
-  message: string;
+const PushSchema = z.object({
+  target: z.enum(["all", "specific"]),
+  email: z.string().optional(),
+  title: z.string().min(1, "Title required").max(100, "Title max 100 characters").trim(),
+  message: z.string().min(1, "Message required").max(500, "Message max 500 characters").trim(),
+});
+
+function stripHtml(str: string): string {
+  return str.replace(/<[^>]*>/g, "");
 }
 
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const body = (await req.json()) as PushBody;
-  const { target, email, title, message } = body;
-
-  if (!title?.trim() || !message?.trim()) {
-    return NextResponse.json({ error: "Title and message are required" }, { status: 400 });
+  const parsed = PushSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
+
+  const { target, email } = parsed.data;
+  const safeTitle = stripHtml(parsed.data.title);
+  const safeMessage = stripHtml(parsed.data.message);
 
   await connectDB();
 
@@ -33,8 +40,8 @@ export async function POST(req: NextRequest) {
     await Notification.create({
       userId: user._id,
       type: "admin_push",
-      title,
-      message,
+      title: safeTitle,
+      message: safeMessage,
     });
     return NextResponse.json({ success: true, sent: 1 });
   }
@@ -48,8 +55,8 @@ export async function POST(req: NextRequest) {
   const docs = users.map((u) => ({
     userId: u._id,
     type: "admin_push" as const,
-    title,
-    message,
+    title: safeTitle,
+    message: safeMessage,
     isRead: false,
     createdAt: new Date(),
   }));

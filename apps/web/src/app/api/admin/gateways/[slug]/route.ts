@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { connectDB, PaymentGateway, AuditLog } from "@toolhub/db";
 import { requireAdmin } from "@/lib/admin-auth";
 import { invalidateGatewayCache } from "@/lib/gateways/manager";
+
+const VALID_ENVIRONMENTS = z.enum(["sandbox", "production"]);
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +31,13 @@ export async function PATCH(
 
     if (typeof body.isActive === "boolean") update.isActive = body.isActive;
     if (typeof body.isDefault === "boolean") update.isDefault = body.isDefault;
-    if (body.environment) update.environment = body.environment;
+    if (body.environment !== undefined) {
+      const envParsed = VALID_ENVIRONMENTS.safeParse(body.environment);
+      if (!envParsed.success) {
+        return NextResponse.json({ error: "environment must be 'sandbox' or 'production'" }, { status: 400 });
+      }
+      update.environment = envParsed.data;
+    }
 
     // Config fields — only update non-empty values (preserve existing secrets if blank)
     if (body.config) {

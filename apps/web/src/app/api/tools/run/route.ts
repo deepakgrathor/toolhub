@@ -6,6 +6,7 @@ import { checkAbuseLimit } from "@/lib/abuse-protection";
 import { applyWatermark } from "@/lib/watermark";
 import { getUserPlan } from "@/lib/user-plan";
 import { checkAndSendCreditAlert } from "@/lib/credit-alerts";
+import { sanitizeInputsObject } from "@/lib/prompt-sanitizer";
 
 export const dynamic = "force-dynamic";
 
@@ -216,11 +217,13 @@ export async function POST(req: NextRequest) {
     }
 
     // ── STEP 7 — Validate required fields ────────────────────────────────────
+    const sanitizedInputs = sanitizeInputsObject(inputs);
+
     const formFields: Array<{ key: string; label: string; required?: boolean }> =
       (tool as unknown as { formFields?: Array<{ key: string; label: string; required?: boolean }> }).formFields ?? [];
 
     for (const field of formFields) {
-      if (field.required && (!inputs[field.key] || inputs[field.key].trim() === "")) {
+      if (field.required && (!sanitizedInputs[field.key] || sanitizedInputs[field.key].trim() === "")) {
         return NextResponse.json(
           { error: `${field.label} is required` },
           { status: 400 }
@@ -230,11 +233,18 @@ export async function POST(req: NextRequest) {
 
     // ── STEP 8 — Build prompt ─────────────────────────────────────────────────
     const promptTemplate: string = (tool as unknown as { promptTemplate?: string }).promptTemplate ?? "";
+
+    // Only substitute keys that are actually defined in the template — attacker-supplied
+    // extra keys are ignored even if they match internal placeholder names.
+    const templateKeys = new Set(
+      [...promptTemplate.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1])
+    );
     let prompt = promptTemplate;
-    for (const [key, value] of Object.entries(inputs)) {
+    for (const key of templateKeys) {
+      const value = sanitizedInputs[key] ?? "";
       prompt = prompt.replaceAll(`{{${key}}}`, value);
     }
-    // Remove unmatched {{placeholders}}
+    // Remove any remaining unmatched {{placeholders}}
     prompt = prompt.replace(/\{\{[^}]+\}\}/g, "");
 
     if (!prompt.trim()) {
@@ -294,7 +304,7 @@ export async function POST(req: NextRequest) {
       checkAndSendCreditAlert(userId, newBalance, userPlan).catch(console.error);
 
       // ── STEP 14 — Return ───────────────────────────────────────────────────
-      return NextResponse.json({ output, creditsUsed: creditCost, newBalance });
+      return NextResponse.json({ success: true, output });
     } finally {
       await redis.del(lockKey);
     }

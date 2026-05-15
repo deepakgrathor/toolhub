@@ -4,6 +4,7 @@ import { connectDB, CreditService, ToolConfig, ToolOutput, InsufficientCreditsEr
 import { blogGeneratorSchema } from "@/tools/blog-generator/schema";
 import { runToolGuard } from "@/lib/tool-guard";
 import { callAIStream } from "@/lib/ai-stream";
+import { sanitizeUserInput } from "@/lib/prompt-sanitizer";
 import type { BlogGeneratorInput } from "@/tools/blog-generator/schema";
 
 export const dynamic = "force-dynamic";
@@ -17,12 +18,17 @@ function buildStreamingPrompt(input: BlogGeneratorInput): string {
   const sectionCount = SECTIONS_COUNT[input.length];
   const wordsPerSection = Math.floor((wordTarget * 0.7) / sectionCount);
 
+  const topic = sanitizeUserInput(input.topic);
+  const tone = sanitizeUserInput(input.tone);
+  const targetAudience = sanitizeUserInput(input.targetAudience || "general");
+  const keywords = sanitizeUserInput(input.keywords || "none");
+
   return `You are an expert blog writer for Indian audiences. Write a structured blog post in plain text with exact section markers.
 
-Topic: ${input.topic}
-Tone: ${input.tone}
-Target audience: ${input.targetAudience || "general"}
-Keywords to include naturally: ${input.keywords || "none"}
+Topic: ${topic}
+Tone: ${tone}
+Target audience: ${targetAudience}
+Keywords to include naturally: ${keywords}
 
 Write ${sectionCount} sections, each ~${wordsPerSection} words. Use EXACTLY this format with no deviation:
 

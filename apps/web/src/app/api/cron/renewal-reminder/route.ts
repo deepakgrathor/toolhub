@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { connectDB, User, Plan } from "@toolhub/db";
 import { sendEmail } from "@/lib/email/sender";
 import { renewalReminderEmail } from "@/lib/email/templates";
 
+function verifyCronSecret(provided: string): boolean {
+  const expected = process.env.CRON_SECRET ?? "";
+  if (!provided || !expected) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
 export async function GET(req: NextRequest) {
-  // Secure with CRON_SECRET
-  const auth = req.headers.get("authorization");
-  const expected = `Bearer ${process.env.CRON_SECRET}`;
-  if (auth !== expected) {
+  const authHeader = req.headers.get("authorization") ?? "";
+  if (!verifyCronSecret(authHeader.replace("Bearer ", ""))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
