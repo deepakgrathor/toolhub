@@ -163,7 +163,8 @@ export default async function MarketingKitPage({ params }: { params: { slug: str
   if (!content) notFound();
 
   const dbSlug = KIT_DB_SLUG[params.slug] ?? params.slug;
-  const tools = await getToolsByKit(dbSlug);
+  // Graceful fallback: DB may be unavailable at build time (ISR — DB is hit at runtime)
+  const tools = await getToolsByKit(dbSlug).catch(() => [] as Awaited<ReturnType<typeof getToolsByKit>>);
 
   const { name, tagline, steps, useCases, faqs } = content;
   const Icon = KIT_ICONS[params.slug] ?? Sparkles;

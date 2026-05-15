@@ -4,6 +4,8 @@ import { connectDB, Payment, PaymentGateway } from "@toolhub/db";
 import { buildGatewayFromDoc } from "@/lib/gateways/manager";
 import { processCreditPackPayment, processPlanPayment } from "@/lib/payment-processor";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
