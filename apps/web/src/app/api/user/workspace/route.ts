@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/require-auth";
+import { ApiResponse } from "@/lib/api-response";
+// TODO: migrate remaining NextResponse.json calls to ApiResponse helpers
 import { connectDB, User } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 import { SIDEBAR_KITS } from "@/lib/kit-config";
@@ -55,7 +57,7 @@ export async function GET() {
     .lean();
 
   if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+    return ApiResponse.notFound("User");
   }
 
   const typedUser = user as {

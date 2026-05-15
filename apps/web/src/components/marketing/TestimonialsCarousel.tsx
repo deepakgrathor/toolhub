@@ -31,6 +31,7 @@ export function TestimonialsCarousel({ testimonials }: Props) {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const isPausedRef = useRef(isPaused);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const scrollToCard = useCallback((index: number) => {
@@ -55,14 +56,20 @@ export function TestimonialsCarousel({ testimonials }: Props) {
     });
   }, [testimonials.length]);
 
+  // Keep ref in sync without restarting the interval
   useEffect(() => {
-    if (!isPaused) {
-      intervalRef.current = setInterval(advance, 5000);
-    }
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
+
+  // Stable interval — only restarts if testimonials.length changes
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      if (!isPausedRef.current) advance();
+    }, 5000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isPaused, advance]);
+  }, [advance]);
 
   function handleScroll() {
     const el = carouselRef.current;

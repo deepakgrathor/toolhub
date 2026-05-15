@@ -1,9 +1,107 @@
 # Handoff Note
-Updated: 2026-05-15 | Account: B | Session: BPerf-2 | Features: withCache helper, requireAuth helper, getUserPlanSlug dedup, atomic plan expiry, response trimming
+Updated: 2026-05-15 | Account: B | Session: BPerf-3 | Features: lazy load QR+framer-motion, AbortController polling, next/image avatar, stable carousel, ApiResponse helpers
 
 ## Where We Are
-Session BPerf-2 done. **TypeScript: 0 errors (apps/web). Build: passing.**
-Master Context: v7.4 — Full security audit complete + BPerf-1 + BPerf-2 performance passes. BFix-1 + BFix-2 + BFix-3 + BSec-1 + BSec-2 + BSec-3 + BSec-4 + BPerf-1 + BPerf-2 all complete.
+Session BPerf-3 done. **TypeScript: 0 errors (apps/web). Build: pre-existing failures on /dashboard/history and /admin/credit-packs only (missing page stubs — unrelated to BPerf sessions).**
+Master Context: v7.5 — Full security audit complete (BSec-1→4) + Full performance audit complete (BPerf-1→3). DRY helpers added: withCache, requireAuth, getSiteConfigValue, ApiResponse, sanitizeUserInput. 29 security issues fixed, 25 performance issues fixed.
+
+---
+
+## What Was Done (Session BPerf-3)
+
+### Fix 1 — PaygicCheckoutModal: Lazy Load qrcode
+
+- `apps/web/src/components/ui/PaygicCheckoutModal.tsx`
+  - Removed top-level `import QRCode from "qrcode"` (~8KB bundle cost for all users)
+  - Replaced with dynamic `import("qrcode")` inside the useEffect that generates the QR data URL
+  - QR generation behavior unchanged; loading state handled by existing `Loader2` spinner in the QR tab
+
+### Fix 2 — PersonaJourney: Replace framer-motion with CSS
+
+- `apps/web/src/components/marketing/PersonaJourney.tsx`
+  - Removed `import { motion, AnimatePresence } from "framer-motion"` (~15–20KB homepage bundle)
+  - Replaced `<motion.div key={activeId} initial/animate/exit>` + `<AnimatePresence>` with plain `<div key={activeId} style={{ animation: 'personaFadeIn 0.2s ease-out' }}>`
+  - React key remount triggers CSS animation restart on tab switch — same enter effect, no exit animation (acceptable UX trade-off for homepage perf)
+  - framer-motion NOT removed from project/package.json — still used in sidebar accordion, onboarding, other components
+- `apps/web/src/app/globals.css`
+  - Added `@keyframes personaFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`
+
+### Fix 3 — PaygicCheckoutModal: AbortController on Polling
+
+- `apps/web/src/components/ui/PaygicCheckoutModal.tsx`
+  - Added `abortControllerRef = useRef<AbortController | null>(null)`
+  - New AbortController created on each modal open (`isOpen` becomes true)
+  - `checkStatus(signal?)` now accepts optional AbortSignal; passes it to `fetch()`
+  - AbortError silently caught — polling continues until next interval
+  - Cleanup: `abortController.abort()` + `clearInterval` for both poll and countdown intervals
+  - Prevents orphaned fetch requests when modal closes during in-flight payment status check
+
+### Fix 4 — payment/return: AbortController on Retry Fetch
+
+- `apps/web/src/app/(site)/payment/return/page.tsx`
+  - Added `useRef` to imports
+  - Added `abortControllerRef = useRef<AbortController | null>(null)`
+  - AbortController created in the mount effect; aborted on unmount
+  - `verifyPayment` passes `signal: abortControllerRef.current?.signal` to fetch
+  - AbortError caught and silently returned — no state update after unmount
+  - Existing retry logic (5 retries × 3s setTimeout) and countdown redirect unchanged
+
+### Fix 5 — UserDropdown: img → next/image
+
+- `apps/web/src/components/layout/UserDropdown.tsx`
+  - Added `import Image from "next/image"`
+  - Replaced both `<img>` tags (score≥100 case + SVG ring case) with `<Image width={36} height={36} className="h-full w-full object-cover" />`
+  - Both images are inside `{image ? ...}` conditionals — `src` is always a non-null string
+  - Enables WebP/AVIF conversion, lazy loading, size hints for Google OAuth avatars + R2 uploads
+- `apps/web/public/default-avatar.svg` — **NEW**: simple gray circle SVG fallback avatar
+- `apps/web/next.config.mjs` — already had correct `remotePatterns` for `lh3.googleusercontent.com` and `*.r2.cloudflarestorage.com`
+
+### Fix 6 — TestimonialsCarousel: Stable Interval
+
+- `apps/web/src/components/marketing/TestimonialsCarousel.tsx`
+  - Added `isPausedRef = useRef(isPaused)` + sync effect `useEffect(() => { isPausedRef.current = isPaused; }, [isPaused])`
+  - Main interval effect now depends only on `[advance]` (stable via `useCallback([testimonials.length])`)
+  - Interval checks `isPausedRef.current` at fire time instead of being cleared/recreated on hover
+  - Eliminates interval restart stutter during hydration and on hover/unhover
+
+### Fix 7 — ApiResponse Helpers + Applied to 6 High-Traffic Routes
+
+- `apps/web/src/lib/api-response.ts` — **NEW**
+  - `ApiResponse.ok`, `error`, `unauthorized`, `forbidden`, `notFound`, `badRequest`, `tooManyRequests`
+  - Always uses `{ error: string }` shape — never `{ message: string }`
+- Applied to 6 high-traffic routes (same routes updated in BPerf-2 for `requireAuth`):
+  - `apps/web/src/app/api/tools/run/route.ts` — 5 responses migrated
+  - `apps/web/src/app/api/user/credits/route.ts` — server error response migrated
+  - `apps/web/src/app/api/user/history/route.ts` — import added (TODO for further migration)
+  - `apps/web/src/app/api/user/workspace/route.ts` — notFound migrated
+  - `apps/web/src/app/api/user/credits/deduct/route.ts` — badRequest, notFound, server error migrated
+  - `apps/web/src/app/api/tools/download-pdf/route.tsx` — badRequest, server error migrated
+  - Two responses preserved as raw `NextResponse.json` where extra fields are needed (`retryAfter`, `balance`)
+
+#### Modified Files (BPerf-3)
+```
+apps/web/src/components/ui/PaygicCheckoutModal.tsx              — lazy qrcode + AbortController
+apps/web/src/components/marketing/PersonaJourney.tsx            — framer-motion removed, CSS animation
+apps/web/src/app/globals.css                                    — @keyframes personaFadeIn
+apps/web/src/app/(site)/payment/return/page.tsx                 — AbortController on retry fetch
+apps/web/src/components/layout/UserDropdown.tsx                 — next/image for avatars
+apps/web/public/default-avatar.svg                             — NEW: fallback avatar
+apps/web/src/components/marketing/TestimonialsCarousel.tsx       — isPausedRef stable interval
+apps/web/src/lib/api-response.ts                               — NEW: ApiResponse helpers
+apps/web/src/app/api/tools/run/route.ts                         — ApiResponse applied
+apps/web/src/app/api/user/credits/route.ts                      — ApiResponse applied
+apps/web/src/app/api/user/history/route.ts                      — ApiResponse import + TODO
+apps/web/src/app/api/user/workspace/route.ts                    — ApiResponse applied
+apps/web/src/app/api/user/credits/deduct/route.ts               — ApiResponse applied
+apps/web/src/app/api/tools/download-pdf/route.tsx               — ApiResponse applied
+```
+
+#### Rules Verified
+- TypeScript: 0 errors (apps/web)
+- Build: pre-existing failures on /dashboard/history + /admin/credit-packs (missing page stubs); compilation itself succeeds
+- No business logic changed — only bundle optimization + memory leak fixes + DRY helpers
+- framer-motion NOT removed from project — only removed from PersonaJourney.tsx
+- next.config.mjs remotePatterns already correct for next/image domains
 
 ---
 

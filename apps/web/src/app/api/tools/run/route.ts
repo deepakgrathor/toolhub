@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/require-auth";
+import { ApiResponse } from "@/lib/api-response";
+// TODO: migrate remaining NextResponse.json calls to ApiResponse helpers
 import { connectDB, Tool, User, CreditTransaction } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 import { checkAbuseLimit } from "@/lib/abuse-protection";
@@ -153,7 +155,7 @@ export async function POST(req: NextRequest) {
     const { toolSlug, inputs = {} } = body;
 
     if (!toolSlug) {
-      return NextResponse.json({ error: "toolSlug is required" }, { status: 400 });
+      return ApiResponse.badRequest("toolSlug is required");
     }
 
     // ── STEP 2 — Fetch tool from DB ──────────────────────────────────────────
@@ -162,7 +164,7 @@ export async function POST(req: NextRequest) {
       .select('slug name type kitSlug systemPrompt promptTemplate formFields outputType aiModel aiProvider maxOutputTokens temperature isActive')
       .lean();
     if (!toolRaw) {
-      return NextResponse.json({ error: "Tool not found" }, { status: 404 });
+      return ApiResponse.notFound("Tool");
     }
 
     const tool = toolRaw as unknown as ToolDoc & {
@@ -184,7 +186,7 @@ export async function POST(req: NextRequest) {
 
     const userDoc = await User.findById(userId).select("credits plan isDeleted").lean();
     if (!userDoc || userDoc.isDeleted) {
-      return NextResponse.json({ error: "Account not found" }, { status: 403 });
+      return ApiResponse.forbidden();
     }
 
     // ── STEP 4 — Credit cost (from ToolConfig) ────────────────────────────────
@@ -194,16 +196,13 @@ export async function POST(req: NextRequest) {
     const creditCost = config?.creditCost ?? 0;
 
     if (config && !config.isActive) {
-      return NextResponse.json(
-        { error: "Tool is not available" },
-        { status: 403 }
-      );
+      return ApiResponse.forbidden();
     }
 
     // ── STEP 5 — Credit check ─────────────────────────────────────────────────
     const userCredits: number = (userDoc as { credits?: number }).credits ?? 0;
     if (userCredits < creditCost) {
-      return NextResponse.json({ error: "insufficient_credits" }, { status: 402 });
+      return ApiResponse.error("insufficient_credits", 402);
     }
 
     // ── STEP 6 — Abuse check ──────────────────────────────────────────────────
@@ -213,7 +212,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: abuse.reason, retryAfter: abuse.retryAfter },
         { status: 429 }
-      );
+      ); // retryAfter extra field — can't use ApiResponse.tooManyRequests here
     }
 
     // ── STEP 7 — Validate required fields ────────────────────────────────────
@@ -256,10 +255,7 @@ export async function POST(req: NextRequest) {
     const redis = getRedis();
     const locked = await redis.set(lockKey, "1", { nx: true, ex: 10 });
     if (!locked) {
-      return NextResponse.json(
-        { error: "Another request is in progress. Please wait." },
-        { status: 429 }
-      );
+      return ApiResponse.tooManyRequests();
     }
     try {
       // ── STEP 10 — Call AI model ────────────────────────────────────────────
@@ -311,9 +307,6 @@ export async function POST(req: NextRequest) {
 
   } catch (err) {
     console.error("[tool-runner]", err);
-    return NextResponse.json(
-      { error: "AI generation failed. Please try again." },
-      { status: 500 }
-    );
+    return ApiResponse.error("AI generation failed. Please try again.");
   }
 }

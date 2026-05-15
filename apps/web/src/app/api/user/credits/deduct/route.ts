@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/require-auth";
+import { ApiResponse } from "@/lib/api-response";
+// TODO: migrate remaining NextResponse.json calls to ApiResponse helpers
 import { connectDB, CreditService, InsufficientCreditsError, User, ToolConfig } from "@toolhub/db";
 import { z } from "zod";
 import { invalidateBalance, invalidateDashStats } from "@/lib/credit-cache";
@@ -17,7 +19,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = deductSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    return ApiResponse.badRequest("Invalid request");
   }
 
   await connectDB();
@@ -25,7 +27,7 @@ export async function POST(req: NextRequest) {
   try {
     const toolConfig = await ToolConfig.findOne({ toolSlug: parsed.data.toolSlug }).lean();
     if (!toolConfig) {
-      return NextResponse.json({ error: "Tool not found" }, { status: 404 });
+      return ApiResponse.notFound("Tool");
     }
     const amount = toolConfig.creditCost;
 
@@ -55,9 +57,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "insufficient_credits", balance: err.balance },
         { status: 402 }
-      );
+      ); // balance field — can't use ApiResponse.error here
     }
     console.error("[POST /api/user/credits/deduct]", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return ApiResponse.error("Server error");
   }
 }

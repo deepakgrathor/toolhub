@@ -183,3 +183,8 @@ a:focus-visible {
   animation: marquee-setulix 30s linear infinite;
 }
 
+@keyframes personaFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+

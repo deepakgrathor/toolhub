@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import QRCode from "qrcode";
 import { CheckCircle, XCircle, Clock, Loader2, Smartphone, X, Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -52,10 +51,11 @@ export function PaygicCheckoutModal({
   const isMobile = isMobileDevice();
   const pollIntervalRef = useRef<ReturnType<typeof setInterval>>();
   const countdownRef = useRef<ReturnType<typeof setInterval>>();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  async function checkStatus() {
+  async function checkStatus(signal?: AbortSignal) {
     try {
-      const res = await fetch(`/api/payments/verify?order_id=${orderId}`);
+      const res = await fetch(`/api/payments/verify?order_id=${orderId}`, { signal });
       const data = await res.json();
 
       if (data.status === "paid") {
@@ -69,22 +69,27 @@ export function PaygicCheckoutModal({
         setPollStatus("failed");
         setTimeout(onFailure, 1500);
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
       // silent — keep polling
     }
   }
 
-  // Generate QR code from upiIntent (or dynamicQR as text)
+  // Generate QR code from upiIntent (or dynamicQR as text) — lazy load qrcode
   useEffect(() => {
     const qrText = upiIntent || dynamicQR;
     if (!isOpen || !qrText) return;
-    QRCode.toDataURL(qrText, { width: 200, margin: 1 })
-      .then(setQrDataUrl)
-      .catch(() => setQrDataUrl(""));
+    import("qrcode").then((mod) => {
+      mod.default.toDataURL(qrText, { width: 200, margin: 1 })
+        .then(setQrDataUrl)
+        .catch(() => setQrDataUrl(""));
+    });
   }, [isOpen, upiIntent, dynamicQR]);
 
   useEffect(() => {
     if (!isOpen) return;
+
+    abortControllerRef.current = new AbortController();
 
     setTimeLeft(expiresIn);
     setPollStatus("polling");
@@ -105,10 +110,11 @@ export function PaygicCheckoutModal({
     }, 1000);
 
     pollIntervalRef.current = setInterval(() => {
-      checkStatus();
+      checkStatus(abortControllerRef.current?.signal);
     }, 3000);
 
     return () => {
+      abortControllerRef.current?.abort();
       clearInterval(pollIntervalRef.current);
       clearInterval(countdownRef.current);
     };

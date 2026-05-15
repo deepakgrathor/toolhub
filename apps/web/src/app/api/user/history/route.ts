@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/require-auth";
+import { ApiResponse } from "@/lib/api-response";
+// TODO: migrate remaining NextResponse.json calls to ApiResponse helpers
 import { connectDB, ToolOutput } from "@toolhub/db";
 import mongoose from "mongoose";
 import { TOOL_NAME_MAP } from "@/lib/tool-names";

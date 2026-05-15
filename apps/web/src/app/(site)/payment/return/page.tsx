@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -34,6 +34,7 @@ export default function PaymentReturnPage() {
   const [retryCount, setRetryCount] = useState(0)
   const [countdown, setCountdown] = useState(AUTO_REDIRECT_SECONDS)
   const MAX_RETRIES = 5
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const verifyPayment = useCallback(async () => {
     if (!orderId) {
@@ -42,7 +43,9 @@ export default function PaymentReturnPage() {
     }
 
     try {
-      const res = await fetch(`/api/payments/verify?order_id=${orderId}`)
+      const res = await fetch(`/api/payments/verify?order_id=${orderId}`, {
+        signal: abortControllerRef.current?.signal,
+      })
       const data: VerifyResponse = await res.json()
 
       if (data.status === 'paid') {
@@ -56,13 +59,18 @@ export default function PaymentReturnPage() {
       } else {
         setStatus('failed')
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return
       setStatus('failed')
     }
   }, [orderId])
 
   useEffect(() => {
+    abortControllerRef.current = new AbortController()
     verifyPayment()
+    return () => {
+      abortControllerRef.current?.abort()
+    }
   }, [verifyPayment])
 
   // Auto-retry for pending state

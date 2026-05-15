@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/require-auth";
+import { ApiResponse } from "@/lib/api-response";
+// TODO: migrate remaining NextResponse.json calls to ApiResponse helpers
 import { connectDB, CreditService } from "@toolhub/db";
 import { getCachedBalance, setCachedBalance } from "@/lib/credit-cache";
 
@@ -30,6 +32,6 @@ export async function GET() {
     return NextResponse.json({ balance, transactions });
   } catch (err) {
     console.error("[/api/user/credits] Error:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return ApiResponse.error("Server error");
   }
 }

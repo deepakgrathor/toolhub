@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/require-auth";
+import { ApiResponse } from "@/lib/api-response";
+// TODO: migrate remaining NextResponse.json calls to ApiResponse helpers
 import { connectDB, BusinessProfile, User } from "@toolhub/db";
 import { getUserPlan } from "@/lib/user-plan";
 import { renderToBuffer } from "@react-pdf/renderer";
@@ -27,10 +29,7 @@ export async function POST(req: NextRequest) {
 
     const MAX_PDF_CONTENT = 50000;
     if (!content || typeof content !== "string" || content.length > MAX_PDF_CONTENT) {
-      return NextResponse.json(
-        { error: "Content too large for PDF generation" },
-        { status: 400 }
-      );
+      return ApiResponse.badRequest("Content too large for PDF generation");
     }
 
     // STEP 2 — Fetch brand assets (PRO+ only)
@@ -122,6 +121,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[download-pdf]", err);
-    return NextResponse.json({ error: "PDF generation failed" }, { status: 500 });
+    return ApiResponse.error("PDF generation failed");
   }
 }

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { History, LogOut, User } from "lucide-react";
 import { useProfileScore } from "@/hooks/useProfileScore";
 
@@ -29,8 +30,13 @@ function ProfileRing({
       <div className="relative w-9 h-9 shrink-0">
         <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-primary bg-primary/20 flex items-center justify-center">
           {image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={image} alt={name ?? "User"} className="h-full w-full object-cover" />
+            <Image
+              src={image ?? "/default-avatar.svg"}
+              alt={name ?? "User avatar"}
+              width={36}
+              height={36}
+              className="h-full w-full object-cover"
+            />
           ) : (
             <span className="text-[10px] font-bold text-primary">{initials}</span>
           )}
@@ -56,8 +62,13 @@ function ProfileRing({
       </svg>
       <div className="absolute inset-[3px] rounded-full overflow-hidden bg-primary/20 flex items-center justify-center">
         {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt={name ?? "User"} className="h-full w-full object-cover" />
+          <Image
+            src={image ?? "/default-avatar.svg"}
+            alt={name ?? "User avatar"}
+            width={36}
+            height={36}
+            className="h-full w-full object-cover"
+          />
         ) : (
           <span className="text-[10px] font-bold text-primary">{initials}</span>
         )}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { personas } from "@/data/personas";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { cn } from "@/lib/utils";
@@ -99,14 +98,10 @@ export function PersonaJourney() {
         </div>
 
         {/* Animated tab content */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeId}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
+        <div
+          key={activeId}
+          style={{ animation: "personaFadeIn 0.2s ease-out" }}
+        >
             {/* ── SECTION 1: Hero Strip ─────────────────────────────────────── */}
             <div className="rounded-xl border border-border bg-card p-6 sm:p-8">
               <div className="flex flex-col sm:flex-row sm:items-start gap-6">
@@ -286,8 +281,7 @@ export function PersonaJourney() {
                 {active.ctaNote}
               </p>
             </div>
-          </motion.div>
-        </AnimatePresence>
+          </div>
       </div>
     </section>
   );
