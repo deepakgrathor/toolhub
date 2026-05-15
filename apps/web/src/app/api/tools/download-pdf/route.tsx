@@ -9,6 +9,7 @@ import { LitePDFTemplate, ProPDFTemplate } from "@/lib/pdf/templates";
 import React from "react";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {

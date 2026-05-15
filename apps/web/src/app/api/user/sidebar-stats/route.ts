@@ -41,8 +41,9 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const planSlug = user.plan ?? "free";
-  const planCredits = PLAN_CREDITS[planSlug] ?? 10;
   const currentCredits = user.credits ?? 0;
+  // planCredits is the higher of the plan quota or current balance (bonuses can exceed plan quota)
+  const planCredits = Math.max(PLAN_CREDITS[planSlug] ?? 10, currentCredits);
   const creditsUsed = Math.max(0, planCredits - currentCredits);
 
   const data = {

@@ -33,7 +33,7 @@ export function PaywallModal() {
             <Dialog.Description className="text-sm text-muted-foreground">
               <span className="font-medium text-foreground">{toolName}</span> costs{" "}
               <span className="font-semibold text-[#7c3aed]">{requiredCredits} credits</span>.
-              You have <span className="font-semibold text-foreground">{balance} credits</span>.
+              You have <span className="font-semibold text-foreground whitespace-nowrap">{balance} credits</span>.
             </Dialog.Description>
 
             <div className="flex w-full gap-2 mt-1">

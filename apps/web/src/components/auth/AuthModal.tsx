@@ -256,7 +256,19 @@ export function AuthModal() {
       closeAuthModal();
       syncCredits();
       toast.success(`Welcome back!`);
-      router.push("/dashboard");
+      const pendingPlan = localStorage.getItem("pending_plan");
+      const pendingPackId = localStorage.getItem("pending_pack_id");
+      if (pendingPlan) {
+        const pendingCycle = localStorage.getItem("pending_plan_cycle") ?? "monthly";
+        localStorage.removeItem("pending_plan");
+        localStorage.removeItem("pending_plan_cycle");
+        router.push(`/checkout?type=plan&slug=${pendingPlan}&cycle=${pendingCycle}`);
+      } else if (pendingPackId) {
+        localStorage.removeItem("pending_pack_id");
+        router.push(`/checkout?type=pack&id=${pendingPackId}`);
+      } else {
+        router.push("/dashboard");
+      }
     }
   };
 
@@ -321,7 +333,19 @@ export function AuthModal() {
         closeAuthModal();
         syncCredits();
         toast.success("Account created! 10 free credits added.");
-        router.push("/dashboard");
+        const pendingPlan = localStorage.getItem("pending_plan");
+        const pendingPackId = localStorage.getItem("pending_pack_id");
+        if (pendingPlan) {
+          const pendingCycle = localStorage.getItem("pending_plan_cycle") ?? "monthly";
+          localStorage.removeItem("pending_plan");
+          localStorage.removeItem("pending_plan_cycle");
+          router.push(`/checkout?type=plan&slug=${pendingPlan}&cycle=${pendingCycle}`);
+        } else if (pendingPackId) {
+          localStorage.removeItem("pending_pack_id");
+          router.push(`/checkout?type=pack&id=${pendingPackId}`);
+        } else {
+          router.push("/dashboard");
+        }
       }
     } catch {
       setServerError("Something went wrong. Please try again.");

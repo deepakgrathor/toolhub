@@ -30,7 +30,7 @@ export function KitSection({ tools }: KitSectionProps) {
               </div>
               <h2 className="text-base font-semibold text-foreground">{kit.name}</h2>
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                {kitTools.length}
+                {kitTools.length} tools
               </span>
             </div>
 

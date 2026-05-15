@@ -567,14 +567,17 @@ export function UniversalToolRenderer({ slug }: { slug: string }) {
         )}
 
         {/* Generated form fields */}
-        {sortedFields.map(field => (
-          <FormFieldRenderer
-            key={field.key}
-            field={field}
-            value={formValues[field.key] ?? ""}
-            onChange={val => setField(field.key, val)}
-          />
-        ))}
+        <div className="grid grid-cols-2 gap-4">
+          {sortedFields.map(field => (
+            <div key={field.key} className={field.type === "textarea" || field.type === "file" ? "col-span-2" : "col-span-1"}>
+              <FormFieldRenderer
+                field={field}
+                value={formValues[field.key] ?? ""}
+                onChange={val => setField(field.key, val)}
+              />
+            </div>
+          ))}
+        </div>
 
         {/* Error message */}
         {genError && (

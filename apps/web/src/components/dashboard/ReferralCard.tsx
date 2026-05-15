@@ -5,10 +5,10 @@ import { Gift, Copy, Check, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface ReferralInfo {
-  referralCode: string;
-  referralLink: string;
-  referralCount: number;
-  creditsEarned: number;
+  refCode: string;
+  refLink: string;
+  stats: { total: number; completed: number; creditsEarned: number };
+  recent: { id: string; name: string; status: string; date: string }[];
 }
 
 function Skeleton({ className }: { className: string }) {
@@ -21,23 +21,23 @@ export function ReferralCard() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetch("/api/referral/info")
+    fetch("/api/user/referrals")
       .then((r) => r.json())
       .then((data) => setInfo(data))
       .finally(() => setLoading(false));
   }, []);
 
   function handleCopy() {
-    if (!info?.referralLink) return;
-    navigator.clipboard.writeText(info.referralLink).then(() => {
+    if (!info?.refLink) return;
+    navigator.clipboard.writeText(info.refLink).then(() => {
       setCopied(true);
       toast.success("Copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     });
   }
 
-  const waText = info?.referralLink
-    ? encodeURIComponent(`Join SetuLix and get 15 free credits! ${info.referralLink}`)
+  const waText = info?.refLink
+    ? encodeURIComponent(`Join SetuLix and get 15 free credits! ${info.refLink}`)
     : "";
 
   return (
@@ -64,7 +64,7 @@ export function ReferralCard() {
           <div className="flex gap-2">
             <input
               readOnly
-              value={info?.referralLink ?? ""}
+              value={info?.refLink ?? ""}
               className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-[#7c3aed]/50"
             />
             <button
@@ -87,9 +87,9 @@ export function ReferralCard() {
 
           {/* Stats */}
           <p className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">{info?.referralCount ?? 0}</span> friends joined
+            <span className="font-semibold text-foreground">{info?.stats.total ?? 0}</span> friends joined
             &nbsp;•&nbsp;
-            <span className="font-semibold text-[#10b981]">{info?.creditsEarned ?? 0}</span> credits earned
+            <span className="font-semibold text-[#10b981]">{info?.stats.creditsEarned ?? 0}</span> credits earned
           </p>
 
           {/* WhatsApp share */}
