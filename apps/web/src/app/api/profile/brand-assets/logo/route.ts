@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { connectDB, BusinessProfile } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 import { getUserPlan } from "@/lib/user-plan";
+import { validateImageFile } from "@/lib/file-validation";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 function getR2Client() {
@@ -15,6 +16,13 @@ function getR2Client() {
     },
   });
 }
+
+const EXT_MAP: Record<string, string> = {
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "image/jpeg": "jpg",
+};
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -39,25 +47,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  const allowedTypes = ["image/png", "image/jpeg", "image/jpg"];
-  if (!allowedTypes.includes(file.type)) {
-    return NextResponse.json(
-      { error: "Only PNG or JPG files allowed" },
-      { status: 400 }
-    );
+  const validation = await validateImageFile(file);
+  if (!validation.valid) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
-  if (file.size > 2 * 1024 * 1024) {
-    return NextResponse.json(
-      { error: "File too large (max 2MB)" },
-      { status: 400 }
-    );
-  }
+  const detectedMime = validation.detectedMime!;
+  const ext = EXT_MAP[detectedMime] ?? "jpg";
+  const key = `brand/${userId}/logo.${ext}`;
 
   const bucket = process.env.CLOUDFLARE_R2_BUCKET_NAME!;
   const publicUrl = process.env.CLOUDFLARE_R2_PUBLIC_URL!;
-  const ext = file.type === "image/png" ? "png" : "jpg";
-  const key = `brand/${userId}/logo.${ext}`;
 
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       Bucket: bucket,
       Key: key,
       Body: buffer,
-      ContentType: file.type,
+      ContentType: detectedMime,
     })
   );
 
@@ -102,7 +102,7 @@ export async function DELETE() {
   const client = getR2Client();
 
   // Try deleting both extensions
-  for (const ext of ["png", "jpg"]) {
+  for (const ext of ["png", "jpg", "gif", "webp"]) {
     try {
       await client.send(
         new DeleteObjectCommand({ Bucket: bucket, Key: `brand/${userId}/logo.${ext}` })

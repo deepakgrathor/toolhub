@@ -79,6 +79,13 @@ export class CashfreeGateway implements IGateway {
       .update(signedPayload)
       .digest("base64");
 
-    return expectedSignature === signature;
+    const expected = Buffer.from(expectedSignature);
+    const received = Buffer.from(signature);
+
+    if (expected.length !== received.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(expected, received);
   }
 }

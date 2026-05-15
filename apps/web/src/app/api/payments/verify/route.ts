@@ -19,23 +19,23 @@ export async function GET(req: NextRequest) {
     await connectDB();
 
     // Security: ensure payment belongs to this user
-    const payment = await Payment.findOne({ orderId, userId: session.user.id });
+    const existing = await Payment.findOne({ orderId, userId: session.user.id });
 
-    if (!payment) {
+    if (!existing) {
       return NextResponse.json({ status: "not_found" });
     }
 
-    if (payment.status === "paid") {
-      return NextResponse.json({ status: "paid", type: payment.type, credits: payment.credits });
+    if (existing.status === "paid") {
+      return NextResponse.json({ status: "paid", type: existing.type, credits: existing.credits });
     }
 
-    if (payment.status === "failed" || payment.status === "cancelled") {
+    if (existing.status === "failed" || existing.status === "cancelled") {
       return NextResponse.json({ status: "failed" });
     }
 
     // status === 'created' — verify via the correct gateway
     const gatewayDoc = await PaymentGateway.findOne({
-      slug: payment.gatewaySlug || "cashfree",
+      slug: existing.gatewaySlug || "cashfree",
     });
 
     if (!gatewayDoc) {
@@ -43,11 +43,20 @@ export async function GET(req: NextRequest) {
     }
 
     const gateway = buildGatewayFromDoc(gatewayDoc);
-    const result = await gateway.verifyPayment(payment.orderId);
+    const result = await gateway.verifyPayment(existing.orderId);
 
     if (result.status === "paid") {
-      payment.status = "paid";
-      await payment.save();
+      // Atomic update: status 'created' → 'paid', exactly once regardless of concurrent webhook + frontend verify
+      const payment = await Payment.findOneAndUpdate(
+        { orderId, status: "created" },
+        { $set: { status: "paid" } },
+        { new: false }
+      );
+
+      if (!payment) {
+        // Already processed by webhook or another concurrent request
+        return NextResponse.json({ status: "paid", type: existing.type, credits: existing.credits });
+      }
 
       if (payment.type === "credit_pack") {
         await processCreditPackPayment(payment);
@@ -63,12 +72,15 @@ export async function GET(req: NextRequest) {
     }
 
     if (result.status === "expired") {
-      payment.status = "failed";
-      await payment.save();
+      await Payment.findOneAndUpdate(
+        { orderId, status: "created" },
+        { $set: { status: "failed" } },
+        { new: false }
+      );
       return NextResponse.json({ status: "failed" });
     }
 
-    return NextResponse.json({ status: payment.status });
+    return NextResponse.json({ status: existing.status });
   } catch (err) {
     console.error("[verify-payment]", err);
     return NextResponse.json({ error: "Failed to verify payment" }, { status: 500 });

@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { connectDB, User, BusinessProfile } from "@toolhub/db";
 import { uploadToR2 } from "@/lib/r2-upload";
 import { calculateProfileScore } from "@/lib/profile-score";
+import { validateImageFile } from "@/lib/file-validation";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -17,16 +18,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  if (file.size > 2 * 1024 * 1024) {
-    return NextResponse.json({ error: "File too large (max 2MB)" }, { status: 400 });
-  }
-
-  if (!file.type.startsWith("image/")) {
-    return NextResponse.json({ error: "Only image files allowed" }, { status: 400 });
+  const validation = await validateImageFile(file);
+  if (!validation.valid) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
   try {
-    const url = await uploadToR2(file, "avatars");
+    const url = await uploadToR2(file, "avatars", validation.detectedMime!);
 
     await connectDB();
     const updatedUser = await User.findByIdAndUpdate(

@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { connectDB, BusinessProfile } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 import { getUserPlan } from "@/lib/user-plan";
+import { validateSignatureFile } from "@/lib/file-validation";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 function getR2Client() {
@@ -39,18 +40,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  if (file.type !== "image/png") {
-    return NextResponse.json(
-      { error: "Only PNG files allowed (for transparent background)" },
-      { status: 400 }
-    );
-  }
-
-  if (file.size > 1024 * 1024) {
-    return NextResponse.json(
-      { error: "File too large (max 1MB)" },
-      { status: 400 }
-    );
+  const validation = await validateSignatureFile(file);
+  if (!validation.valid) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
   const bucket = process.env.CLOUDFLARE_R2_BUCKET_NAME!;
@@ -66,7 +58,7 @@ export async function POST(req: NextRequest) {
       Bucket: bucket,
       Key: key,
       Body: buffer,
-      ContentType: "image/png",
+      ContentType: validation.detectedMime!,
     })
   );
 

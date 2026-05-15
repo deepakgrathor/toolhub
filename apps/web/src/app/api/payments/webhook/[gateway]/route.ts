@@ -57,15 +57,7 @@ export async function POST(
       return Response.json({ received: true });
     }
 
-    const payment = await Payment.findOne({ orderId: merchantReferenceId });
-    if (!payment) {
-      return Response.json({ received: true });
-    }
-    if (payment.status === "paid") {
-      return Response.json({ received: true });
-    }
-
-    // Paygic: double-verify via API
+    // Paygic: double-verify via API before atomic update
     if (gatewaySlug === "paygic" && txnStatus === "SUCCESS") {
       const verifyResult = await gateway.verifyPayment(merchantReferenceId);
       if (verifyResult.status !== "paid") {
@@ -74,13 +66,30 @@ export async function POST(
       }
     }
 
-    payment.status = "paid";
+    // Compute metadata from event payload
     const dataObj = event.data as Record<string, Record<string, string>>;
-    payment.cashfreePaymentId =
+    const cfPaymentId =
       String(dataObj?.payment?.cf_payment_id || dataObj?.paygicReferenceId || dataObj?.UTR || "") || undefined;
-    payment.paymentMethod =
+    const payMethod =
       gatewaySlug === "paygic" ? "upi" : dataObj?.payment?.payment_method || undefined;
-    await payment.save();
+
+    // Atomic update: status 'created' → 'paid', exactly once — prevents double-credit on concurrent webhooks
+    const updateFields: { status: string; cashfreePaymentId?: string; paymentMethod?: string } = {
+      status: "paid",
+    };
+    if (cfPaymentId) updateFields.cashfreePaymentId = cfPaymentId;
+    if (payMethod) updateFields.paymentMethod = payMethod;
+
+    const payment = await Payment.findOneAndUpdate(
+      { orderId: merchantReferenceId, status: "created" },
+      { $set: updateFields },
+      { new: false }
+    );
+
+    if (!payment) {
+      // Not found or already processed — both safe to ignore
+      return Response.json({ received: true });
+    }
 
     if (payment.type === "credit_pack") {
       await processCreditPackPayment(payment);

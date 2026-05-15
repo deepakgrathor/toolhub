@@ -19,7 +19,8 @@ function getR2Client() {
 
 export async function uploadToR2(
   file: File,
-  folder: "avatars" | "logos"
+  folder: "avatars" | "logos",
+  contentType: string
 ): Promise<string> {
   const bucket = process.env.CLOUDFLARE_R2_BUCKET_NAME;
   const publicUrl = process.env.CLOUDFLARE_R2_PUBLIC_URL;
@@ -40,7 +41,7 @@ export async function uploadToR2(
       Bucket: bucket,
       Key: key,
       Body: buffer,
-      ContentType: file.type,
+      ContentType: contentType,
     })
   );
 

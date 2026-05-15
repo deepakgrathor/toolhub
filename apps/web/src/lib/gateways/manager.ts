@@ -6,40 +6,53 @@ import { PayuGateway } from "./payu";
 import type { IGateway, GatewayConfig } from "./types";
 import { getRedis } from "@toolhub/shared";
 
-const CACHE_KEY = "SetuLix:active_gateway";
+// Slug-only cache — credentials are never stored in Redis
+const CACHE_KEY = "active_gateway:slug";
+// Old key that stored full config (including secrets) — always delete on access
+const OLD_CACHE_KEY = "SetuLix:active_gateway";
 const CACHE_TTL = 300;
 
 export async function getActiveGateway(): Promise<IGateway> {
   const redis = getRedis();
 
-  const cached = await redis.get<{ slug: string; config: GatewayConfig }>(CACHE_KEY);
-  if (cached && cached.slug) {
-    return buildGateway(cached.slug, cached.config);
-  }
+  // Clean up old key that stored credentials in Redis (one-time migration, no-op once gone)
+  void redis.del(OLD_CACHE_KEY).catch(() => {});
+
+  const cachedSlug = await redis.get<string>(CACHE_KEY);
 
   await connectDB();
 
-  const gateway = await PaymentGateway.findOne({ isDefault: true, isActive: true });
+  let gatewayDoc = null;
 
-  if (!gateway) {
-    throw new Error(
-      "No active payment gateway configured. Please set a default gateway in admin panel."
-    );
+  if (cachedSlug) {
+    gatewayDoc = await PaymentGateway.findOne({ slug: cachedSlug, isActive: true }).lean();
+  }
+
+  if (!gatewayDoc) {
+    // Cache miss or stale slug — fetch default gateway from MongoDB
+    gatewayDoc = await PaymentGateway.findOne({ isDefault: true, isActive: true }).lean();
+
+    if (!gatewayDoc) {
+      throw new Error(
+        "No active payment gateway configured. Please set a default gateway in admin panel."
+      );
+    }
+
+    // Cache only the slug — never cache secrets
+    await redis.set(CACHE_KEY, gatewayDoc.slug, { ex: CACHE_TTL });
   }
 
   const config: GatewayConfig = {
-    apiKey: gateway.config.apiKey || "",
-    secretKey: gateway.config.secretKey || "",
-    merchantId: gateway.config.merchantId || "",
-    webhookSecret: gateway.config.webhookSecret || "",
-    token: gateway.config.token || "",
-    environment: gateway.environment,
-    extraConfig: (gateway.config.extraConfig as Record<string, unknown>) || {},
+    apiKey: gatewayDoc.config.apiKey || "",
+    secretKey: gatewayDoc.config.secretKey || "",
+    merchantId: gatewayDoc.config.merchantId || "",
+    webhookSecret: gatewayDoc.config.webhookSecret || "",
+    token: gatewayDoc.config.token || "",
+    environment: gatewayDoc.environment as "sandbox" | "production",
+    extraConfig: (gatewayDoc.config.extraConfig as Record<string, unknown>) || {},
   };
 
-  await redis.set(CACHE_KEY, { slug: gateway.slug, config }, { ex: CACHE_TTL });
-
-  return buildGateway(gateway.slug, config);
+  return buildGateway(gatewayDoc.slug, config);
 }
 
 export function buildGateway(slug: string, config: GatewayConfig): IGateway {
@@ -84,6 +97,8 @@ export function buildGatewayFromDoc(doc: {
 export async function invalidateGatewayCache(): Promise<void> {
   const redis = getRedis();
   await redis.del(CACHE_KEY);
+  // Also clean up old key that stored credentials
+  await redis.del(OLD_CACHE_KEY).catch(() => {});
 }
 
 export async function getActiveGatewaySlug(): Promise<string> {
@@ -106,7 +121,7 @@ export async function getPaygicGateway(): Promise<{
     merchantId: doc.config.merchantId || process.env.PAYGIC_MID || "",
     webhookSecret: "",
     token: doc.config.token || "",
-    environment: doc.environment,
+    environment: doc.environment as "sandbox" | "production",
     extraConfig: {},
   };
 

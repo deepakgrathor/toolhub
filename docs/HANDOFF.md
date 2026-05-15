@@ -1,9 +1,79 @@
 # Handoff Note
-Updated: 2026-05-15 | Account: B | Session: BSec-1 | Features: critical security fixes — credit deduct from ToolConfig, disabled tool guard, Redis concurrent request lock, admin credit cap
+Updated: 2026-05-15 | Account: B | Session: BSec-2 | Features: payment security — timing-safe HMAC, atomic credit dedup, magic-byte file validation, gateway secrets out of Redis
 
 ## Where We Are
-Session BSec-1 done. **TypeScript: 0 errors (apps/web). Build: passing.**
-Master Context: v7.2 — BFix-1 (indexes, N+1, LiteLLM) + BFix-2 (hardcoded values) + BFix-3 (security) + BSec-1 (credit security) all complete.
+Session BSec-2 done. **TypeScript: 0 errors (apps/web). Build: passing (75/75 static pages — pre-existing Windows ENOENT on build trace collection is unrelated to code changes).**
+Master Context: v7.3 — BFix-1 + BFix-2 + BFix-3 + BSec-1 + BSec-2 all complete.
+
+---
+
+## What Was Done (Session BSec-2)
+
+### Fix 1 — Cashfree Webhook: Timing-Safe HMAC Comparison
+
+- `apps/web/src/lib/gateways/cashfree.ts`
+  - **Before**: `return expectedSignature === signature` — string equality leaks timing info, allows HMAC reconstruction
+  - **After**: `Buffer.from(expectedSignature)` + `Buffer.from(signature)` → length check → `crypto.timingSafeEqual(expected, received)`
+  - Both buffers must be same byte length; length mismatch returns `false` immediately with no timing leak
+
+### Fix 2 — Payment Double-Credit Race Condition: Atomic Status Update
+
+- `apps/web/src/app/api/payments/verify/route.ts`
+  - Kept initial `Payment.findOne({ orderId, userId })` for ownership security check
+  - Replaced `payment.status = 'paid'; await payment.save()` with `Payment.findOneAndUpdate({ orderId, status: 'created' }, { $set: { status: 'paid' } }, { new: false })`
+  - If `findOneAndUpdate` returns null → already processed → return success immediately (idempotent)
+  - `{ new: false }` returns old doc with payment details needed by `processCreditPackPayment`
+  - Same atomic pattern applied to `expired` status transition
+- `apps/web/src/app/api/payments/webhook/[gateway]/route.ts`
+  - Removed initial `Payment.findOne` + manual status check + `payment.save()` pattern
+  - Paygic double-verify via API runs first (before the atomic update)
+  - All three paths (Paygic, Cashfree, verify) now use `findOneAndUpdate({ status: 'created' })` as the single gate — credits added exactly once regardless of race conditions
+
+### Fix 3 — File Upload: Magic Byte Validation + Extension Allowlist
+
+- `apps/web/src/lib/file-validation.ts` — NEW
+  - `validateImageFile(file)`: 2MB cap → extension allowlist (`jpg/jpeg/png/gif/webp`) → read first 8 bytes → match magic bytes (`ffd8ff`/`89504e47`/`47494638`/`52494646`) → return `{ valid, detectedMime }`
+  - `validateSignatureFile(file)`: 1MB cap → PNG extension only → PNG magic byte (`89504e47`) only → stricter than general image
+  - SVG and HTML are rejected at both extension check and magic byte check (no SVG/HTML magic bytes in allowlist)
+- `apps/web/src/lib/r2-upload.ts`
+  - Added required `contentType: string` parameter — `ContentType` in S3 upload now always comes from caller (never from `file.type`)
+- `apps/web/src/app/api/profile/avatar/route.ts` — replaced client-controlled `file.type` check with `validateImageFile()`; passes `validation.detectedMime!` to `uploadToR2`
+- `apps/web/src/app/api/profile/logo/route.ts` — same pattern (this route was also calling `uploadToR2` with 2 args)
+- `apps/web/src/app/api/profile/brand-assets/logo/route.ts` — replaced client-controlled `allowedTypes.includes(file.type)` with `validateImageFile()`; uses `detectedMime` for both `ContentType` and extension derivation; DELETE now also tries `gif` and `webp` extensions
+- `apps/web/src/app/api/profile/brand-assets/signature/route.ts` — replaced client-controlled `file.type !== 'image/png'` with `validateSignatureFile()`; uses `validation.detectedMime!` as `ContentType`
+
+### Fix 4 — Gateway Cache: Credentials Removed from Redis
+
+- `apps/web/src/lib/gateways/manager.ts`
+  - **Before**: `redis.set('SetuLix:active_gateway', { slug, config }, ...)` — full `GatewayConfig` (secretKey, webhookSecret, token) stored in Redis as JSON
+  - **After**: `redis.set('active_gateway:slug', gatewayDoc.slug, ...)` — slug string only, never credentials
+  - On cache hit: use cached slug to fetch full doc from MongoDB → build gateway from DB
+  - On cache miss: fetch `{ isDefault: true, isActive: true }` from MongoDB → cache slug → build gateway from DB
+  - Old Redis key `SetuLix:active_gateway` deleted via `void redis.del(OLD_CACHE_KEY)` on every `getActiveGateway()` call (no-op once expired/deleted)
+  - `invalidateGatewayCache()` now deletes both old and new keys
+  - `getPaygicGateway()` updated: `environment` cast preserved (`as "sandbox" | "production"`)
+
+#### Modified Files (BSec-2)
+```
+apps/web/src/lib/gateways/cashfree.ts                          — timing-safe HMAC
+apps/web/src/app/api/payments/verify/route.ts                  — atomic findOneAndUpdate
+apps/web/src/app/api/payments/webhook/[gateway]/route.ts       — atomic findOneAndUpdate
+apps/web/src/lib/file-validation.ts                            — NEW: validateImageFile + validateSignatureFile
+apps/web/src/lib/r2-upload.ts                                  — contentType param (no more file.type)
+apps/web/src/app/api/profile/avatar/route.ts                   — validateImageFile
+apps/web/src/app/api/profile/logo/route.ts                     — validateImageFile
+apps/web/src/app/api/profile/brand-assets/logo/route.ts        — validateImageFile
+apps/web/src/app/api/profile/brand-assets/signature/route.ts   — validateSignatureFile
+apps/web/src/lib/gateways/manager.ts                           — slug-only Redis cache
+```
+
+#### Rules Verified
+- TypeScript: 0 errors (apps/web)
+- Build: passing (75/75 static pages)
+- No business logic changed — only security mechanisms
+- processCreditPackPayment / processPlanPayment functions unchanged
+- SVG/HTML files rejected at both extension and magic byte checks
+- Redis contains no payment gateway secrets
 
 ---
 
