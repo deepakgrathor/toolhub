@@ -130,9 +130,9 @@ export async function POST(req: NextRequest) {
             encoder.encode(`\n\n[ERROR:{"code":"insufficient_credits"}]`)
           );
         } else {
-          const msg = err instanceof Error ? err.message : "unknown";
+          console.error("[stream/blog-generator]", err);
           controller.enqueue(
-            encoder.encode(`\n\n[ERROR:{"code":"generation_failed","detail":"${msg.slice(0, 200)}"}]`)
+            encoder.encode(`\n\n[ERROR:{"code":"generation_failed"}]`)
           );
         }
       } finally {

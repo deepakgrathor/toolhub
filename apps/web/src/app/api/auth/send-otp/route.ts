@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomInt, createHash } from "crypto";
 import { connectDB, OtpToken, User } from "@toolhub/db";
+import { getRedis } from "@toolhub/shared";
 import { z } from "zod";
 
 const schema = z.object({
@@ -61,6 +62,31 @@ async function sendOtpEmail(email: string, name: string, otp: string) {
 }
 
 export async function POST(req: NextRequest) {
+  // IP-based rate limiting: max 5 OTP requests per IP per hour
+  try {
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      req.headers.get("x-real-ip") ??
+      "unknown";
+
+    const redis = getRedis();
+    const rateLimitKey = `otp:rate:${ip}`;
+    const attempts = await redis.incr(rateLimitKey);
+
+    if (attempts === 1) {
+      await redis.expire(rateLimitKey, 3600);
+    }
+
+    if (attempts > 5) {
+      return NextResponse.json(
+        { error: "Too many OTP requests. Please try again later." },
+        { status: 429 }
+      );
+    }
+  } catch (redisErr) {
+    console.error("[send-otp] Redis rate-limit error (failing open):", redisErr);
+  }
+
   try {
     const body = await req.json();
     const parsed = schema.safeParse(body);

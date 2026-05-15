@@ -1,9 +1,57 @@
 # Handoff Note
-Updated: 2026-05-15 | Account: B | Session: BFix-2 | Features: hardcoded values fix — kit pricing, welcome credits, ThemeProvider audit
+Updated: 2026-05-15 | Account: B | Session: BFix-3 | Features: security fixes — error message sanitization, OTP IP rate limiting, webhook order verification
 
 ## Where We Are
-Session BFix-2 done. **TypeScript: 0 errors (all packages). Build: passing.**
+Session BFix-3 done. **TypeScript: 0 errors (all packages). Build: passing (75/75 pages).**
+Master Context: v7.1 — BFix-1 (indexes, N+1, LiteLLM) + BFix-2 (hardcoded values) + BFix-3 (security) all complete.
 Note: pre-existing prisma/opentelemetry warning and verify-payment static render note in build output — both existed before this session.
+
+---
+
+## What Was Done (Session BFix-3)
+
+### Task 1 — Error Message Sanitization
+
+- `apps/web/src/app/api/tools/blog-generator/stream/route.ts`
+  - **Before**: catch block sent `detail: msg.slice(0,200)` unconditionally in stream error payload — leaked internal error details to client
+  - **After**: logs error server-side via `console.error`, sends only `{"code":"generation_failed"}` — no detail field
+- All JSON tool routes (blog-generator, caption-generator, hook-writer, etc.)
+  - Already had `process.env.NODE_ENV !== "production"` guard — in production `detail` was never sent
+  - No changes needed for these routes
+- `apps/web/src/app/api/tools/[slug]/route.ts` — already returning generic "Failed to fetch tool" ✓
+- `apps/web/src/app/api/tools/run/route.ts` — already returning generic "AI generation failed. Please try again." ✓
+
+### Task 2 — OTP IP-Based Rate Limiting
+
+- `apps/web/src/app/api/auth/send-otp/route.ts`
+  - Added IP-based rate limiting at the TOP of the POST handler, before any DB calls
+  - IP extracted from `x-forwarded-for` → `x-real-ip` → `"unknown"` fallback
+  - Redis key: `otp:rate:{ip}` with 1-hour TTL (set on first attempt)
+  - Max 5 requests per IP per hour → 429 if exceeded
+  - Redis errors fail open (try/catch logs server-side, request allowed through)
+  - Reuses `getRedis()` from `@toolhub/shared` (existing singleton pattern)
+  - Existing email-level DB TTL (3 per 10 min per email) unchanged — both limits apply
+
+### Task 3 — Webhook Signature Verification Order (verified)
+
+- `apps/web/src/app/api/payments/webhook/route.ts` (old Cashfree route)
+  - HMAC signature verified at STEP 2, before any DB reads/writes at STEP 5+ ✓
+- `apps/web/src/app/api/payments/webhook/[gateway]/route.ts` (active multi-gateway route)
+  - Cashfree: `gateway.verifyWebhook()` called at line 29 → returns 401 if invalid, before any write at line 77+ ✓
+  - Paygic: `verifyWebhook` always true (Paygic doesn't use HMAC), double-verifies via API at line 70 → before `payment.save()` at line 83 ✓
+  - Signature verification order is correct — no changes needed
+
+#### Modified Files (BFix-3)
+```
+apps/web/src/app/api/tools/blog-generator/stream/route.ts  — remove error detail leak in stream
+apps/web/src/app/api/auth/send-otp/route.ts               — IP-based Redis rate limiting added
+```
+
+#### Rules Verified
+- TypeScript: 0 errors (apps/web)
+- Build: passing (75/75 static pages)
+- No internal error messages sent to client in production
+- OTP brute force protected at both IP level (Redis) and email level (DB)
 
 ---
 
