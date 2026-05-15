@@ -1,9 +1,66 @@
 # Handoff Note
-Updated: 2026-05-15 | Account: B | Session: BFix-1 | Features: DB indexes, tool-registry N+1 fix, blog engine LiteLLM removal
+Updated: 2026-05-15 | Account: B | Session: BFix-2 | Features: hardcoded values fix — kit pricing, welcome credits, ThemeProvider audit
 
 ## Where We Are
-Session BFix-1 done. **TypeScript: 0 errors (all packages). Build: passing.**
+Session BFix-2 done. **TypeScript: 0 errors (all packages). Build: passing.**
 Note: pre-existing prisma/opentelemetry warning and verify-payment static render note in build output — both existed before this session.
+
+---
+
+## What Was Done (Session BFix-2)
+
+### Task 1 — Kit Page Hardcoded Credit Costs Removed
+
+- `apps/web/src/app/(marketing)/kits/[slug]/page.tsx` — fully rewritten
+  - Removed hardcoded `KITS` object (had baked-in `creditCost` values, violating arch rule #9 + #16)
+  - Added `MARKETING_CONTENT` — pure copy per kit (name, tagline, steps, useCases, faqs) — no creditCost
+  - Added `KIT_ICONS` map: URL slug → lucide-react component
+  - Added `KIT_DB_SLUG` map: `legal → ca-legal` (URL slug differs from DB kit slug in tools `kits[]` array)
+  - Tool list now fetched at render via `getToolsByKit(dbSlug)` — uses tool-registry (Redis + DB)
+  - Tool cards: show FREE badge (emerald) or AI badge (purple) — NO credit cost displayed
+  - Tools section hidden if DB returns empty (graceful fallback for unseeded envs)
+  - Added `export const revalidate = 3600` — ISR, marketing page does not need real-time data
+
+### Task 2 — ThemeProvider (already done — no changes needed)
+
+- Root `apps/web/src/app/layout.tsx` already had `getDefaultTheme()` reading SiteConfig key `"default_theme"` with fallback to `"dark"`
+- Seed already had `{ key: "default_theme", value: "dark" }` entry
+- Verified and confirmed — nothing to change
+
+### Task 3 — Welcome Credits Migrated to SiteConfig
+
+- `apps/web/src/auth.ts`
+  - Removed `FREE_CREDITS_ON_SIGNUP` import from `@toolhub/shared`
+  - Added `SiteConfig` import from `@toolhub/db`
+  - On first Google OAuth login (user creation): replaced `credits: FREE_CREDITS_ON_SIGNUP` with a `SiteConfig.findOne({ key: "welcome_bonus_credits" })` read (fallback: 10)
+  - Admin can now change welcome credits from DB without a code deploy
+- `packages/db/src/seed.ts`
+  - Added `{ key: "welcome_bonus_credits", value: 10 }` to `SITE_CONFIGS` array
+- `packages/shared/src/constants/index.ts`
+  - Marked `FREE_CREDITS_ON_SIGNUP` as `@deprecated` with comment pointing to SiteConfig key
+  - Kept the export (not deleted) — may still be referenced in docs/tooling
+
+#### Modified Files (BFix-2)
+```
+apps/web/src/app/(marketing)/kits/[slug]/page.tsx  — hardcoded KITS → DB fetch + MARKETING_CONTENT
+apps/web/src/auth.ts                               — FREE_CREDITS_ON_SIGNUP → SiteConfig read
+packages/db/src/seed.ts                            — added welcome_bonus_credits entry
+packages/shared/src/constants/index.ts            — deprecated FREE_CREDITS_ON_SIGNUP
+```
+
+#### Rules Verified
+- TypeScript: 0 errors (apps/web + packages/db + packages/shared)
+- Build: passing (75/75 static pages)
+- No credit costs shown on marketing pages
+- No hardcoded credit values in runtime code paths
+- Tool credit costs, welcome bonus all fetched from DB/SiteConfig
+
+---
+
+## Next Session: B10-C
+- FAQ section redesign (premium accordion with animations)
+- Final CTA redesign (premium gradient)
+- Any remaining polish items
 
 ---
 
