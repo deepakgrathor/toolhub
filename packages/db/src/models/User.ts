@@ -92,7 +92,7 @@ const UserSchema = new Schema<IUser>(
       default: "email",
     },
     referralCode: { type: String, unique: true, sparse: true },
-    referredBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    referredBy: { type: Schema.Types.ObjectId, ref: "User", default: null, index: true },
     referralCount: { type: Number, default: 0 },
     isBanned: { type: Boolean, default: false },
     status: { type: String, enum: ["active", "deleted", "banned"], default: "active" },

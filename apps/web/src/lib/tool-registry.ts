@@ -1,6 +1,5 @@
 import { connectDB } from "@toolhub/db";
-import { Tool, ITool } from "@toolhub/db";
-import { ToolConfig, IToolConfig } from "@toolhub/db";
+import { Tool } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 
 export interface ToolWithConfig {
@@ -68,31 +67,72 @@ async function cacheSet<T>(key: string, data: T): Promise<void> {
   }
 }
 
-// ── DB helpers ──────────────────────────────────────────────────────────────
+// ── Aggregation helpers ─────────────────────────────────────────────────────
 
-function mergeToolWithConfig(
-  tool: ITool,
-  config: IToolConfig | null
-): ToolWithConfig {
+// Raw document shape returned by the $lookup pipeline
+interface RawAggregatedTool {
+  slug: string;
+  name: string;
+  description: string;
+  category: string;
+  kits: string[];
+  isAI: boolean;
+  isFree: boolean;
+  icon: string;
+  createdAt: Date;
+  updatedAt: Date;
+  config?: {
+    creditCost?: number;
+    isActive?: boolean;
+    isVisible?: boolean;
+    aiModel?: string;
+    aiProvider?: string;
+    fallbackModel?: string;
+    fallbackProvider?: string;
+  };
+}
+
+// Reused pipeline stages — $match is prepended when querying by slug
+const LOOKUP_STAGES = [
+  {
+    $lookup: {
+      from: "toolconfigs",
+      localField: "slug",
+      foreignField: "toolSlug",
+      as: "configArr",
+    },
+  },
+  {
+    $addFields: {
+      config: { $arrayElemAt: ["$configArr", 0] },
+    },
+  },
+  {
+    $project: { configArr: 0 },
+  },
+];
+
+function fromAggregated(raw: RawAggregatedTool): ToolWithConfig {
+  const c = raw.config;
   return {
-    slug: tool.slug,
-    name: tool.name,
-    description: tool.description,
-    category: tool.category,
-    kits: tool.kits,
-    isAI: tool.isAI,
-    isFree: tool.isFree,
-    icon: tool.icon,
-    createdAt: tool.createdAt,
-    updatedAt: tool.updatedAt,
+    slug: raw.slug,
+    name: raw.name,
+    description: raw.description,
+    category: raw.category,
+    kits: raw.kits,
+    isAI: raw.isAI,
+    isFree: raw.isFree,
+    icon: raw.icon,
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt,
     config: {
-      creditCost: config?.creditCost ?? 0,
-      isActive: config?.isActive ?? true,
-      isVisible: config?.isVisible ?? true,
-      aiModel: config?.aiModel ?? "",
-      aiProvider: config?.aiProvider ?? "",
-      fallbackModel: config?.fallbackModel ?? "",
-      fallbackProvider: config?.fallbackProvider ?? "",
+      creditCost: c?.creditCost ?? 0,
+      isActive: c?.isActive ?? true,
+      isVisible: c?.isVisible ?? true,
+      aiModel: c?.aiModel ?? "",
+      aiProvider: c?.aiProvider ?? "",
+      fallbackModel: c?.fallbackModel ?? "",
+      fallbackProvider: c?.fallbackProvider ?? "",
     },
   };
 }
@@ -106,17 +146,9 @@ export async function getAllTools(): Promise<ToolWithConfig[]> {
 
   await connectDB();
 
-  const [tools, configs] = await Promise.all([
-    Tool.find().lean<ITool[]>(),
-    ToolConfig.find().lean<IToolConfig[]>(),
-  ]);
-
-  const configMap = new Map<string, IToolConfig>(
-    configs.map((c) => [c.toolSlug, c])
-  );
-
-  const result = tools
-    .map((t) => mergeToolWithConfig(t, configMap.get(t.slug) ?? null))
+  const raws = await Tool.aggregate<RawAggregatedTool>(LOOKUP_STAGES);
+  const result = raws
+    .map(fromAggregated)
     .filter((t) => t.config.isActive && t.config.isVisible);
 
   await cacheSet("all_tools", result);
@@ -131,14 +163,14 @@ export async function getToolBySlug(slug: string): Promise<ToolWithConfig | null
 
   await connectDB();
 
-  const [tool, config] = await Promise.all([
-    Tool.findOne({ slug }).lean<ITool>(),
-    ToolConfig.findOne({ toolSlug: slug }).lean<IToolConfig>(),
+  const raws = await Tool.aggregate<RawAggregatedTool>([
+    { $match: { slug } },
+    ...LOOKUP_STAGES,
   ]);
 
-  if (!tool) return null;
+  if (!raws[0]) return null;
 
-  const result = mergeToolWithConfig(tool, config);
+  const result = fromAggregated(raws[0]);
   await cacheSet(cacheKey, result);
   return result;
 }

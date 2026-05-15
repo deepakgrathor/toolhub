@@ -45,7 +45,7 @@ const CreditTransactionSchema = new Schema<ICreditTransaction>(
     },
     amount: { type: Number, required: true },
     balanceAfter: { type: Number, required: true },
-    toolSlug: { type: String },
+    toolSlug: { type: String, index: true },
     note: { type: String },
     meta: { type: Schema.Types.Mixed },
   },
