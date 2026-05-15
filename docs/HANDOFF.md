@@ -1,9 +1,102 @@
 # Handoff Note
-Updated: 2026-05-15 | Account: B | Session: BSec-3 | Features: security headers, Google email_verified, Redis rate limiter, HMAC OTP, JWT maxAge
+Updated: 2026-05-15 | Account: B | Session: BSec-4 | Features: prompt injection sanitization, email signup credits, referral SiteConfig, notification limits, misc security hardening
 
 ## Where We Are
-Session BSec-3 done. **TypeScript: 0 errors (apps/web).**
-Master Context: v7.4 — BFix-1 + BFix-2 + BFix-3 + BSec-1 + BSec-2 + BSec-3 all complete.
+Session BSec-4 done. **TypeScript: 0 errors (apps/web). Build: passing.**
+Master Context: v7.2 — Full security audit complete. BFix-1 + BFix-2 + BFix-3 + BSec-1 + BSec-2 + BSec-3 + BSec-4 all complete.
+
+---
+
+## What Was Done (Session BSec-4)
+
+### Fix 1 — Prompt Injection Sanitization
+
+- `apps/web/src/lib/prompt-sanitizer.ts` — **NEW**
+  - `sanitizeUserInput(input)` — replaces 8 injection patterns (`ignore previous instructions`, `system prompt`, `you are now`, `[INST]`, etc.) with `[removed]`; caps input at 2000 chars; replace (not block) approach avoids false positive rejections
+  - `sanitizeInputsObject(inputs)` — applies `sanitizeUserInput` to every key in the inputs object; non-string values coerced to string + capped
+- `apps/web/src/app/api/tools/blog-generator/stream/route.ts`
+  - `buildStreamingPrompt()` now sanitizes `topic`, `tone`, `targetAudience`, `keywords` before template interpolation
+- `apps/web/src/app/api/tools/run/route.ts`
+  - STEP 7: `sanitizeInputsObject(inputs)` runs before required-field validation and before prompt building
+  - STEP 8: Template key allowlist — `templateKeys` extracted from `promptTemplate` via regex; only those keys substituted; attacker-supplied extra keys (e.g. `systemInstructions`) silently ignored
+
+### Fix 2 — Welcome Credits for Email Signup
+
+- `apps/web/src/app/api/auth/signup/route.ts`
+  - Added `SiteConfig`, `CreditTransaction` to `@toolhub/db` import
+  - After user creation, if no referral cookie (`ref`): reads `welcome_bonus_credits` from SiteConfig (fallback: 10)
+  - Updates user with `$inc: { credits: welcomeCredits }` + sets `welcomeCreditGiven: true`
+  - Creates `CreditTransaction` with `type: 'welcome_bonus'` for audit trail
+  - Wrapped in try/catch — never breaks signup on credit error
+  - Referred users (with `ref` cookie) skip this block — credits come from admin-approved Referral flow
+
+### Fix 3 — Referral Manual Approval Reads SiteConfig
+
+- `apps/web/src/app/api/admin/referrals/[id]/approve/route.ts`
+  - Removed `const REFERRAL_CREDIT = 10` constant
+  - Added `SiteConfig` to import; reads `referral_reward_credits` key after `connectDB()` (fallback: 10)
+  - All four uses of the old constant replaced with `referralCredit` variable
+  - CreditTransaction and notifications still created correctly
+
+### Fix 4 — Admin Notifications: Length Limits + HTML Strip
+
+- `apps/web/src/app/api/admin/notifications/push/route.ts` — **full rewrite**
+  - Added `PushSchema` (Zod): `title` max 100 chars, `message` max 500 chars, both trimmed; `email` optional
+  - `stripHtml(str)` — strips all `<tag>` patterns before any DB write
+  - `safeTitle` + `safeMessage` used in all `Notification.create()` and `insertMany()` calls
+  - Zod validation failure returns `{ error: error.flatten() }` with 400
+
+### Fix 5 — Remaining Low + Medium Issues
+
+#### 5a — Gateway Environment Allowlist
+- `apps/web/src/app/api/admin/gateways/[slug]/route.ts`
+  - Added `z` import; `VALID_ENVIRONMENTS = z.enum(['sandbox', 'production'])`
+  - `body.environment` validated via `safeParse` before updating; returns 400 on invalid value
+
+#### 5b — Cron Secret Timing-Safe Comparison
+- `apps/web/src/app/api/cron/renewal-reminder/route.ts` + `rollover/route.ts`
+  - Added `verifyCronSecret(provided)` helper using `crypto.timingSafeEqual`
+  - Length mismatch returns false without timing info; both buffers must match byte-for-byte
+  - Replaces `authHeader !== \`Bearer ${cronSecret}\`` string comparison
+
+#### 5c — Tool Run Response: No Balance Leak
+- `apps/web/src/app/api/tools/run/route.ts`
+  - STEP 14 response changed from `{ output, creditsUsed, newBalance }` → `{ success: true, output }`
+  - Frontend must use `/api/user/balance` to refresh credit display
+
+#### 5d — PDF Content Length Validation
+- `apps/web/src/app/api/tools/download-pdf/route.tsx`
+  - Added `MAX_PDF_CONTENT = 50000` check immediately after body parse
+  - Returns 400 `"Content too large for PDF generation"` if content is missing, not a string, or over limit
+
+#### 5e — Admin Presets: ObjectId Validation
+- `apps/web/src/app/api/admin/users/[userId]/presets/route.ts`
+  - Added `isValidObjectId` import from `mongoose`
+  - Early return 400 `"Invalid user ID"` if `userId` fails ObjectId check, before any DB query
+
+#### Modified Files (BSec-4)
+```
+apps/web/src/lib/prompt-sanitizer.ts                              — NEW
+apps/web/src/app/api/tools/blog-generator/stream/route.ts         — sanitize inputs
+apps/web/src/app/api/tools/run/route.ts                           — sanitize inputs + allowlist + response trim
+apps/web/src/app/api/auth/signup/route.ts                         — welcome credits for email users
+apps/web/src/app/api/admin/referrals/[id]/approve/route.ts        — SiteConfig referral credit
+apps/web/src/app/api/admin/notifications/push/route.ts            — Zod limits + HTML strip
+apps/web/src/app/api/admin/gateways/[slug]/route.ts               — z.enum environment
+apps/web/src/app/api/cron/renewal-reminder/route.ts               — timingSafeEqual cron auth
+apps/web/src/app/api/cron/rollover/route.ts                       — timingSafeEqual cron auth
+apps/web/src/app/api/tools/download-pdf/route.tsx                 — content length guard
+apps/web/src/app/api/admin/users/[userId]/presets/route.ts        — isValidObjectId guard
+```
+
+#### Rules Verified
+- TypeScript: 0 errors (apps/web)
+- Build: passing (all static pages rendered)
+- No business logic changed — only security mechanisms
+- sanitizeUserInput replaces (not blocks) — no false positives on legitimate content
+- welcomeCreditGiven flag prevents double-claim
+- CreditTransaction created for all credit grants (full audit trail)
+- SiteConfig fallback to 10 if key missing for both welcome + referral credits
 
 ---
 
