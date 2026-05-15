@@ -180,7 +180,7 @@ function PlanCard({
       {/* CTA */}
       {plan.type === "enterprise" ? (
         <a
-          href="mailto:talk.enterprise@toolspire.io"
+          href="mailto:talk.enterprise@setulix.com"
           className="flex items-center justify-center gap-2 w-full rounded-xl border border-border py-2.5 text-sm font-semibold text-foreground hover:bg-muted/40 transition-colors"
         >
           <Mail className="h-4 w-4" />

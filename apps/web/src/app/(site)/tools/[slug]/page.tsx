@@ -134,9 +134,9 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const tool = await getToolBySlug(params.slug);
-  if (!tool) return { title: "Tool Not Found — Toolspire" };
+  if (!tool) return { title: "Tool Not Found — SetuLix" };
   return {
-    title: `${tool.name} — Toolspire`,
+    title: `${tool.name} — SetuLix`,
     description: tool.description,
   };
 }

@@ -1,0 +1,15 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#0a0a0a"/>
+  <rect x="40" y="40" width="1120" height="550" rx="16" fill="#111111"/>
+  <text x="600" y="280" font-family="system-ui,sans-serif"
+    font-size="72" font-weight="700" fill="#7c3aed"
+    text-anchor="middle">SetuLix</text>
+  <text x="600" y="360" font-family="system-ui,sans-serif"
+    font-size="32" fill="#e8e8e8" text-anchor="middle">
+    AI Tools for Every Indian Business
+  </text>
+  <text x="600" y="430" font-family="system-ui,sans-serif"
+    font-size="24" fill="#888888" text-anchor="middle">
+    setulix.com
+  </text>
+</svg>

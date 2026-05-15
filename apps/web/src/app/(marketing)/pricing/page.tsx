@@ -5,7 +5,7 @@ import { connectDB, Plan as PlanModel, CreditPack, SiteConfig } from "@toolhub/d
 import { getRedis } from "@toolhub/shared";
 
 export const metadata: Metadata = {
-  title: "Pricing — ToolHub | Simple AI Tool Plans",
+  title: "Pricing — SetuLix | AI Credits & Plans",
   description:
     "Start free with all non-AI tools. Upgrade to unlock AI credits for blog writing, invoices, HR docs, legal notices, and more. No hidden fees.",
 };

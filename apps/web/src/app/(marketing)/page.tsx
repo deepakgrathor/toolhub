@@ -459,8 +459,47 @@ export default async function MarketingHomePage() {
     fetchRollover(),
   ]);
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://setulix.com/#organization",
+        name: "SetuLabsAI",
+        alternateName: "SetuLix",
+        url: "https://setulix.com",
+        logo: {
+          "@type": "ImageObject",
+          url: "https://setulix.com/android-chrome-512x512.png",
+        },
+        sameAs: ["https://www.linkedin.com/in/deepakgrathor/"],
+        contactPoint: {
+          "@type": "ContactPoint",
+          email: "talk.enterprise@setulix.com",
+          contactType: "customer service",
+          areaServed: "IN",
+          availableLanguage: "English",
+        },
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://setulix.com/#website",
+        url: "https://setulix.com",
+        name: "SetuLix",
+        description:
+          "27 AI-powered tools for Indian businesses, creators and professionals.",
+        publisher: { "@id": "https://setulix.com/#organization" },
+        inLanguage: "en-IN",
+      },
+    ],
+  };
+
   return (
     <div className="overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <DeletedAccountToast />
 
       {/* AuthModalOpener: reads ?auth=signup|login from URL */}

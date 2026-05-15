@@ -1,33 +1,50 @@
-import type { MetadataRoute } from "next";
-import { SIDEBAR_KITS } from "@/lib/kit-config";
+import { MetadataRoute } from "next";
 
-const BASE = "https://setulix.com";
-
-const STATIC_ROUTES: MetadataRoute.Sitemap = [
-  { url: BASE, changeFrequency: "weekly", priority: 1.0 },
-  { url: `${BASE}/pricing`, changeFrequency: "weekly", priority: 0.9 },
-  { url: `${BASE}/about`, changeFrequency: "monthly", priority: 0.7 },
-  { url: `${BASE}/kits/creator`, changeFrequency: "monthly", priority: 0.8 },
-  { url: `${BASE}/kits/sme`, changeFrequency: "monthly", priority: 0.8 },
-  { url: `${BASE}/kits/hr`, changeFrequency: "monthly", priority: 0.8 },
-  { url: `${BASE}/kits/legal`, changeFrequency: "monthly", priority: 0.8 },
-  { url: `${BASE}/kits/marketing`, changeFrequency: "monthly", priority: 0.8 },
+const TOOL_SLUGS = [
+  "blog-generator", "yt-script", "thumbnail-ai",
+  "title-generator", "hook-writer", "caption-generator",
+  "gst-invoice", "expense-tracker", "quotation-generator",
+  "salary-slip", "offer-letter", "tds-sheet", "qr-generator",
+  "jd-generator", "resume-screener", "appraisal-draft",
+  "policy-generator", "legal-notice", "nda-generator",
+  "legal-disclaimer", "gst-calculator", "whatsapp-bulk",
+  "ad-copy", "email-subject", "linkedin-bio",
+  "seo-auditor", "website-generator",
 ];
 
+const KIT_SLUGS = ["creator", "sme", "hr", "legal", "marketing"];
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  // Deduplicate slugs (some tools appear in multiple kits)
-  const slugSet = new Set<string>();
-  for (const kit of SIDEBAR_KITS) {
-    for (const tool of kit.tools) {
-      slugSet.add(tool.slug);
-    }
-  }
+  const base = "https://setulix.com";
+  const now = new Date();
 
-  const toolRoutes: MetadataRoute.Sitemap = Array.from(slugSet).map((slug) => ({
-    url: `${BASE}/tools/${slug}`,
-    changeFrequency: "monthly" as const,
-    priority: 0.7,
-  }));
+  return [
+    // Homepage
+    { url: base, lastModified: now, changeFrequency: "daily", priority: 1.0 },
 
-  return [...STATIC_ROUTES, ...toolRoutes];
+    // Kit pages
+    ...KIT_SLUGS.map((slug) => ({
+      url: `${base}/kits/${slug}`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.9,
+    })),
+
+    // Individual tool pages
+    ...TOOL_SLUGS.map((slug) => ({
+      url: `${base}/tools/${slug}`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.85,
+    })),
+
+    // Tools listing
+    { url: `${base}/tools`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
+
+    // Pricing
+    { url: `${base}/pricing`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+
+    // About
+    { url: `${base}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+  ];
 }

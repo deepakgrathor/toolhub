@@ -3,7 +3,7 @@ import { connectDB, Plan } from "@toolhub/db";
 import { PlansTable } from "@/components/admin/PlansTable";
 import type { PlanRow } from "@/components/admin/PlansTable";
 
-export const metadata: Metadata = { title: "Admin Plans — ToolHub" };
+export const metadata: Metadata = { title: "Admin Plans — SetuLix" };
 export const dynamic = "force-dynamic";
 
 async function getPlans(): Promise<PlanRow[]> {

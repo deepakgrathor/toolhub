@@ -147,12 +147,48 @@ const MARKETING_CONTENT: Record<string, MarketingContent> = {
 
 // ── Metadata ─────────────────────────────────────────────────────────────────
 
+const KIT_DESCRIPTIONS: Record<string, string> = {
+  creator:
+    "6 AI-powered tools for Indian content creators and YouTubers. Generate blog posts, YouTube scripts, thumbnails, titles, hooks and captions — all from one platform.",
+  sme:
+    "7 free business tools built for Indian SMEs and freelancers. Create GST invoices, salary slips, quotations, offer letters and TDS sheets — zero credits required.",
+  hr:
+    "4 AI-powered HR tools for Indian teams and HR professionals. Generate job descriptions, screen resumes, draft appraisals and create HR policies in minutes.",
+  legal:
+    "5 AI legal tools for Indian businesses and CA professionals. Draft legal notices, NDAs, disclaimers and calculate GST — all compliant with Indian law.",
+  marketing:
+    "5 AI marketing tools for Indian brands and agencies. Write ad copy, email subject lines, LinkedIn bios and get full SEO audits — powered by GPT-4o and Gemini.",
+};
+
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const content = MARKETING_CONTENT[params.slug];
-  if (!content) return {};
+  const { slug } = params;
+
+  const description = KIT_DESCRIPTIONS[slug];
+  if (!description) {
+    return { title: "Kit not found | SetuLix" };
+  }
+
+  const kitName = slug.charAt(0).toUpperCase() + slug.slice(1);
+  const title = `${kitName} Kit — AI Tools for Indian Professionals`;
+
   return {
-    title: `${content.name} — AI Tools for Indian Professionals | SetuLix`,
-    description: content.tagline,
+    title,
+    description,
+    alternates: {
+      canonical: `https://setulix.com/kits/${slug}`,
+    },
+    openGraph: {
+      title: `${title} | SetuLix`,
+      description,
+      url: `https://setulix.com/kits/${slug}`,
+      images: [{ url: "/og-default.png", width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | SetuLix`,
+      description,
+      images: ["/og-default.png"],
+    },
   };
 }
 

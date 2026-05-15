@@ -1,0 +1,74 @@
+# SetuLix by SetuLabsAI
+> AI-powered tools platform for Indian businesses, creators, and professionals.
+
+SetuLix offers 27 tools across 5 professional kits. Free tools (zero credits)
+and AI-powered paid tools (credit-based). No subscription needed to start.
+
+Website: https://setulix.com
+Founder: Deepak Rathor
+Company: SetuLabsAI
+Contact: talk.enterprise@setulix.com
+LinkedIn: https://www.linkedin.com/in/deepakgrathor/
+
+## Plans
+- Free: ₹0 — 10 welcome credits, free tools unlimited
+- Lite: ₹399/month — 200 credits/month
+- Pro: ₹999/month — 700 credits/month
+- Business: ₹2999/month — 1500 credits/month, team seats
+
+## Tool Kits
+
+### Creator Kit — /kits/creator
+Tools for Indian content creators and YouTubers.
+- Blog Generator (/tools/blog-generator) — AI blog post writer for Indian audiences
+- YouTube Script Writer (/tools/yt-script) — full YT video scripts
+- Thumbnail AI (/tools/thumbnail-ai) — AI-generated YouTube thumbnails
+- Title Generator (/tools/title-generator) — YouTube and blog title ideas
+- Hook Writer (/tools/hook-writer) — attention-grabbing content hooks
+- Caption Generator (/tools/caption-generator) — Instagram and social captions
+
+### SME Kit — /kits/sme
+Free business document tools for Indian small businesses.
+- GST Invoice Generator (/tools/gst-invoice) — GST-compliant invoices, zero credits
+- Expense Tracker (/tools/expense-tracker) — business expense tracking, zero credits
+- Quotation Generator (/tools/quotation-generator) — professional quotes, zero credits
+- Salary Slip Generator (/tools/salary-slip) — payslips for employees, zero credits
+- Offer Letter Generator (/tools/offer-letter) — employment offer letters, zero credits
+- TDS Sheet (/tools/tds-sheet) — TDS calculation sheet, zero credits
+- QR Code Generator (/tools/qr-generator) — business QR codes, zero credits
+
+### HR Kit — /kits/hr
+AI tools for Indian HR professionals and teams.
+- Job Description Generator (/tools/jd-generator) — AI-written job descriptions
+- Resume Screener (/tools/resume-screener) — AI resume shortlisting
+- Appraisal Draft (/tools/appraisal-draft) — performance appraisal writing
+- Policy Generator (/tools/policy-generator) — HR policy documents
+
+### Legal Kit — /kits/legal
+AI legal drafting tools for Indian businesses and CA professionals.
+- Legal Notice Generator (/tools/legal-notice) — legally worded notices
+- NDA Generator (/tools/nda-generator) — non-disclosure agreements
+- Legal Disclaimer (/tools/legal-disclaimer) — website and app disclaimers
+- GST Calculator (/tools/gst-calculator) — GST calculation, zero credits
+- WhatsApp Bulk Message (/tools/whatsapp-bulk) — bulk message composer
+
+### Marketing Kit — /kits/marketing
+AI marketing tools for Indian brands and agencies.
+- Ad Copy Writer (/tools/ad-copy) — Facebook and Google ad copy
+- Email Subject Line Generator (/tools/email-subject) — high open-rate subjects
+- LinkedIn Bio Generator (/tools/linkedin-bio) — professional LinkedIn summaries
+- SEO Auditor (/tools/seo-auditor) — website SEO analysis
+
+### Website Kit — /kits/website
+AI website content generation for Indian businesses.
+- Website Generator (/tools/website-generator) — full website content generation
+
+## Target Audience
+Indian freelancers, small and medium businesses (SMEs), HR professionals,
+CA and legal professionals, digital marketers, content creators, YouTubers,
+startups, agencies operating in India.
+
+## Technology
+Built on Next.js 14, powered by Claude (Anthropic), GPT-4o (OpenAI),
+and Gemini (Google). Payments via UPI (Paygic) and Cashfree.
+Hosted on Vercel.
