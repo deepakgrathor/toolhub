@@ -474,8 +474,7 @@ export default function CheckoutPage() {
                 <div className="rounded-lg bg-primary/5 border border-primary/20 p-3">
                   <p className="text-sm font-semibold text-foreground">{item.name}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {item.credits} credits
-                    {item.cycle ? ` / ${item.cycle}` : ""}
+                    {item.credits} credits{item.type === "plan" ? " / month" : ""}
                   </p>
                   {item.cycle === "yearly" && item.monthlyRate != null && (
                     <p className="text-xs text-primary mt-1 font-medium">
