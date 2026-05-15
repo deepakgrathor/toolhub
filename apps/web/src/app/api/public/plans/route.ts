@@ -1,52 +1,27 @@
 import { NextResponse } from "next/server";
 import { connectDB, Plan } from "@toolhub/db";
-import { getRedis } from "@toolhub/shared";
-
-const CACHE_KEY = "plans:public";
-const CACHE_TTL = 600; // 10 min
+import { withCache } from "@/lib/with-cache";
 
 export async function GET() {
   try {
-    const redis = getRedis();
-    const cached = await redis.get(CACHE_KEY);
-    if (cached) {
-      const parsed = JSON.parse(cached as string) as unknown[];
-      if (parsed.length > 0) {
-        const response = NextResponse.json({ plans: parsed });
-        response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
-        return response;
-      }
-      // Empty cached array means seed hadn't run yet — fall through to DB
-      await redis.del(CACHE_KEY);
-    }
-  } catch {
-    // Redis unavailable — fall through to DB
-  }
+    const plans = await withCache("plans:public", 600, async () => {
+      await connectDB();
+      const rawPlans = await Plan.find({ isActive: true })
+        .sort({ order: 1 })
+        .lean();
 
-  try {
-    await connectDB();
-    const plans = await Plan.find({ isActive: true })
-      .sort({ order: 1 })
-      .lean();
-
-    // Compute yearly savings per plan (both prices are monthly equivalents)
-    const plansWithSavings = plans.map((plan) => {
-      const yearlySavings =
-        (plan.pricing.monthly.basePrice - plan.pricing.yearly.basePrice) * 12;
-      return { ...plan, yearlySavings };
+      return rawPlans.map((plan) => ({
+        ...plan,
+        yearlySavings:
+          (plan.pricing.monthly.basePrice - plan.pricing.yearly.basePrice) * 12,
+      }));
     });
 
-    try {
-      const redis = getRedis();
-      await redis.set(CACHE_KEY, JSON.stringify(plansWithSavings), {
-        ex: CACHE_TTL,
-      });
-    } catch {
-      // silent
-    }
-
-    const response = NextResponse.json({ plans: plansWithSavings });
-    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    const response = NextResponse.json({ plans });
+    response.headers.set(
+      "Cache-Control",
+      "public, s-maxage=3600, stale-while-revalidate=86400"
+    );
     return response;
   } catch {
     return NextResponse.json(

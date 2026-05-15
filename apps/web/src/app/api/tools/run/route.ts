@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireAuth } from "@/lib/require-auth";
 import { connectDB, Tool, User, CreditTransaction } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 import { checkAbuseLimit } from "@/lib/abuse-protection";
@@ -178,11 +178,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── STEP 3 — Auth ────────────────────────────────────────────────────────
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const userId = session.user.id;
+    const authResult = await requireAuth();
+    if (!authResult.authenticated) return authResult.response;
+    const { userId } = authResult;
 
     const userDoc = await User.findById(userId).select("credits plan isDeleted").lean();
     if (!userDoc || userDoc.isDeleted) {

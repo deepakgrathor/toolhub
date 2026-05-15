@@ -1,44 +1,30 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@toolhub/db";
-import { getRedis } from "@toolhub/shared";
 import mongoose from "mongoose";
-
-const CACHE_KEY = "public:tools";
-const CACHE_TTL = 300; // 5 min
+import { withCache } from "@/lib/with-cache";
 
 export async function GET() {
   try {
-    const redis = getRedis();
-    const cached = await redis.get(CACHE_KEY);
-    if (cached) {
-      const response = NextResponse.json({ tools: JSON.parse(cached as string) });
-      response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
-      return response;
-    }
-  } catch {
-    // Redis unavailable
-  }
-
-  try {
-    await connectDB();
-    const db = mongoose.connection.db!;
-    const tools = await db
-      .collection("tools")
-      .find({ isVisible: { $ne: false } })
-      .project({ slug: 1, name: 1, kit: 1, description: 1 })
-      .toArray();
-
-    try {
-      const redis = getRedis();
-      await redis.set(CACHE_KEY, JSON.stringify(tools), { ex: CACHE_TTL });
-    } catch {
-      // silent
-    }
+    const tools = await withCache("public:tools", 300, async () => {
+      await connectDB();
+      const db = mongoose.connection.db!;
+      return db
+        .collection("tools")
+        .find({ isVisible: { $ne: false } })
+        .project({ slug: 1, name: 1, kit: 1, description: 1 })
+        .toArray();
+    });
 
     const response = NextResponse.json({ tools });
-    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    response.headers.set(
+      "Cache-Control",
+      "public, s-maxage=3600, stale-while-revalidate=86400"
+    );
     return response;
   } catch {
-    return NextResponse.json({ tools: [], error: "DB unavailable" }, { status: 200 });
+    return NextResponse.json(
+      { tools: [], error: "DB unavailable" },
+      { status: 200 }
+    );
   }
 }

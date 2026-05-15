@@ -1,9 +1,108 @@
 # Handoff Note
-Updated: 2026-05-15 | Account: B | Session: BPerf-1 | Features: Cache-Control headers, DB projections, ISR, generateStaticParams, SiteConfig Redis cache
+Updated: 2026-05-15 | Account: B | Session: BPerf-2 | Features: withCache helper, requireAuth helper, getUserPlanSlug dedup, atomic plan expiry, response trimming
 
 ## Where We Are
-Session BPerf-1 done. **TypeScript: 0 errors (apps/web). Build: passing.**
-Master Context: v7.3 — Full security audit complete + BPerf-1 performance pass. BFix-1 + BFix-2 + BFix-3 + BSec-1 + BSec-2 + BSec-3 + BSec-4 + BPerf-1 all complete.
+Session BPerf-2 done. **TypeScript: 0 errors (apps/web). Build: passing.**
+Master Context: v7.4 — Full security audit complete + BPerf-1 + BPerf-2 performance passes. BFix-1 + BFix-2 + BFix-3 + BSec-1 + BSec-2 + BSec-3 + BSec-4 + BPerf-1 + BPerf-2 all complete.
+
+---
+
+## What Was Done (Session BPerf-2)
+
+### Fix 1 — withCache\<T\>() Shared Redis Helper
+
+- `apps/web/src/lib/with-cache.ts` — **NEW**
+  - `withCache<T>(key, ttlSeconds, fetcher)` — Redis-first cache-aside; fails open (returns fetcher result even if Redis write fails); uses `getRedis()` from `@toolhub/shared`
+  - `invalidateCache(...keys)` — deletes multiple Redis keys; non-critical (silent on error)
+- `apps/web/src/app/api/public/tools/route.ts`
+  - Replaced manual `getRedis()` try/catch/get/set blocks with `withCache('public:tools', 300, fetcher)`; key unchanged
+- `apps/web/src/app/api/public/plans/route.ts`
+  - Replaced manual Redis blocks with `withCache('plans:public', 600, fetcher)`; `yearlySavings` computation preserved inside fetcher
+- `apps/web/src/lib/user-plan.ts`
+  - Replaced manual Redis get/set blocks with `withCache('plan:{userId}', 300, fetcher)`; key format and TTL unchanged
+
+### Fix 2 — requireAuth() Shared Auth Helper
+
+- `apps/web/src/lib/require-auth.ts` — **NEW**
+  - `requireAuth()` — calls `auth()`, returns `{ authenticated: true, userId, session }` or `{ authenticated: false, response: 401 }`
+  - Error message standardised to `'Authentication required'`
+  - Typed with `Session` from `next-auth` (avoids NextAuth v5 overload TS error)
+  - TODO comment for gradual rollout to remaining routes
+- Applied to 6 high-traffic routes (replaced `const session = await auth(); if (!session?.user?.id)` pattern):
+  - `apps/web/src/app/api/tools/run/route.ts`
+  - `apps/web/src/app/api/user/credits/route.ts` (the balance endpoint)
+  - `apps/web/src/app/api/user/history/route.ts`
+  - `apps/web/src/app/api/user/workspace/route.ts`
+  - `apps/web/src/app/api/user/credits/deduct/route.ts`
+  - `apps/web/src/app/api/tools/download-pdf/route.tsx`
+
+### Fix 3 — getUserPlanSlug() Eliminates Duplicate DB Query
+
+- `apps/web/src/lib/tool-guard.ts`
+  - `getUserPlanSlug()` now delegates to `getUserPlan()` from `@/lib/user-plan` (Redis cache + DB fallback)
+  - Removed direct `User.findById()` call from `getUserPlanSlug` — uses cached result
+  - `runToolGuard()` keeps its own `User.findById` for the abuse check (separate concern)
+
+### Fix 4 — Atomic Plan Expiry Check
+
+- `apps/web/src/auth.ts` (~line 127)
+  - Replaced 2-call pattern (findById + findByIdAndUpdate) with single `User.findOneAndUpdate` matching `{ plan: { $ne: 'free' }, planExpiry: { $lt: now } }`
+  - Returns null for non-expired users (majority) — 1 DB call instead of 2
+  - Cache invalidation (`plan:`, `sidebar:` keys) only fires when expiredUser is non-null
+
+### Fix 5 — Admin Payments: Exclude billingSnapshot from List
+
+- `apps/web/src/app/api/admin/payments/route.ts`
+  - Added `.select('-billingSnapshot')` to list query — removes 30–50KB per page load
+  - Removed `billingSnapshot` from serialised row map
+- `apps/web/src/app/api/admin/payments/[id]/route.ts` — **NEW**
+  - `GET /api/admin/payments/[id]` — returns full payment document including `billingSnapshot`
+  - Protected by `requireAdmin()`
+
+### Fix 6 — Admin Referrals: .lean() Already Present
+
+- `apps/web/src/app/api/admin/referrals/route.ts`
+  - `.lean()` was already present after both `.populate()` calls — no change needed
+
+### Fix 7 — History List: Projection + Truncation + Detail Endpoint
+
+- `apps/web/src/app/api/user/history/route.ts`
+  - Added `.select('toolSlug creditsUsed createdAt outputText')` — excludes `inputSnapshot` from list
+  - `outputText` truncated to 200 chars in response map; `hasMore: boolean` added
+  - Fixed stale `session.user.id` reference (now uses `userId` from `requireAuth`)
+- `apps/web/src/app/api/user/history/[id]/route.ts` — **NEW**
+  - `GET /api/user/history/[id]` — returns full document including `outputText` + `inputSnapshot`
+  - Ownership check: `{ _id, userId }` filter ensures user can only access own records
+  - Protected by `requireAuth()`
+
+#### Modified Files (BPerf-2)
+```
+apps/web/src/lib/with-cache.ts                              — NEW: withCache + invalidateCache
+apps/web/src/lib/require-auth.ts                            — NEW: requireAuth helper
+apps/web/src/app/api/public/tools/route.ts                  — withCache
+apps/web/src/app/api/public/plans/route.ts                  — withCache
+apps/web/src/lib/user-plan.ts                               — withCache
+apps/web/src/lib/tool-guard.ts                              — getUserPlanSlug delegates to getUserPlan
+apps/web/src/auth.ts                                        — atomic findOneAndUpdate for plan expiry
+apps/web/src/app/api/tools/run/route.ts                     — requireAuth
+apps/web/src/app/api/user/credits/route.ts                  — requireAuth
+apps/web/src/app/api/user/history/route.ts                  — requireAuth + projection + truncation
+apps/web/src/app/api/user/workspace/route.ts                — requireAuth
+apps/web/src/app/api/user/credits/deduct/route.ts           — requireAuth
+apps/web/src/app/api/tools/download-pdf/route.tsx           — requireAuth
+apps/web/src/app/api/admin/payments/route.ts                — .select('-billingSnapshot')
+apps/web/src/app/api/admin/payments/[id]/route.ts           — NEW: detail endpoint with billingSnapshot
+apps/web/src/app/api/user/history/[id]/route.ts             — NEW: detail endpoint with full outputText
+```
+
+#### Rules Verified
+- TypeScript: 0 errors (apps/web)
+- Build: passing
+- No business logic changed — only DRY violations fixed + query optimisations
+- Cache key names unchanged — existing Redis entries remain valid
+- requireAuth fails open to 401 with standardised error message
+- withCache fails open — fetcher result returned even if Redis write fails
+- Plan expiry reset behaviour functionally identical; atomic for non-expired users (1 DB call)
 
 ---
 

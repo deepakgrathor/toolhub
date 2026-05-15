@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireAuth } from "@/lib/require-auth";
 import { connectDB, CreditService } from "@toolhub/db";
 import { getCachedBalance, setCachedBalance } from "@/lib/credit-cache";
 
@@ -7,12 +7,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+    const authResult = await requireAuth();
+    if (!authResult.authenticated) return authResult.response;
+    const { userId } = authResult;
 
     // Try Redis cache first (avoids DB round-trip on every navbar/store sync)
     const cached = await getCachedBalance(userId);

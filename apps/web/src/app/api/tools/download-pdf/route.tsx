@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireAuth } from "@/lib/require-auth";
 import { connectDB, BusinessProfile, User } from "@toolhub/db";
 import { getUserPlan } from "@/lib/user-plan";
 import { renderToBuffer } from "@react-pdf/renderer";
@@ -10,12 +10,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+    const authResult = await requireAuth();
+    if (!authResult.authenticated) return authResult.response;
+    const { userId } = authResult;
 
     // STEP 1 — Auth + plan check (all plans allowed)
     const planSlug = await getUserPlan(userId);

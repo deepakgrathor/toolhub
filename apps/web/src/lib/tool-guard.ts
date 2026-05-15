@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { connectDB, User } from "@toolhub/db";
 import { checkAbuseLimit } from "@/lib/abuse-protection";
+import { getUserPlan } from "@/lib/user-plan";
 
 export async function runToolGuard(
   userId: string,
@@ -34,9 +35,8 @@ export async function runToolGuard(
   return null;
 }
 
-/** Fetch user's plan slug — used by /api/user/plan and server components */
+/** Fetch user's plan slug — uses Redis cache via getUserPlan() */
 export async function getUserPlanSlug(userId: string): Promise<string> {
-  await connectDB();
-  const user = await User.findById(userId).select("plan").lean();
-  return user?.plan ?? "free";
+  const plan = await getUserPlan(userId);
+  return plan ?? "free";
 }

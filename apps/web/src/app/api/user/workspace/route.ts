@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireAuth } from "@/lib/require-auth";
 import { connectDB, User } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 import { SIDEBAR_KITS } from "@/lib/kit-config";
@@ -34,12 +34,9 @@ const PROFESSION_KIT: Record<string, string> = {
 };
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.user.id;
+  const authResult = await requireAuth();
+  if (!authResult.authenticated) return authResult.response;
+  const { userId } = authResult;
   const cacheKey = `workspace:${userId}`;
 
   try {

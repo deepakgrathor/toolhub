@@ -123,22 +123,23 @@ const config: NextAuthConfig = {
           token.onboardingCompleted = user.onboardingCompleted ?? false;
         }
       }
-      // Check plan expiry on each token refresh
+      // Check plan expiry on each token refresh (single atomic DB call)
       if (token.id && !token.isDeleted) {
         try {
           await connectDB();
-          const dbUser = await User.findById(token.id).select("plan planExpiry");
-          if (
-            dbUser &&
-            dbUser.plan !== "free" &&
-            dbUser.planExpiry &&
-            dbUser.planExpiry < new Date()
-          ) {
-            // Plan expired — reset to free
-            await User.findByIdAndUpdate(token.id, {
-              plan: "free",
-              planExpiry: null,
-            });
+          const now = new Date();
+          // findOneAndUpdate only matches non-free users with expired plans.
+          // Returns null for the majority (not expired) — avoids a second DB call.
+          const expiredUser = await User.findOneAndUpdate(
+            {
+              _id: token.id,
+              plan: { $ne: "free" },
+              planExpiry: { $lt: now },
+            },
+            { $set: { plan: "free", planExpiry: null } },
+            { new: true }
+          );
+          if (expiredUser) {
             const { getRedis } = await import("@toolhub/shared");
             const redis = getRedis();
             await redis.del(`plan:${token.id}`);

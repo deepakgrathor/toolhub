@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
 
   const [payments, totalCount, statsAgg] = await Promise.all([
     Payment.find(filter)
+      .select("-billingSnapshot")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -77,7 +78,6 @@ export async function GET(req: NextRequest) {
       invoiceNumber: p.invoiceNumber ?? null,
       paymentMethod: p.paymentMethod ?? null,
       cashfreePaymentId: p.cashfreePaymentId ?? null,
-      billingSnapshot: p.billingSnapshot,
       credits: p.credits,
       planSlug: p.planSlug ?? null,
       billingCycle: p.billingCycle ?? null,

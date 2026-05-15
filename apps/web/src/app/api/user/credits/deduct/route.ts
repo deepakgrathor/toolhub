@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireAuth } from "@/lib/require-auth";
 import { connectDB, CreditService, InsufficientCreditsError, User, ToolConfig } from "@toolhub/db";
 import { z } from "zod";
 import { invalidateBalance, invalidateDashStats } from "@/lib/credit-cache";
@@ -10,10 +10,9 @@ const deductSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authResult = await requireAuth();
+  if (!authResult.authenticated) return authResult.response;
+  const { userId } = authResult;
 
   const body = await req.json();
   const parsed = deductSchema.safeParse(body);
@@ -35,20 +34,20 @@ export async function POST(req: NextRequest) {
     }
 
     const { newBalance } = await CreditService.deductCredits(
-      session.user.id,
+      userId,
       amount,
       parsed.data.toolSlug
     );
 
     // Invalidate stale cached balance + dashboard stats
     await Promise.all([
-      invalidateBalance(session.user.id),
-      invalidateDashStats(session.user.id),
+      invalidateBalance(userId),
+      invalidateDashStats(userId),
     ]);
 
     // Fire-and-forget credit low alert (never blocks response)
-    const userPlan = await User.findById(session.user.id).select("plan").lean();
-    void checkAndSendCreditAlert(session.user.id, newBalance, userPlan?.plan ?? "free");
+    const userPlan = await User.findById(userId).select("plan").lean();
+    void checkAndSendCreditAlert(userId, newBalance, userPlan?.plan ?? "free");
 
     return NextResponse.json({ success: true, newBalance });
   } catch (err) {
