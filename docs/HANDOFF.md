@@ -1,9 +1,63 @@
 # Handoff Note
-Updated: 2026-05-15 | Account: B | Session: B10-FIX | Features: 11-issue fix — tools sync, pricing sync, about redesign, hero premium, features premium, persona tabs, CTAs, centering, how-it-works, comparison, testimonials carousel
+Updated: 2026-05-15 | Account: B | Session: BFix-1 | Features: DB indexes, tool-registry N+1 fix, blog engine LiteLLM removal
 
 ## Where We Are
-Session B10-FIX done. All 11 issues resolved. **TypeScript: 0 errors (apps/web).**
-Note: `npx turbo build` fails with pre-existing `Cannot find module for page: /_document` error (not caused by any session changes).
+Session BFix-1 done. **TypeScript: 0 errors (all packages). Build: passing.**
+Note: pre-existing prisma/opentelemetry warning and verify-payment static render note in build output — both existed before this session.
+
+---
+
+## What Was Done (Session BFix-1)
+
+### Task 1 — Missing DB Indexes added
+
+- `packages/db/src/models/CreditTransaction.ts`
+  - Added `index: true` to `toolSlug` field (speeds per-tool history queries)
+- `packages/db/src/models/User.ts`
+  - Added `index: true` to `referredBy` field (speeds referral chain lookups)
+- `packages/db/src/models/Payment.ts`
+  - Added compound index `PaymentSchema.index({ userId: 1, status: 1 })` (speeds admin payment filter queries)
+
+### Task 2 — Tool Registry N+1 Query Fixed
+
+- `apps/web/src/lib/tool-registry.ts` — fully rewritten
+  - **Before**: `getAllTools()` did `Promise.all([Tool.find().lean(), ToolConfig.find().lean()])` — two DB round trips, merged in memory
+  - **Before**: `getToolBySlug()` did same with two findOne calls
+  - **After**: both use a single `$lookup` aggregation pipeline (`toolconfigs` collection, keyed on `slug`/`toolSlug`) — one DB round trip
+  - New `RawAggregatedTool` interface + `fromAggregated()` helper replace old `mergeToolWithConfig()`
+  - Shared `LOOKUP_STAGES` constant reused between `getAllTools()` (no match) and `getToolBySlug()` (prepends `$match: { slug }`)
+  - Redis/mem cache logic, `getToolsByKit()`, `getKitList()`, `clearToolCache()` — all unchanged
+
+### Task 3 — Blog Engine LiteLLM Removed
+
+- `apps/web/src/tools/blog-generator/engine.ts`
+  - Removed LiteLLM gateway block (`LITELLM_GATEWAY_URL` / `LITELLM_MASTER_KEY` env vars) — was Phase 2+ only, dead in Phase 1
+  - Removed `MODEL_PROVIDER` and `ANTHROPIC_MODEL_IDS` lookup tables (no longer needed)
+  - `callAI()` now routes directly: `provider === "anthropic"` → Anthropic API, `provider === "google"` → Gemini API, default → OpenAI
+  - Provider comes from `toolConfigDoc.aiProvider` (DB/Redis), not hardcoded
+  - Credit deduction logic unchanged — still happens only after successful AI response
+
+#### Modified Files (BFix-1)
+```
+packages/db/src/models/CreditTransaction.ts   — index on toolSlug
+packages/db/src/models/User.ts                — index on referredBy
+packages/db/src/models/Payment.ts             — compound index {userId, status}
+apps/web/src/lib/tool-registry.ts             — $lookup aggregation replaces N+1
+apps/web/src/tools/blog-generator/engine.ts   — LiteLLM removed, direct providers only
+```
+
+#### Rules Verified
+- TypeScript: 0 errors (apps/web + packages/db + packages/shared)
+- Build: passing (75/75 static pages)
+- No hardcoded credit costs or models
+- Credit deduction still happens after successful AI response only
+
+---
+
+## Next Session: B10-C
+- FAQ section redesign (premium accordion with animations)
+- Final CTA redesign (premium gradient)
+- Any remaining polish items
 
 ---
 
