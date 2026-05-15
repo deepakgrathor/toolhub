@@ -1,9 +1,25 @@
 # Handoff Note
-Updated: 2026-05-15 | Account: B | Session: BPerf-3 | Features: lazy load QR+framer-motion, AbortController polling, next/image avatar, stable carousel, ApiResponse helpers
+Updated: 2026-05-16 | Account: B | Session: SEO-1 | Features: brand fix, root metadata, robots, sitemap, JSON-LD, llms.txt, kit metadata, OG image, webmanifest
 
 ## Where We Are
-Session BPerf-3 done. **TypeScript: 0 errors (apps/web). Build: pre-existing failures on /dashboard/history and /admin/credit-packs only (missing page stubs — unrelated to BPerf sessions).**
-Master Context: v7.5 — Full security audit complete (BSec-1→4) + Full performance audit complete (BPerf-1→3). DRY helpers added: withCache, requireAuth, getSiteConfigValue, ApiResponse, sanitizeUserInput. 29 security issues fixed, 25 performance issues fixed.
+Session SEO-1 done. **TypeScript: 0 errors (apps/web). Build: clean (79 routes). Pre-existing build failures on /dashboard/history and /admin/credit-packs are gone — build is now fully clean.**
+Master Context: v8.0 — Full security audit (BSec-1→4) + Full performance audit (BPerf-1→3) + Foundation SEO (SEO-1) complete.
+
+### SEO State After SEO-1
+- Brand: all "Toolspire"/"ToolHub" occurrences replaced with "SetuLix" across all files
+- Root layout: full metadata (OG image, twitter image, keywords, authors, icons, webmanifest, googleBot)
+- robots.ts: disallows 10 auth-gated routes + explicit AI bot allow rules
+- sitemap.ts: 27 explicit tool slugs + 5 kits + /tools listing + lastModified timestamps
+- JSON-LD: Organization + WebSite schema injected on homepage
+- /tools page: metadata provided via (marketing)/tools/layout.tsx (bypasses "use client" limitation)
+- /kits/[slug]: rich generateMetadata with per-kit descriptions, OG/twitter images, canonicals
+- public/: site.webmanifest, og-default.svg (PNG pending — see OG_TODO.md), llms.txt
+- Remaining: favicon PNG files (see FAVICON_TODO.md), og-default.png (needs sharp or online converter)
+
+### Next SEO Sessions
+- SEO-2: Individual tool public landing pages — create (marketing)/tools/[slug]/page.tsx with rich content
+- SEO-3: Tool-level JSON-LD (SoftwareApplication schema per tool)
+- SEO-4: FAQ structured data on kit pages
 
 ---
 
