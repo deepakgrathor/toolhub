@@ -1,8 +1,29 @@
 # Handoff Note
-Updated: 2026-05-16 | Account: B | Session: SEO-2 | Features: 27 individual tool public pages, JSON-LD schemas (SoftwareApplication + FAQPage + BreadcrumbList + HowTo), conditional session-based rendering, generateMetadata + generateStaticParams per tool
+Updated: 2026-05-16 | Account: B | Session: Dash-1 | Features: Dashboard redesign — removed ToolsSection (All Tools), added CreditHealthWidget + QuickLaunchSection
 
 ## Where We Are
-Session SEO-2 done. **TypeScript: 0 errors (apps/web).**
+Session Dash-1 done. **TypeScript: 0 errors (apps/web).**
+
+### Dashboard State After Dash-1
+- `ToolsSection` async server component removed from `dashboard/page.tsx`
+- `getAllTools`, `KitSection`, `KitSectionSkeleton` imports removed from dashboard page
+- `CreditHealthWidget` — new client component at `components/dashboard/CreditHealthWidget.tsx`
+  - Uses `useCreditStore` (`@/store/credits-store`) for `balance` + `isLoading`
+  - Props: `planSlug: string` — shows progress bar, tasks estimate, upgrade banner for free/lite
+  - Upgrade banner: free→Lite, lite→Pro; hidden for pro/business
+  - Bar color: green (>40%), amber (>15%), red (≤15%)
+- `QuickLaunchSection` — new client component at `components/dashboard/QuickLaunchSection.tsx`
+  - Props: `kitSlug: string` — shows 4 tool cards for the user's kit, falls back to DEFAULT_TOOLS
+  - Kit map: creator, sme, hr, legal, marketing
+  - "All tools →" links to `/explore`
+- Dashboard page layout order: Greeting → Stats (Suspense) → CreditHealthWidget → RecentActivity → QuickLaunchSection → ReferralCard
+- **NOTE:** `plan`/`planSlug` and `kitSlug`/`professions` are NOT in NextAuth session.user (not mapped in auth.ts session callback). Currently `planSlug = 'free'` hardcoded, `kitSlug = ''` (shows DEFAULT_TOOLS). To make dynamic: add `plan` and `professions` fields to JWT token in `auth.ts` and map them in the session callback.
+
+### Next Steps
+- Dash-2: Add `plan` + `professions[0]` to NextAuth JWT/session so CreditHealthWidget and QuickLaunchSection become truly dynamic
+- SEO-3: Kit landing page content (public pages for /kits/[slug])
+
+
 Master Context: v9.0 — Full security audit (BSec-1→4) + Full performance audit (BPerf-1→3) + Foundation SEO (SEO-1) + Individual tool SEO pages (SEO-2) complete.
 
 ### SEO State After SEO-2
