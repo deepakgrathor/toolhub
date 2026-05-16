@@ -9,7 +9,10 @@ export const dynamic = "force-dynamic";
 const featureSchema = z.object({
   text: z.string().min(1),
   included: z.boolean().default(true),
-  highlight: z.boolean().default(false),
+  highlight: z
+    .union([z.boolean(), z.string()])
+    .transform((v) => (typeof v === "boolean" ? "" : v))
+    .default(""),
 });
 
 const pricingSchema = z.object({
@@ -45,7 +48,7 @@ const updateSchema = z.object({
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: { slug: string } },
 ) {
   const admin = await requireAdmin(req);
   if (!admin) {
@@ -57,7 +60,7 @@ export async function PATCH(
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid request", issues: parsed.error.issues },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -79,32 +82,45 @@ export async function PATCH(
   if (data.features !== undefined) updateSet.features = data.features;
   if (data.limits) {
     const l = data.limits;
-    if (l.toolAccess !== undefined) updateSet["limits.toolAccess"] = l.toolAccess;
-    if (l.historyDays !== undefined) updateSet["limits.historyDays"] = l.historyDays;
+    if (l.toolAccess !== undefined)
+      updateSet["limits.toolAccess"] = l.toolAccess;
+    if (l.historyDays !== undefined)
+      updateSet["limits.historyDays"] = l.historyDays;
     if (l.teamSeats !== undefined) updateSet["limits.teamSeats"] = l.teamSeats;
   }
   if (data.pricing?.monthly) {
     const m = data.pricing.monthly;
-    if (m.basePrice !== undefined) updateSet["pricing.monthly.basePrice"] = m.basePrice;
-    if (m.pricePerCredit !== undefined) updateSet["pricing.monthly.pricePerCredit"] = m.pricePerCredit;
-    if (m.baseCredits !== undefined) updateSet["pricing.monthly.baseCredits"] = m.baseCredits;
-    if (m.maxCredits !== undefined) updateSet["pricing.monthly.maxCredits"] = m.maxCredits;
-    if (m.cashfreePlanId !== undefined) updateSet["pricing.monthly.cashfreePlanId"] = m.cashfreePlanId;
+    if (m.basePrice !== undefined)
+      updateSet["pricing.monthly.basePrice"] = m.basePrice;
+    if (m.pricePerCredit !== undefined)
+      updateSet["pricing.monthly.pricePerCredit"] = m.pricePerCredit;
+    if (m.baseCredits !== undefined)
+      updateSet["pricing.monthly.baseCredits"] = m.baseCredits;
+    if (m.maxCredits !== undefined)
+      updateSet["pricing.monthly.maxCredits"] = m.maxCredits;
+    if (m.cashfreePlanId !== undefined)
+      updateSet["pricing.monthly.cashfreePlanId"] = m.cashfreePlanId;
   }
   if (data.pricing?.yearly) {
     const y = data.pricing.yearly;
-    if (y.basePrice !== undefined) updateSet["pricing.yearly.basePrice"] = y.basePrice;
-    if (y.pricePerCredit !== undefined) updateSet["pricing.yearly.pricePerCredit"] = y.pricePerCredit;
-    if (y.baseCredits !== undefined) updateSet["pricing.yearly.baseCredits"] = y.baseCredits;
-    if (y.maxCredits !== undefined) updateSet["pricing.yearly.maxCredits"] = y.maxCredits;
-    if (y.discountPercent !== undefined) updateSet["pricing.yearly.discountPercent"] = y.discountPercent;
-    if (y.cashfreePlanId !== undefined) updateSet["pricing.yearly.cashfreePlanId"] = y.cashfreePlanId;
+    if (y.basePrice !== undefined)
+      updateSet["pricing.yearly.basePrice"] = y.basePrice;
+    if (y.pricePerCredit !== undefined)
+      updateSet["pricing.yearly.pricePerCredit"] = y.pricePerCredit;
+    if (y.baseCredits !== undefined)
+      updateSet["pricing.yearly.baseCredits"] = y.baseCredits;
+    if (y.maxCredits !== undefined)
+      updateSet["pricing.yearly.maxCredits"] = y.maxCredits;
+    if (y.discountPercent !== undefined)
+      updateSet["pricing.yearly.discountPercent"] = y.discountPercent;
+    if (y.cashfreePlanId !== undefined)
+      updateSet["pricing.yearly.cashfreePlanId"] = y.cashfreePlanId;
   }
 
   const plan = await Plan.findOneAndUpdate(
     { slug: params.slug },
     { $set: updateSet },
-    { new: true }
+    { new: true },
   ).lean();
 
   // Invalidate public cache

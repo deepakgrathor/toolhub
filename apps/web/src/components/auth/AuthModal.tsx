@@ -423,7 +423,7 @@ export function AuthModal() {
 
           {/* Mode tabs — hidden during OTP step */}
           {signupStep === "form" && (
-            <div className="mb-5 flex rounded-lg bg-muted p-1">
+            <div className="mb-5 flex rounded-lg bg-muted/10 p-1">
               <button
                 type="button"
                 onClick={() => switchMode("login")}

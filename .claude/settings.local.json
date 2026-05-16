@@ -87,7 +87,17 @@
       "PowerShell($env:PATH = \"C:\\\\Users\\\\Deepak_Rathor\\\\AppData\\\\Roaming\\\\npm;\" + $env:PATH; Set-Location \"F:\\\\2026\\\\AI_Project\\\\toolhub\"; pnpm tsc --noEmit 2>&1)",
       "Bash(pnpm tsc *)",
       "PowerShell(cd \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\"; npx tsc --noEmit; echo \"Exit: $LASTEXITCODE\")",
-      "PowerShell(Get-Command node, npm, npx, pnpm -ErrorAction SilentlyContinue)"
+      "PowerShell(Get-Command node, npm, npx, pnpm -ErrorAction SilentlyContinue)",
+      "Bash(pnpm --filter @toolhub/web tsc --noEmit)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "PowerShell($env:PATH = \"$env:APPDATA\\\\npm;$env:LOCALAPPDATA\\\\pnpm;\" + $env:PATH; cd \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\"; npx tsc --noEmit 2>&1 | Select-Object -First 60)",
+      "Bash(cd \"/mnt/f/2026/AI_Project/toolhub/apps/web\" && pnpm tsc --noEmit 2>&1 | head -80)",
+      "Bash(ls /mnt/)",
+      "Read(//c//**)",
+      "Bash(ls /f/2026/AI_Project/toolhub/apps/web 2>/dev/null | head -5 || ls /d/2026/AI_Project/toolhub/apps/web 2>/dev/null | head -5 || echo \"checking...\")",
+      "Bash(cd /f/2026/AI_Project/toolhub && which npm && which npx && ls node_modules/.bin/tsc 2>/dev/null | head -3)",
+      "PowerShell(Get-ChildItem \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\" -Recurse -Name | Where-Object { $_ -match \"payment\" })",
+      "Bash(npx shadcn@latest add accordion --yes)"
     ]
   }
 }

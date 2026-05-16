@@ -23,7 +23,7 @@ const PlanPricingSchema = new mongoose.Schema(
     cashfreePlanId: { type: String },
     discountPercent: { type: Number, default: 0 },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const PlanFeatureSchema = new mongoose.Schema(
@@ -32,7 +32,7 @@ const PlanFeatureSchema = new mongoose.Schema(
     included: { type: Boolean, default: true },
     highlight: { type: String, default: "" },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const PlanSchema = new mongoose.Schema(
@@ -50,7 +50,7 @@ const PlanSchema = new mongoose.Schema(
     creditRollover: { enabled: Boolean, maxDays: Number },
     limits: { toolAccess: String, historyDays: Number, teamSeats: Number },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const CreditPackSchema = new mongoose.Schema(
@@ -63,11 +63,12 @@ const CreditPackSchema = new mongoose.Schema(
     isPopular: { type: Boolean, default: false },
     order: Number,
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Plan = mongoose.models.Plan ?? mongoose.model("Plan", PlanSchema);
-const CreditPack = mongoose.models.CreditPack ?? mongoose.model("CreditPack", CreditPackSchema);
+const CreditPack =
+  mongoose.models.CreditPack ?? mongoose.model("CreditPack", CreditPackSchema);
 
 // ── Plan seed data ────────────────────────────────────────────────────────────
 
@@ -81,12 +82,28 @@ const PLANS = [
     order: 1,
     type: "free",
     pricing: {
-      monthly: { basePrice: 0, pricePerCredit: 0, baseCredits: 0, maxCredits: 0, discountPercent: 0 },
-      yearly:  { basePrice: 0, pricePerCredit: 0, baseCredits: 0, maxCredits: 0, discountPercent: 0 },
+      monthly: {
+        basePrice: 0,
+        pricePerCredit: 0,
+        baseCredits: 0,
+        maxCredits: 0,
+        discountPercent: 0,
+      },
+      yearly: {
+        basePrice: 0,
+        pricePerCredit: 0,
+        baseCredits: 0,
+        maxCredits: 0,
+        discountPercent: 0,
+      },
     },
     features: [
       { text: "GST Invoice & QR Tools", included: true, highlight: "" },
-      { text: "Hook, Caption & Title Generator", included: true, highlight: "" },
+      {
+        text: "Hook, Caption & Title Generator",
+        included: true,
+        highlight: "",
+      },
       { text: "10 Welcome Credits (one-time)", included: true, highlight: "" },
       { text: "Basic Dashboard", included: true, highlight: "" },
       { text: "Blog & Script Generator", included: false, highlight: "" },
@@ -94,7 +111,11 @@ const PLANS = [
       { text: "Legal & HR Tools", included: false, highlight: "" },
       { text: "Credit Rollover", included: false, highlight: "" },
     ],
-    usageExamples: [],
+    usageExamples: [
+      "~3 AI tasks with welcome credits",
+      "Unlimited free tool usage",
+      "No card required",
+    ],
     creditRollover: { enabled: false, maxDays: 30 },
     limits: { toolAccess: "free_only", historyDays: -1, teamSeats: 1 },
   },
@@ -107,8 +128,20 @@ const PLANS = [
     order: 2,
     type: "credit",
     pricing: {
-      monthly: { basePrice: 399, pricePerCredit: 0, baseCredits: 200, maxCredits: 200, discountPercent: 0 },
-      yearly:  { basePrice: 319, pricePerCredit: 0, baseCredits: 200, maxCredits: 200, discountPercent: 20 },
+      monthly: {
+        basePrice: 399,
+        pricePerCredit: 0,
+        baseCredits: 200,
+        maxCredits: 200,
+        discountPercent: 0,
+      },
+      yearly: {
+        basePrice: 319,
+        pricePerCredit: 0,
+        baseCredits: 200,
+        maxCredits: 200,
+        discountPercent: 20,
+      },
     },
     features: [
       { text: "Everything in Free", included: true, highlight: "" },
@@ -123,9 +156,10 @@ const PLANS = [
       { text: "Thumbnail AI", included: false, highlight: "" },
     ],
     usageExamples: [
-      "~20 AI blog posts/month",
-      "~100 social captions",
-      "~10 resume screenings",
+      "~65 AI tasks every month",
+      "~65 blog posts or social captions",
+      "~25 job descriptions, policies, or appraisals",
+      "~8 legal notices or NDAs",
     ],
     creditRollover: { enabled: true, maxDays: 30 },
     limits: { toolAccess: "all", historyDays: -1, teamSeats: 1 },
@@ -139,8 +173,20 @@ const PLANS = [
     order: 3,
     type: "credit",
     pricing: {
-      monthly: { basePrice: 999, pricePerCredit: 0, baseCredits: 700, maxCredits: 700, discountPercent: 0 },
-      yearly:  { basePrice: 799, pricePerCredit: 0, baseCredits: 700, maxCredits: 700, discountPercent: 20 },
+      monthly: {
+        basePrice: 999,
+        pricePerCredit: 0,
+        baseCredits: 700,
+        maxCredits: 700,
+        discountPercent: 0,
+      },
+      yearly: {
+        basePrice: 799,
+        pricePerCredit: 0,
+        baseCredits: 700,
+        maxCredits: 700,
+        discountPercent: 20,
+      },
     },
     features: [
       { text: "Everything in Lite", included: true, highlight: "" },
@@ -155,10 +201,11 @@ const PLANS = [
       { text: "Team Features", included: false, highlight: "" },
     ],
     usageExamples: [
-      "~40 AI websites/month",
-      "~100 SEO blog posts",
-      "~300 social posts",
-      "~50 legal documents",
+      "~230 AI tasks every month",
+      "~115 blog posts or 230 social captions",
+      "~87 job descriptions, policies, or appraisals",
+      "~46 legal notices or full SEO audits",
+      "~46 complete AI website generations",
     ],
     creditRollover: { enabled: true, maxDays: 30 },
     limits: { toolAccess: "all", historyDays: -1, teamSeats: 1 },
@@ -172,8 +219,20 @@ const PLANS = [
     order: 4,
     type: "credit",
     pricing: {
-      monthly: { basePrice: 2999, pricePerCredit: 0, baseCredits: 1500, maxCredits: 1500, discountPercent: 0 },
-      yearly:  { basePrice: 2399, pricePerCredit: 0, baseCredits: 1500, maxCredits: 1500, discountPercent: 20 },
+      monthly: {
+        basePrice: 2999,
+        pricePerCredit: 0,
+        baseCredits: 1500,
+        maxCredits: 1500,
+        discountPercent: 0,
+      },
+      yearly: {
+        basePrice: 2399,
+        pricePerCredit: 0,
+        baseCredits: 1500,
+        maxCredits: 1500,
+        discountPercent: 20,
+      },
     },
     features: [
       { text: "Everything in Pro", included: true, highlight: "" },
@@ -185,9 +244,11 @@ const PLANS = [
       { text: "Advanced Analytics", included: true, highlight: "Coming Soon" },
     ],
     usageExamples: [
-      "High-volume AI workflows",
-      "Large-scale content generation",
-      "~100 websites/month",
+      "~500 AI tasks every month",
+      "~250 blog posts or 500 social captions",
+      "~187 job descriptions, policies, or appraisals",
+      "~100 legal notices or complete website builds",
+      "High-volume content workflows",
     ],
     creditRollover: { enabled: true, maxDays: 60 },
     limits: { toolAccess: "all", historyDays: -1, teamSeats: 5 },
@@ -201,8 +262,20 @@ const PLANS = [
     order: 5,
     type: "enterprise",
     pricing: {
-      monthly: { basePrice: 0, pricePerCredit: 0, baseCredits: 0, maxCredits: 0, discountPercent: 0 },
-      yearly:  { basePrice: 0, pricePerCredit: 0, baseCredits: 0, maxCredits: 0, discountPercent: 0 },
+      monthly: {
+        basePrice: 0,
+        pricePerCredit: 0,
+        baseCredits: 0,
+        maxCredits: 0,
+        discountPercent: 0,
+      },
+      yearly: {
+        basePrice: 0,
+        pricePerCredit: 0,
+        baseCredits: 0,
+        maxCredits: 0,
+        discountPercent: 0,
+      },
     },
     features: [
       { text: "Unlimited Team Scaling", included: true, highlight: "" },
@@ -222,10 +295,42 @@ const PLANS = [
 // ── Credit pack seed data ─────────────────────────────────────────────────────
 
 const CREDIT_PACKS = [
-  { name: "Starter",  credits: 50,   price: 149,  pricePerCredit: 2.98, isActive: true, isPopular: false, order: 1 },
-  { name: "Growth",   credits: 150,  price: 349,  pricePerCredit: 2.33, isActive: true, isPopular: false, order: 2 },
-  { name: "Pro Pack", credits: 400,  price: 799,  pricePerCredit: 2.00, isActive: true, isPopular: true,  order: 3 },
-  { name: "Power",    credits: 1000, price: 1799, pricePerCredit: 1.80, isActive: true, isPopular: false, order: 4 },
+  {
+    name: "Starter",
+    credits: 50,
+    price: 149,
+    pricePerCredit: 2.98,
+    isActive: true,
+    isPopular: false,
+    order: 1,
+  },
+  {
+    name: "Growth",
+    credits: 150,
+    price: 349,
+    pricePerCredit: 2.33,
+    isActive: true,
+    isPopular: false,
+    order: 2,
+  },
+  {
+    name: "Pro Pack",
+    credits: 400,
+    price: 799,
+    pricePerCredit: 2.0,
+    isActive: true,
+    isPopular: true,
+    order: 3,
+  },
+  {
+    name: "Power",
+    credits: 1000,
+    price: 1799,
+    pricePerCredit: 1.8,
+    isActive: true,
+    isPopular: false,
+    order: 4,
+  },
 ];
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -239,7 +344,9 @@ async function seed() {
   const newSlugs = PLANS.map((p) => p.slug);
   const deleted = await Plan.deleteMany({ slug: { $nin: newSlugs } });
   if (deleted.deletedCount > 0) {
-    console.log(`  Removed ${deleted.deletedCount} stale plan(s) (e.g. "starter")`);
+    console.log(
+      `  Removed ${deleted.deletedCount} stale plan(s) (e.g. "starter")`,
+    );
   }
 
   // Upsert plans
@@ -247,7 +354,7 @@ async function seed() {
     await Plan.findOneAndUpdate(
       { slug: plan.slug },
       { $set: plan },
-      { upsert: true, new: true }
+      { upsert: true, new: true },
     );
     console.log(`  Plan upserted: ${plan.name} (${plan.slug})`);
   }
@@ -256,7 +363,9 @@ async function seed() {
 
   // Remove stale credit packs
   const newPackNames = CREDIT_PACKS.map((p) => p.name);
-  const deletedPacks = await CreditPack.deleteMany({ name: { $nin: newPackNames } });
+  const deletedPacks = await CreditPack.deleteMany({
+    name: { $nin: newPackNames },
+  });
   if (deletedPacks.deletedCount > 0) {
     console.log(`  Removed ${deletedPacks.deletedCount} stale credit pack(s)`);
   }
@@ -266,9 +375,11 @@ async function seed() {
     await CreditPack.findOneAndUpdate(
       { name: pack.name },
       { $set: pack },
-      { upsert: true, new: true }
+      { upsert: true, new: true },
     );
-    console.log(`  CreditPack upserted: ${pack.name} (${pack.credits}cr → ₹${pack.price})`);
+    console.log(
+      `  CreditPack upserted: ${pack.name} (${pack.credits}cr → ₹${pack.price})`,
+    );
   }
 
   console.log("\nSeed complete.");

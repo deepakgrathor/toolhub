@@ -172,7 +172,7 @@ function PlanWidget({ isCollapsed }: { isCollapsed: boolean }) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+    <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
       {/* Plan badge + upgrade */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-foreground uppercase tracking-wide">

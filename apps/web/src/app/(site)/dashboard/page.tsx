@@ -110,7 +110,7 @@ export default async function DashboardPage() {
   const greeting = getGreeting();
 
   return (
-    <div className="min-h-full px-4 py-8 md:px-8 max-w-6xl mx-auto">
+    <div className="min-h-full px-4 py-8 md:px-8 max-w-7xl mx-auto">
       {/* Greeting — renders instantly, no DB needed */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground">
