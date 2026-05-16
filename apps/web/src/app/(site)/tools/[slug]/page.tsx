@@ -11,11 +11,12 @@ import { ToolErrorBoundary } from "@/components/tools/ToolErrorBoundary";
 import { UniversalToolRenderer } from "@/components/tools/UniversalToolRenderer";
 import { ToolPublicPage } from "@/components/seo/ToolPublicPage";
 import { toolSeoMap, toolSeoData } from "@/data/tool-seo";
+import { getSiteConfigValue } from "@/lib/site-config-cache";
 
 // ── Dynamic tool component map ────────────────────────────────────────────────
 // Add new tools here as they are built. Each entry is code-split automatically.
 
-const toolComponents: Record<string, React.ComponentType<{ creditCost?: number }>> = {
+const toolComponents: Record<string, React.ComponentType<{ creditCost?: number; faceAddonCost?: number }>> = {
   "blog-generator": dynamic(
     () => import("@/tools/blog-generator/BlogGeneratorTool"),
     { loading: () => <ToolPageSkeleton /> }
@@ -223,6 +224,12 @@ export default async function ToolPage({ params }: Props) {
   const Icon = getToolIcon(tool.slug);
   const ToolComponent = toolComponents[params.slug];
 
+  // Extra props for tools that need them
+  const faceAddonCost =
+    params.slug === "thumbnail-ai"
+      ? (await getSiteConfigValue("thumbnail_face_addon_credits", 3)) as number
+      : undefined;
+
   return (
     <div className="h-full flex flex-col">
       {/* Breadcrumb */}
@@ -243,7 +250,7 @@ export default async function ToolPage({ params }: Props) {
         <ToolUnavailableCard name={tool.name} />
       ) : ToolComponent ? (
         <ToolErrorBoundary toolName={tool.name}>
-          <ToolComponent creditCost={tool.config.creditCost} />
+          <ToolComponent creditCost={tool.config.creditCost} faceAddonCost={faceAddonCost} />
         </ToolErrorBoundary>
       ) : (
         // No dedicated component → use universal dynamic renderer

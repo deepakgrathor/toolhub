@@ -1,8 +1,27 @@
 # Handoff Note
-Updated: 2026-05-16 | Account: B | Session: CreditFix-1 | Features: Credit cost display audit — removed all hardcoded FREE/creditCost values, synced seed to master context v8.0 values
+Updated: 2026-05-17 | Account: B | Session: ThumbnailAI-1 | Features: Thumbnail AI complete redesign — smart progressive form, Haiku→GPT-Image-1 pipeline, dynamic face addon credits, platform-aware sizing, Own Face photo upload
 
 ## Where We Are
-Session CreditFix-1 done. **TypeScript: 0 errors (apps/web).**
+Session ThumbnailAI-1 done. **TypeScript: 0 errors (apps/web).**
+
+### Thumbnail AI State After ThumbnailAI-1
+
+**Files changed:**
+- `packages/db/src/seed.ts` — added `thumbnail_face_addon_credits: 3` to SITE_CONFIGS
+- `apps/web/src/tools/thumbnail-ai/schema.ts` — complete rewrite: PLATFORMS, SIZES, NICHES, MOODS, COLOR_THEMES, FACE_MODES, new `thumbnailAISchema` with platform/title/topic/niche/mood/colorTheme/faceMode/gender/faceImageBase64
+- `apps/web/src/tools/thumbnail-ai/engine.ts` — complete rewrite: 2-stage pipeline (Haiku builds cinematic prompt → GPT-Image-1 generates), own-face uses `/images/edits` endpoint, addon credit cost fetched from SiteConfig, credits deducted AFTER R2 upload
+- `apps/web/src/tools/thumbnail-ai/ThumbnailAITool.tsx` — complete rewrite: progressive form reveal (platform → size+content → style options → face), 3 face modes (AI/Own/None), gender toggle, photo upload with preview, dynamic credit counter
+- `apps/web/src/app/(site)/tools/[slug]/page.tsx` — added `getSiteConfigValue` import, `faceAddonCost` fetch for thumbnail-ai slug, `faceAddonCost` prop passed to `ToolComponent`; `toolComponents` type updated to `{ creditCost?: number; faceAddonCost?: number }`
+
+**Post-deploy:**
+- Run `npm run db:seed` to seed `thumbnail_face_addon_credits` into MongoDB
+- `ANTHROPIC_API_KEY` must be set — Haiku is called first; falls back to a safe prompt if missing/failing
+- `OPENAI_API_KEY` required for GPT-Image-1
+- All Cloudflare R2 env vars required (same as before)
+
+### Next Steps
+- Dash-2: Add `plan` + `professions[0]` to NextAuth JWT/session
+- SEO-3: Kit landing page content (public pages for /kits/[slug])
 
 ### Credit Audit State After CreditFix-1
 - **Root cause**: `HookWriterTool` + `CaptionGeneratorTool` had hardcoded `FREE` badges/buttons and discarded their `creditCost` prop (`_creditCost`). Backend engines were already DB-driven.

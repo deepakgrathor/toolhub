@@ -1,25 +1,39 @@
-"use client";
+"use client"
 
-import { useState, useEffect, useRef } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { thumbnailAISchema, type ThumbnailAIInput } from "./schema";
-import { thumbnailAIConfig } from "./config";
-import { Image as ImageIcon, Coins, Loader2, Download, RefreshCw, AlertTriangle } from "lucide-react";
-import { toast } from "sonner";
-import { useSession } from "next-auth/react";
-import { useAuthStore } from "@/store/auth-store";
-import { usePaywallStore } from "@/store/paywall-store";
-import { useCreditStore } from "@/store/credits-store";
-import { ThumbnailHistory } from "./ThumbnailHistory";
-import { PresetSelector } from "@/components/ui/PresetSelector";
-import { usePresets } from "@/hooks/usePresets";
+import { useState, useEffect, useRef } from "react"
+import { useSession } from "next-auth/react"
+import { useAuthStore } from "@/store/auth-store"
+import { usePaywallStore } from "@/store/paywall-store"
+import { useCreditStore } from "@/store/credits-store"
+import { usePresets } from "@/hooks/usePresets"
+import { PresetSelector } from "@/components/ui/PresetSelector"
+import { ThumbnailHistory } from "./ThumbnailHistory"
+import { thumbnailAIConfig } from "./config"
+import {
+  PLATFORMS, SIZES, NICHES, MOODS, COLOR_THEMES,
+  type ThumbnailAIInput,
+} from "./schema"
+import {
+  Image as ImageIcon, Coins, Loader2, Download, RefreshCw,
+  AlertTriangle, User, Upload, X, Sparkles,
+} from "lucide-react"
+import { toast } from "sonner"
 
-interface ThumbnailOutput {
-  imageUrl: string;
+// ── Platform display labels ────────────────────────────────────────────────
+
+const PLATFORM_LABELS: Record<string, string> = {
+  youtube: "YouTube",
+  "instagram-post": "Instagram Post",
+  "instagram-reels": "Instagram Reels",
+  linkedin: "LinkedIn",
+  twitter: "Twitter / X",
+  blog: "Blog / Website",
+  pinterest: "Pinterest",
 }
 
-function Pill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+// ── Chip component ─────────────────────────────────────────────────────────
+
+function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -32,135 +46,203 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
     >
       {label}
     </button>
-  );
+  )
 }
 
-export default function ThumbnailAITool({ creditCost: creditCostProp }: { creditCost?: number }) {
-  const creditCost = creditCostProp ?? thumbnailAIConfig.creditCost;
-  const { status } = useSession();
-  const { balance, deductLocally } = useCreditStore();
-  const openAuthModal = useAuthStore((s) => s.openAuthModal);
-  const openPaywall = usePaywallStore((s) => s.openPaywall);
+// ── Animated section reveal ────────────────────────────────────────────────
 
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [output, setOutput] = useState<ThumbnailOutput | null>(null);
-  const [lastFormData, setLastFormData] = useState<ThumbnailAIInput | null>(null);
-  const [newThumbnail, setNewThumbnail] = useState<{ imageUrl: string; prompt: string } | null>(null);
+function RevealSection({ show, children }: { show: boolean; children: React.ReactNode }) {
+  if (!show) return null
+  return (
+    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+      {children}
+    </div>
+  )
+}
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<ThumbnailAIInput>({
-    resolver: zodResolver(thumbnailAISchema),
-    defaultValues: { style: "youtube-thumbnail", colorScheme: "vibrant" },
-  });
+// ── Main component ─────────────────────────────────────────────────────────
 
-  const selectedStyle = watch("style");
-  const selectedColor = watch("colorScheme");
-  const formValues = watch() as unknown as Record<string, string>;
+export default function ThumbnailAITool({
+  creditCost: creditCostProp,
+  faceAddonCost: faceAddonCostProp,
+}: {
+  creditCost?: number
+  faceAddonCost?: number
+}) {
+  const baseCost = creditCostProp ?? thumbnailAIConfig.creditCost
+  const faceAddonCost = faceAddonCostProp ?? 3
 
-  const [planSlug, setPlanSlug] = useState('free');
-  const { presets, isFetched, fetchPresets } = usePresets('thumbnail-ai');
-  const defaultLoadedRef = useRef(false);
+  const { status } = useSession()
+  const { balance, deductLocally } = useCreditStore()
+  const openAuthModal = useAuthStore((s) => s.openAuthModal)
+  const openPaywall = usePaywallStore((s) => s.openPaywall)
+
+  // Form state
+  const [platform, setPlatform] = useState<string>("")
+  const [apiSize, setApiSize] = useState<string>("")
+  const [title, setTitle] = useState("")
+  const [topic, setTopic] = useState("")
+  const [niche, setNiche] = useState("")
+  const [mood, setMood] = useState("")
+  const [colorTheme, setColorTheme] = useState("Auto (recommended)")
+  const [faceMode, setFaceMode] = useState<"ai" | "own" | "none">("ai")
+  const [gender, setGender] = useState<"male" | "female">("male")
+  const [faceFile, setFaceFile] = useState<File | null>(null)
+  const [facePreviewUrl, setFacePreviewUrl] = useState<string | null>(null)
+
+  // Progressive reveal — derived from form values
+  const showSize = platform !== ""
+  const showContent = platform !== ""
+  const showStyleOptions = title.length >= 3
+  const showFaceOption = topic.length >= 10
+
+  // Dynamic credit cost
+  const totalCredits = faceMode === "own" ? baseCost + faceAddonCost : baseCost
+
+  // Generation state
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [output, setOutput] = useState<{ imageUrl: string } | null>(null)
+  const [lastInput, setLastInput] = useState<ThumbnailAIInput | null>(null)
+  const [newThumbnail, setNewThumbnail] = useState<{ imageUrl: string; prompt: string } | null>(null)
+
+  // Presets
+  const [planSlug, setPlanSlug] = useState("free")
+  const { presets, isFetched, fetchPresets } = usePresets("thumbnail-ai")
+  const defaultLoadedRef = useRef(false)
 
   useEffect(() => {
-    fetch('/api/user/plan')
-      .then(r => r.json())
-      .then((d: { planSlug?: string }) => setPlanSlug(d.planSlug ?? 'free'))
-      .catch(() => null);
-  }, []);
+    fetch("/api/user/plan")
+      .then((r) => r.json())
+      .then((d: { planSlug?: string }) => setPlanSlug(d.planSlug ?? "free"))
+      .catch(() => null)
+  }, [])
 
-  useEffect(() => { fetchPresets(); }, [fetchPresets]);
+  useEffect(() => { fetchPresets() }, [fetchPresets])
 
   useEffect(() => {
-    if (!isFetched || defaultLoadedRef.current) return;
-    const defaultPreset = presets.find(p => p.isDefault);
+    if (!isFetched || defaultLoadedRef.current) return
+    const defaultPreset = presets.find((p) => p.isDefault)
     if (defaultPreset) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      Object.entries(defaultPreset.inputs).forEach(([key, value]) => setValue(key as any, value as string, { shouldValidate: false }));
-      defaultLoadedRef.current = true;
+      const inp = defaultPreset.inputs as Record<string, string>
+      if (inp.platform) setPlatform(inp.platform)
+      if (inp.title) setTitle(inp.title)
+      if (inp.topic) setTopic(inp.topic)
+      if (inp.niche) setNiche(inp.niche)
+      if (inp.mood) setMood(inp.mood)
+      if (inp.colorTheme) setColorTheme(inp.colorTheme)
+      if (inp.faceMode) setFaceMode(inp.faceMode as "ai" | "own" | "none")
+      if (inp.gender) setGender(inp.gender as "male" | "female")
+      defaultLoadedRef.current = true
     }
-  }, [isFetched, presets, setValue]);
+  }, [isFetched, presets])
 
-  async function generate(data: ThumbnailAIInput) {
-    if (status === "unauthenticated") { openAuthModal("login"); return; }
-    if (balance < creditCost) { openPaywall(thumbnailAIConfig.name, creditCost); return; }
+  // Platform → auto-select size
+  useEffect(() => {
+    if (platform && SIZES[platform as keyof typeof SIZES]) {
+      setApiSize(SIZES[platform as keyof typeof SIZES].apiSize)
+    }
+  }, [platform])
 
-    setIsGenerating(true);
-    setLastFormData(data);
+  // Face file → preview URL
+  useEffect(() => {
+    if (faceFile) {
+      const url = URL.createObjectURL(faceFile)
+      setFacePreviewUrl(url)
+      return () => URL.revokeObjectURL(url)
+    } else {
+      setFacePreviewUrl(null)
+    }
+  }, [faceFile])
+
+  const currentInputs = { platform, apiSize, title, topic, niche, mood, colorTheme, faceMode, gender }
+
+  async function generate() {
+    if (status === "unauthenticated") { openAuthModal("login"); return }
+    if (balance < totalCredits) { openPaywall(thumbnailAIConfig.name, totalCredits); return }
+
+    if (!platform) { toast.error("Please select a platform"); return }
+    if (title.length < 3) { toast.error("Please enter a title (min 3 characters)"); return }
+    if (topic.length < 10) { toast.error("Please describe your content (min 10 characters)"); return }
+    if (faceMode === "own" && !faceFile) { toast.error("Please upload your photo for Own Face mode"); return }
+
+    let faceImageBase64: string | undefined
+    if (faceMode === "own" && faceFile) {
+      const arrayBuffer = await faceFile.arrayBuffer()
+      const bytes = new Uint8Array(arrayBuffer)
+      let binary = ""
+      bytes.forEach((b) => (binary += String.fromCharCode(b)))
+      faceImageBase64 = btoa(binary)
+    }
+
+    const input: ThumbnailAIInput = {
+      platform: platform as ThumbnailAIInput["platform"],
+      apiSize: apiSize as ThumbnailAIInput["apiSize"],
+      title,
+      topic,
+      niche: (niche as ThumbnailAIInput["niche"]) || undefined,
+      mood: (mood as ThumbnailAIInput["mood"]) || undefined,
+      colorTheme: (colorTheme as ThumbnailAIInput["colorTheme"]) || undefined,
+      faceMode,
+      gender: faceMode !== "none" ? gender : undefined,
+      faceImageBase64,
+    }
+
+    setIsGenerating(true)
+    setLastInput(input)
+
     try {
       const res = await fetch("/api/tools/thumbnail-ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (res.status === 402) { openPaywall(thumbnailAIConfig.name, creditCost); return; }
+        body: JSON.stringify(input),
+      })
+
+      if (res.status === 402) { openPaywall(thumbnailAIConfig.name, totalCredits); return }
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error((err as { detail?: string }).detail ?? "generation_failed");
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { detail?: string }).detail ?? "generation_failed")
       }
-      const json = await res.json();
-      const result = json.output as ThumbnailOutput;
-      setOutput(result);
-      deductLocally(creditCost);
-      // Notify history gallery of the new thumbnail
-      setNewThumbnail({ imageUrl: result.imageUrl, prompt: data.mainSubject });
+
+      const json = await res.json()
+      const result = json.output as { imageUrl: string }
+      setOutput(result)
+      deductLocally(totalCredits)
+      setNewThumbnail({ imageUrl: result.imageUrl, prompt: title })
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Generation failed.";
-      toast.error(msg.includes("storage not configured") ? "Image storage not configured. Contact support." : "Generation failed. Please try again.");
+      const msg = e instanceof Error ? e.message : "Generation failed."
+      toast.error(
+        msg.includes("storage not configured")
+          ? "Image storage not configured. Contact support."
+          : "Generation failed. Please try again."
+      )
     } finally {
-      setIsGenerating(false);
+      setIsGenerating(false)
     }
   }
 
   async function downloadImage() {
-    if (!output) return;
+    if (!output) return
     try {
-      const res = await fetch(output.imageUrl);
-      const blob = await res.blob();
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "thumbnail.png";
-      a.click();
-      URL.revokeObjectURL(a.href);
+      const res = await fetch(output.imageUrl)
+      const blob = await res.blob()
+      const a = document.createElement("a")
+      a.href = URL.createObjectURL(blob)
+      a.download = `thumbnail-${platform}-${Date.now()}.png`
+      a.click()
+      URL.revokeObjectURL(a.href)
     } catch {
-      window.open(output.imageUrl, "_blank");
+      window.open(output.imageUrl, "_blank")
     }
-  }
-
-  function GenerateButton() {
-    if (status === "unauthenticated") {
-      return (
-        <button type="button" onClick={() => openAuthModal("login")}
-          className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent/90 transition-colors">
-          <Coins className="h-4 w-4" />Login to Generate
-        </button>
-      );
-    }
-    if (balance < creditCost) {
-      return (
-        <button type="button" onClick={() => openPaywall(thumbnailAIConfig.name, creditCost)}
-          className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent/90 transition-colors">
-          <Coins className="h-4 w-4" />Buy Credits
-        </button>
-      );
-    }
-    return (
-      <div className="space-y-1">
-        <button type="submit" disabled={isGenerating}
-          className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
-          {isGenerating ? <><Loader2 className="h-4 w-4 animate-spin" />Generating...</> : <><Coins className="h-4 w-4" />Generate Thumbnail — {creditCost} credits</>}
-        </button>
-        <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
-          <AlertTriangle className="h-3 w-3" />Takes 20–30 seconds
-        </p>
-      </div>
-    );
   }
 
   return (
     <div className="flex flex-1 flex-col overflow-auto">
-      {/* Two-panel tool layout */}
       <div className="flex flex-col lg:flex-row">
-        {/* LEFT PANEL */}
+
+        {/* LEFT PANEL — Form */}
         <div className="lg:w-[45%] lg:border-r border-border p-4 md:p-6 space-y-5 overflow-y-auto">
+
+          {/* Header */}
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 shrink-0">
               <ImageIcon className="h-6 w-6 text-accent" />
@@ -168,78 +250,323 @@ export default function ThumbnailAITool({ creditCost: creditCostProp }: { credit
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-bold text-foreground">{thumbnailAIConfig.name}</h1>
-                <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">{creditCost} credits</span>
+                <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">
+                  {totalCredits} credits
+                </span>
               </div>
-              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{thumbnailAIConfig.description}</p>
+              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                {thumbnailAIConfig.description}
+              </p>
             </div>
           </div>
 
           {/* Preset selector */}
           <PresetSelector
             toolSlug="thumbnail-ai"
-            currentInputs={formValues}
+            currentInputs={currentInputs}
             planSlug={planSlug}
             onPresetLoad={(inputs) => {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              Object.entries(inputs).forEach(([key, value]) => setValue(key as any, value, { shouldValidate: false }));
-              toast.success('Preset loaded!');
+              const inp = inputs as Record<string, string>
+              if (inp.platform) setPlatform(inp.platform)
+              if (inp.title) setTitle(inp.title)
+              if (inp.topic) setTopic(inp.topic)
+              if (inp.niche) setNiche(inp.niche)
+              if (inp.mood) setMood(inp.mood)
+              if (inp.colorTheme) setColorTheme(inp.colorTheme)
+              if (inp.faceMode) setFaceMode(inp.faceMode as "ai" | "own" | "none")
+              if (inp.gender) setGender(inp.gender as "male" | "female")
+              toast.success("Preset loaded!")
             }}
           />
 
-          <form onSubmit={handleSubmit(generate)} className="space-y-5">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Video / Post Title <span className="text-destructive">*</span></label>
-              <input {...register("videoTitle")} placeholder="e.g. How I Made ₹1 Lakh in 30 Days" className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition" />
-              {errors.videoTitle && <p className="text-xs text-destructive">{errors.videoTitle.message}</p>}
-            </div>
+          <div className="space-y-5">
 
+            {/* FIELD 1: Platform */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Style</label>
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  { value: "youtube-thumbnail", label: "YouTube Thumbnail" },
-                  { value: "instagram-post", label: "Instagram Post" },
-                  { value: "linkedin-banner", label: "LinkedIn Banner" },
-                  { value: "blog-header", label: "Blog Header" },
-                ] as const).map(({ value, label }) => (
-                  <Pill key={value} label={label} active={selectedStyle === value} onClick={() => setValue("style", value)} />
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Color Scheme</label>
-              <div className="flex flex-wrap gap-2">
-                {(["vibrant", "dark", "minimal", "colorful"] as const).map((c) => (
-                  <Pill key={c} label={c.charAt(0).toUpperCase() + c.slice(1)} active={selectedColor === c} onClick={() => setValue("colorScheme", c)} />
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Main Subject <span className="text-destructive">*</span></label>
-              <textarea {...register("mainSubject")} rows={3} placeholder="Describe what should appear in the image — e.g. Person looking surprised at laptop, office background, professional setting" className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition resize-none" />
-              {errors.mainSubject && <p className="text-xs text-destructive">{errors.mainSubject.message}</p>}
-            </div>
-
-            <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">
-                Text Overlay <span className="text-muted-foreground font-normal">(optional, max 50 chars)</span>
+                Platform <span className="text-destructive">*</span>
               </label>
-              <input {...register("textOverlay")} placeholder="Short text to appear on thumbnail" maxLength={50} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition" />
+              <div className="flex flex-wrap gap-2">
+                {PLATFORMS.map((p) => (
+                  <Chip
+                    key={p}
+                    label={PLATFORM_LABELS[p]}
+                    active={platform === p}
+                    onClick={() => setPlatform(p)}
+                  />
+                ))}
+              </div>
             </div>
 
-            <GenerateButton />
-          </form>
+            {/* FIELD 2: Size — auto revealed after platform */}
+            <RevealSection show={showSize}>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Size</label>
+                <div className="flex flex-wrap gap-2">
+                  {(Object.entries(SIZES) as [string, { label: string; apiSize: string }][]).map(([p, s]) => (
+                    <Chip
+                      key={p}
+                      label={`${PLATFORM_LABELS[p]} — ${s.label}`}
+                      active={apiSize === s.apiSize && platform === p}
+                      onClick={() => { setPlatform(p); setApiSize(s.apiSize) }}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Auto-selected for {PLATFORM_LABELS[platform] ?? platform}. Change if needed.
+                </p>
+              </div>
+            </RevealSection>
+
+            {/* FIELDS 3+4: Title + Topic — revealed with platform */}
+            <RevealSection show={showContent}>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">
+                    Title / Headline <span className="text-destructive">*</span>
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    The text that will appear on your thumbnail
+                  </p>
+                  <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder='e.g. "5 Mistakes That Kill Your GST Return"'
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">
+                    Content topic <span className="text-destructive">*</span>
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    What is your video/post about? More detail = better thumbnail
+                  </p>
+                  <textarea
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    rows={3}
+                    placeholder="e.g. Common GST filing mistakes Indian small businesses make — wrong HSN codes, missed deadlines, penalties"
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition resize-none"
+                  />
+                </div>
+              </div>
+            </RevealSection>
+
+            {/* FIELDS 5+6+7: Niche + Mood + Color — revealed after title has 3 chars */}
+            <RevealSection show={showStyleOptions}>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Niche <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {NICHES.map((n) => (
+                      <Chip key={n} label={n} active={niche === n} onClick={() => setNiche(niche === n ? "" : n)} />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Mood <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {MOODS.map((m) => (
+                      <Chip key={m} label={m} active={mood === m} onClick={() => setMood(mood === m ? "" : m)} />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Color theme <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {COLOR_THEMES.map((c) => (
+                      <Chip key={c} label={c} active={colorTheme === c} onClick={() => setColorTheme(c)} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </RevealSection>
+
+            {/* FIELD 8: Face mode — revealed after topic has 10 chars */}
+            <RevealSection show={showFaceOption}>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Face in thumbnail</label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Thumbnails with faces get higher CTR
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  {/* AI Face */}
+                  <button
+                    type="button"
+                    onClick={() => setFaceMode("ai")}
+                    className={`rounded-xl border p-3 text-center transition-colors ${
+                      faceMode === "ai"
+                        ? "border-accent bg-accent/8"
+                        : "border-border hover:border-foreground/30"
+                    }`}
+                  >
+                    <Sparkles className={`h-5 w-5 mx-auto mb-1.5 ${faceMode === "ai" ? "text-accent" : "text-muted-foreground"}`} />
+                    <p className="text-xs font-medium text-foreground">AI Face</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{baseCost} cr</p>
+                  </button>
+
+                  {/* Own Face */}
+                  <button
+                    type="button"
+                    onClick={() => setFaceMode("own")}
+                    className={`rounded-xl border p-3 text-center transition-colors ${
+                      faceMode === "own"
+                        ? "border-accent bg-accent/8"
+                        : "border-border hover:border-foreground/30"
+                    }`}
+                  >
+                    <User className={`h-5 w-5 mx-auto mb-1.5 ${faceMode === "own" ? "text-accent" : "text-muted-foreground"}`} />
+                    <p className="text-xs font-medium text-foreground">My Photo</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{baseCost + faceAddonCost} cr</p>
+                  </button>
+
+                  {/* No Face */}
+                  <button
+                    type="button"
+                    onClick={() => setFaceMode("none")}
+                    className={`rounded-xl border p-3 text-center transition-colors ${
+                      faceMode === "none"
+                        ? "border-accent bg-accent/8"
+                        : "border-border hover:border-foreground/30"
+                    }`}
+                  >
+                    <ImageIcon className={`h-5 w-5 mx-auto mb-1.5 ${faceMode === "none" ? "text-accent" : "text-muted-foreground"}`} />
+                    <p className="text-xs font-medium text-foreground">No Face</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{baseCost} cr</p>
+                  </button>
+                </div>
+
+                {/* Gender toggle — shown when AI face selected */}
+                {faceMode === "ai" && (
+                  <div className="flex gap-2 animate-in fade-in duration-200">
+                    <Chip label="Male" active={gender === "male"} onClick={() => setGender("male")} />
+                    <Chip label="Female" active={gender === "female"} onClick={() => setGender("female")} />
+                  </div>
+                )}
+
+                {/* Photo upload — shown when own face selected */}
+                {faceMode === "own" && (
+                  <div className="animate-in fade-in duration-200 space-y-2">
+                    {facePreviewUrl ? (
+                      <div className="relative w-20 h-20">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={facePreviewUrl}
+                          alt="Your photo"
+                          className="w-20 h-20 rounded-xl object-cover border border-border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => { setFaceFile(null); setFacePreviewUrl(null) }}
+                          className="absolute -top-1.5 -right-1.5 rounded-full bg-destructive p-0.5"
+                        >
+                          <X className="h-3 w-3 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-5 cursor-pointer hover:border-accent/50 transition-colors">
+                        <Upload className="h-6 w-6 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Upload your photo (PNG/JPG, max 2MB)</span>
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            if (file.size > 2 * 1024 * 1024) {
+                              toast.error("Photo must be under 2MB")
+                              return
+                            }
+                            setFaceFile(file)
+                          }}
+                        />
+                      </label>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      +{faceAddonCost} credits for photo mode. Your photo is used only for this generation.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </RevealSection>
+
+            {/* Credit display + Generate button */}
+            {showContent && (
+              <div className="space-y-3 pt-1">
+                <div className="rounded-lg bg-muted/40 px-4 py-3 flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {faceMode === "own"
+                      ? `${baseCost} base + ${faceAddonCost} photo addon`
+                      : "Credits required"}
+                  </span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {totalCredits} credits
+                  </span>
+                </div>
+
+                {status === "unauthenticated" ? (
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal("login")}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent/90 transition-colors"
+                  >
+                    <Coins className="h-4 w-4" />Login to Generate
+                  </button>
+                ) : balance < totalCredits ? (
+                  <button
+                    type="button"
+                    onClick={() => openPaywall(thumbnailAIConfig.name, totalCredits)}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent/90 transition-colors"
+                  >
+                    <Coins className="h-4 w-4" />Buy Credits
+                  </button>
+                ) : (
+                  <div className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={generate}
+                      disabled={isGenerating}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isGenerating
+                        ? <><Loader2 className="h-4 w-4 animate-spin" />Generating...</>
+                        : <><Coins className="h-4 w-4" />Generate Thumbnail — {totalCredits} credits</>
+                      }
+                    </button>
+                    <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />Takes 20–30 seconds
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
         </div>
 
-        {/* RIGHT PANEL */}
+        {/* RIGHT PANEL — Output */}
         <div className="lg:w-[55%] p-4 md:p-6 overflow-y-auto">
           {!isGenerating && !output && (
             <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border bg-surface/50 p-8">
               <ImageIcon className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
               <p className="text-sm font-medium text-foreground">Your thumbnail will appear here</p>
-              <p className="text-xs text-muted-foreground mt-1">Describe your thumbnail and click Generate</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Fill in the form and click Generate
+              </p>
             </div>
           )}
 
@@ -247,13 +574,18 @@ export default function ThumbnailAITool({ creditCost: creditCostProp }: { credit
             <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center p-8 space-y-4">
               <Loader2 className="h-10 w-10 animate-spin text-accent" />
               <p className="text-sm font-semibold text-foreground">Creating your thumbnail...</p>
-              <p className="text-xs text-muted-foreground">Generating with Best AI Model</p>
+              <p className="text-xs text-muted-foreground">
+                {faceMode === "own"
+                  ? "Using your photo with AI generation"
+                  : "Building cinematic prompt with AI, then generating image"}
+              </p>
               <p className="text-xs text-muted-foreground">This takes 20–30 seconds</p>
             </div>
           )}
 
           {!isGenerating && output && (
             <div className="space-y-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={output.imageUrl}
                 alt="Generated thumbnail"
@@ -261,18 +593,22 @@ export default function ThumbnailAITool({ creditCost: creditCostProp }: { credit
               />
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
-                  {creditCost} credits used
+                  {totalCredits} credits used
                 </span>
                 <div className="flex gap-2">
-                  <button type="button" onClick={downloadImage}
-                    className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface transition-colors">
+                  <button
+                    type="button"
+                    onClick={downloadImage}
+                    className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface transition-colors"
+                  >
                     <Download className="h-3.5 w-3.5" />Download
                   </button>
                   <button
                     type="button"
-                    onClick={() => lastFormData && generate(lastFormData)}
+                    onClick={() => lastInput && generate()}
                     disabled={isGenerating}
-                    className="flex items-center gap-1.5 rounded-lg bg-accent/10 border border-accent/30 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/20 disabled:opacity-60 transition-colors">
+                    className="flex items-center gap-1.5 rounded-lg bg-accent/10 border border-accent/30 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/20 disabled:opacity-60 transition-colors"
+                  >
                     <RefreshCw className="h-3.5 w-3.5" />Regenerate
                   </button>
                 </div>
@@ -282,12 +618,12 @@ export default function ThumbnailAITool({ creditCost: creditCostProp }: { credit
         </div>
       </div>
 
-      {/* History gallery — only for logged-in users */}
+      {/* History gallery */}
       {status === "authenticated" && (
         <div className="border-t border-border px-4 md:px-6 pb-8">
           <ThumbnailHistory newThumbnail={newThumbnail} />
         </div>
       )}
     </div>
-  );
+  )
 }

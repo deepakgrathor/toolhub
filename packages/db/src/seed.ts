@@ -517,6 +517,7 @@ const SITE_CONFIGS = [
   { key: "announcement_banner", value: "" },
   { key: "announcement_visible", value: false },
   { key: "welcome_bonus_credits", value: 10 },
+  { key: "thumbnail_face_addon_credits", value: 3 },
 ];
 
 // ── Main ────────────────────────────────────────────────────────────────────
