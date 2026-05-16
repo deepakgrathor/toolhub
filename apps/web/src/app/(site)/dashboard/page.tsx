@@ -3,13 +3,13 @@ import { Suspense } from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { connectDB, CreditTransaction, ToolOutput, User } from "@toolhub/db";
-import { getAllTools } from "@/lib/tool-registry";
 import { StatsBar } from "@/components/dashboard/StatsBar";
-import { KitSection } from "@/components/dashboard/KitSection";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { ReferralCard } from "@/components/dashboard/ReferralCard";
 import { GreetingTagline } from "@/components/dashboard/GreetingTagline";
-import { StatsBarSkeleton, KitSectionSkeleton } from "@/components/ui/skeletons";
+import { CreditHealthWidget } from "@/components/dashboard/CreditHealthWidget";
+import { QuickLaunchSection } from "@/components/dashboard/QuickLaunchSection";
+import { StatsBarSkeleton } from "@/components/ui/skeletons";
 import { getCachedDashStats, setCachedDashStats } from "@/lib/credit-cache";
 import mongoose from "mongoose";
 
@@ -84,22 +84,6 @@ async function StatsSection({ userId }: { userId: string }) {
   );
 }
 
-async function ToolsSection() {
-  let allTools: Awaited<ReturnType<typeof getAllTools>> = [];
-  try {
-    allTools = await getAllTools();
-  } catch {
-    // DB unavailable
-  }
-
-  return (
-    <div>
-      <h2 className="text-base font-semibold text-foreground mb-4">All Tools</h2>
-      <KitSection tools={allTools} />
-    </div>
-  );
-}
-
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
@@ -108,6 +92,8 @@ export default async function DashboardPage() {
 
   const firstName = session.user.name?.split(" ")[0] ?? "there";
   const greeting = getGreeting();
+  const planSlug = 'free';
+  const kitSlug = '';
 
   return (
     <div className="min-h-full px-4 py-8 md:px-8 max-w-7xl mx-auto">
@@ -120,29 +106,25 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats — streams in after DB query */}
-      <div className="mb-10">
+      <div className="mb-6">
         <Suspense fallback={<StatsBarSkeleton />}>
           <StatsSection userId={session.user.id} />
         </Suspense>
       </div>
 
+      {/* Credit health */}
+      <div className="mb-8">
+        <CreditHealthWidget planSlug={planSlug} />
+      </div>
+
       {/* Recent activity — client component with its own loading state */}
-      <div className="mb-10">
+      <div className="mb-8">
         <RecentActivity />
       </div>
 
-      {/* Tools — streams in after DB + Redis query */}
-      <div className="mb-10">
-        <Suspense
-          fallback={
-            <div>
-              <div className="h-5 w-24 mb-4 animate-pulse rounded-lg bg-muted" />
-              <KitSectionSkeleton />
-            </div>
-          }
-        >
-          <ToolsSection />
-        </Suspense>
+      {/* Quick launch */}
+      <div className="mb-8">
+        <QuickLaunchSection kitSlug={kitSlug} />
       </div>
 
       {/* Referral section */}
