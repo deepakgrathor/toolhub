@@ -67,22 +67,22 @@ const TOOLS: ToolSeed[] = [
     slug: "hook-writer",
     name: "Hook Writer",
     description:
-      "Write powerful opening hooks that grab attention instantly — free tool.",
+      "Write powerful opening hooks that grab attention instantly using AI.",
     category: "Content Creation",
     kits: ["creator"],
-    isAI: false,
-    isFree: true,
+    isAI: true,
+    isFree: false,
     icon: "Zap",
   },
   {
     slug: "caption-generator",
     name: "Caption Generator",
     description:
-      "Generate social media captions with hashtags in seconds — free tool.",
+      "Generate social media captions with hashtags in seconds using AI.",
     category: "Content Creation",
     kits: ["creator"],
-    isAI: false,
-    isFree: true,
+    isAI: true,
+    isFree: false,
     icon: "MessageSquare",
   },
 
@@ -359,10 +359,10 @@ function cfg(
 
 const TOOL_CONFIGS: ConfigSeed[] = [
   // Free / no-AI tools
-  cfg("hook-writer", 0, "gemini-flash-2.0", "google", "gpt-4o-mini", "openai"),
+  cfg("hook-writer", 1, "gemini-flash-2.0", "google", "gpt-4o-mini", "openai"),
   cfg(
     "caption-generator",
-    0,
+    1,
     "gemini-flash-2.0",
     "google",
     "gpt-4o-mini",
@@ -420,7 +420,7 @@ const TOOL_CONFIGS: ConfigSeed[] = [
     "gpt-4o-mini",
     "openai",
   ),
-  cfg("jd-generator", 3, "gpt-4o-mini", "openai", "gemini-flash-2.0", "google"),
+  cfg("jd-generator", 2, "gpt-4o-mini", "openai", "gemini-flash-2.0", "google"),
   cfg(
     "appraisal-draft",
     3,
@@ -451,15 +451,14 @@ const TOOL_CONFIGS: ConfigSeed[] = [
   // 4 credits
   cfg("yt-script", 4, "claude-haiku-3-5", "anthropic", "gpt-4o-mini", "openai"),
 
-  // 7 credits
-  cfg("thumbnail-ai", 7, "dall-e-3", "openai", "", ""),
-
   // 8 credits
   cfg("seo-auditor", 8, "claude-sonnet-4-5", "anthropic", "gpt-4o", "openai"),
+  cfg("legal-notice", 8, "claude-sonnet-4-5", "anthropic", "gpt-4o", "openai"),
 
   // 10 credits
+  cfg("thumbnail-ai", 10, "gpt-image-1", "openai", "", ""),
   cfg(
-    "website-generator",
+    "nda-generator",
     10,
     "claude-sonnet-4-5",
     "anthropic",
@@ -467,11 +466,10 @@ const TOOL_CONFIGS: ConfigSeed[] = [
     "openai",
   ),
 
-  // 12 credits
-  cfg("legal-notice", 12, "claude-sonnet-4-5", "anthropic", "gpt-4o", "openai"),
+  // 15 credits
   cfg(
-    "nda-generator",
-    12,
+    "website-generator",
+    15,
     "claude-sonnet-4-5",
     "anthropic",
     "gpt-4o",

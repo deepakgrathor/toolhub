@@ -5,10 +5,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { hookWriterSchema, type HookWriterInput } from "./schema";
 import { hookWriterConfig } from "./config";
-import { Zap, Copy, CheckCheck, Loader2 } from "lucide-react";
+import { Zap, Copy, CheckCheck, Loader2, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { useAuthStore } from "@/store/auth-store";
+import { usePaywallStore } from "@/store/paywall-store";
+import { useCreditStore } from "@/store/credits-store";
 import { PresetSelector } from "@/components/ui/PresetSelector";
 import { usePresets } from "@/hooks/usePresets";
 
@@ -66,9 +68,12 @@ function HookCard({ hook, index }: { hook: string; index: number }) {
   );
 }
 
-export default function HookWriterTool({ creditCost: _creditCost }: { creditCost?: number }) {
+export default function HookWriterTool({ creditCost: creditCostProp }: { creditCost?: number }) {
+  const creditCost = creditCostProp ?? hookWriterConfig.creditCost;
   const { status } = useSession();
+  const { balance, deductLocally } = useCreditStore();
   const openAuthModal = useAuthStore((s) => s.openAuthModal);
+  const openPaywall = usePaywallStore((s) => s.openPaywall);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hooks, setHooks] = useState<string[]>([]);
 
@@ -115,6 +120,10 @@ export default function HookWriterTool({ creditCost: _creditCost }: { creditCost
       openAuthModal("login");
       return;
     }
+    if (creditCost > 0 && balance < creditCost) {
+      openPaywall(hookWriterConfig.name, creditCost);
+      return;
+    }
     setIsGenerating(true);
     setHooks([]);
     try {
@@ -123,8 +132,10 @@ export default function HookWriterTool({ creditCost: _creditCost }: { creditCost
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      if (res.status === 402) { openPaywall(hookWriterConfig.name, creditCost); return; }
       if (!res.ok) throw new Error("generation_failed");
       const json = await res.json();
+      deductLocally(creditCost);
       setHooks((json.output?.hooks as string[]) ?? []);
     } catch {
       toast.error("Generation failed. Please try again.");
@@ -144,9 +155,11 @@ export default function HookWriterTool({ creditCost: _creditCost }: { creditCost
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold text-foreground">{hookWriterConfig.name}</h1>
-              <span className="rounded-full bg-green-500/15 px-2 py-0.5 text-xs font-semibold text-green-500">
-                FREE
-              </span>
+              {creditCost === 0 ? (
+                <span className="rounded-full bg-green-500/15 px-2 py-0.5 text-xs font-semibold text-green-500">Free</span>
+              ) : (
+                <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">{creditCost} credit</span>
+              )}
             </div>
             <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
               {hookWriterConfig.description}
@@ -221,7 +234,16 @@ export default function HookWriterTool({ creditCost: _creditCost }: { creditCost
               className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent/90 transition-colors"
             >
               <Zap className="h-4 w-4" />
-              Login to Generate Free
+              Login to Generate
+            </button>
+          ) : creditCost > 0 && balance < creditCost ? (
+            <button
+              type="button"
+              onClick={() => openPaywall(hookWriterConfig.name, creditCost)}
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary/10 border border-primary/20 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors"
+            >
+              <Coins className="h-4 w-4" />
+              Get Credits — {creditCost} credit needed
             </button>
           ) : (
             <button
@@ -231,8 +253,10 @@ export default function HookWriterTool({ creditCost: _creditCost }: { creditCost
             >
               {isGenerating ? (
                 <><Loader2 className="h-4 w-4 animate-spin" />Generating...</>
-              ) : (
+              ) : creditCost === 0 ? (
                 <><Zap className="h-4 w-4" />Generate Hooks — Free</>
+              ) : (
+                <><Coins className="h-4 w-4" />Generate Hooks — {creditCost} credit</>
               )}
             </button>
           )}

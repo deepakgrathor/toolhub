@@ -5,13 +5,38 @@ import { withCache } from "@/lib/with-cache";
 
 export async function GET() {
   try {
-    const tools = await withCache("public:tools", 300, async () => {
+    const tools = await withCache("public:tools:v2", 300, async () => {
       await connectDB();
       const db = mongoose.connection.db!;
       return db
         .collection("tools")
-        .find({ isVisible: { $ne: false } })
-        .project({ slug: 1, name: 1, kit: 1, description: 1 })
+        .aggregate([
+          { $match: { isVisible: { $ne: false } } },
+          {
+            $lookup: {
+              from: "toolconfigs",
+              localField: "slug",
+              foreignField: "toolSlug",
+              as: "configArr",
+            },
+          },
+          {
+            $addFields: {
+              creditCost: {
+                $ifNull: [{ $arrayElemAt: ["$configArr.creditCost", 0] }, 0],
+              },
+              isFree: {
+                $eq: [
+                  { $ifNull: [{ $arrayElemAt: ["$configArr.creditCost", 0] }, 0] },
+                  0,
+                ],
+              },
+            },
+          },
+          {
+            $project: { slug: 1, name: 1, kit: 1, description: 1, creditCost: 1, isFree: 1 },
+          },
+        ])
         .toArray();
     });
 
