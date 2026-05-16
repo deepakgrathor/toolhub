@@ -247,7 +247,7 @@ export default function ThumbnailAITool({ creditCost: creditCostProp }: { credit
             <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center p-8 space-y-4">
               <Loader2 className="h-10 w-10 animate-spin text-accent" />
               <p className="text-sm font-semibold text-foreground">Creating your thumbnail...</p>
-              <p className="text-xs text-muted-foreground">Generating with DALL-E 3</p>
+              <p className="text-xs text-muted-foreground">Generating with Best AI Model</p>
               <p className="text-xs text-muted-foreground">This takes 20–30 seconds</p>
             </div>
           )}

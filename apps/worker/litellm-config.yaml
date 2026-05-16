@@ -24,9 +24,9 @@ model_list:
       model: gemini/gemini-2.0-flash
       api_key: os.environ/GOOGLE_AI_API_KEY
 
-  - model_name: dall-e-3
+  - model_name: gpt-image-1
     litellm_params:
-      model: openai/dall-e-3
+      model: openai/gpt-image-1
       api_key: os.environ/OPENAI_API_KEY
 
 router_settings:

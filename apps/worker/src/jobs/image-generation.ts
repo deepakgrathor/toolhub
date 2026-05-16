@@ -3,7 +3,7 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 interface ImageGenPayload {
   prompt: string;
-  size: "1024x1024" | "1792x1024";
+  size: "1024x1024" | "1536x1024";
   userId: string;
   toolSlug: string;
 }
@@ -38,9 +38,10 @@ export async function processImageGeneration(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "dall-e-3",
+        model: "gpt-image-1",
         prompt: payload.prompt,
         size: payload.size,
+        quality: "low",
         n: 1,
       }),
     }
@@ -51,15 +52,11 @@ export async function processImageGeneration(
     throw new Error(`LiteLLM image error ${genRes.status}: ${text}`);
   }
 
-  const genData = await genRes.json();
-  const openaiUrl = genData.data[0].url as string;
+  const genData = await genRes.json() as { data?: { b64_json?: string }[] };
+  const b64 = genData?.data?.[0]?.b64_json;
+  if (!b64) throw new Error("No image data in response");
 
-  // 2. Download image from OpenAI's expiring URL (valid ~1 hour)
-  const imgRes = await fetch(openaiUrl);
-  if (!imgRes.ok) {
-    throw new Error(`Failed to download image: ${imgRes.status}`);
-  }
-  const buffer = Buffer.from(await imgRes.arrayBuffer());
+  const buffer = Buffer.from(b64, "base64");
 
   // 3. Upload to Cloudflare R2 for permanent storage
   const key = `images/${payload.toolSlug}/${payload.userId}/${Date.now()}.png`;

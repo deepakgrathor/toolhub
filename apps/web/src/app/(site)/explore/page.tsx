@@ -10,12 +10,12 @@ import type { ToolWithConfig } from "@/lib/tool-registry";
 import { useWorkspaceStore } from "@/store/workspace-store";
 
 const KIT_FILTERS = [
-  { id: "all",       label: "All Tools",  icon: "LayoutGrid" },
-  { id: "creator",   label: "Creator",    icon: "Sparkles" },
-  { id: "sme",       label: "SME",        icon: "Building2" },
-  { id: "hr",        label: "HR",         icon: "Users" },
-  { id: "ca-legal",  label: "Legal",      icon: "Scale" },
-  { id: "marketing", label: "Marketing",  icon: "Megaphone" },
+  { id: "all", label: "All Tools", icon: "LayoutGrid" },
+  { id: "creator", label: "Creator", icon: "Sparkles" },
+  { id: "sme", label: "SME", icon: "Building2" },
+  { id: "hr", label: "HR", icon: "Users" },
+  { id: "ca-legal", label: "Legal", icon: "Scale" },
+  { id: "marketing", label: "Marketing", icon: "Megaphone" },
 ];
 
 interface ExploreData {
@@ -43,14 +43,20 @@ function ToolCard({
             <Icon className="h-4.5 w-4.5 text-primary" />
           </div>
           <div>
-            <div className="text-sm font-semibold text-foreground leading-tight">{tool.name}</div>
+            <div className="text-sm font-semibold text-foreground leading-tight">
+              {tool.name}
+            </div>
             <div className="text-xs text-muted-foreground mt-0.5">
-              {tool.config.creditCost === 0 ? "Free" : `${tool.config.creditCost} cr`}
+              {tool.config.creditCost === 0
+                ? "Free"
+                : `${tool.config.creditCost} cr`}
             </div>
           </div>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground line-clamp-2 flex-1">{tool.description}</p>
+      <p className="text-xs text-muted-foreground line-clamp-2 flex-1">
+        {tool.description}
+      </p>
       <button
         onClick={onToggle}
         disabled={toggling}
@@ -58,15 +64,19 @@ function ToolCard({
           "flex items-center justify-center gap-1.5 w-full rounded-lg py-1.5 text-xs font-medium transition-all",
           isAdded
             ? "bg-primary/10 text-primary border border-primary/20 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
-            : "bg-primary text-white hover:opacity-90"
+            : "bg-primary text-white hover:opacity-90",
         )}
       >
         {toggling ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
         ) : isAdded ? (
-          <><Check className="h-3.5 w-3.5" /> Added</>
+          <>
+            <Check className="h-3.5 w-3.5" /> Added
+          </>
         ) : (
-          <><Plus className="h-3.5 w-3.5" /> Add to Workspace</>
+          <>
+            <Plus className="h-3.5 w-3.5" /> Add to Workspace
+          </>
         )}
       </button>
     </div>
@@ -91,7 +101,7 @@ export default function ExplorePage() {
     setLoading(true);
     try {
       const res = await fetch("/api/explore/tools");
-      const d = await res.json() as ExploreData;
+      const d = (await res.json()) as ExploreData;
       setData(d);
     } catch {
       //
@@ -116,7 +126,14 @@ export default function ExplorePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ slug }),
         });
-        setData((d) => d ? { ...d, userAddedSlugs: d.userAddedSlugs.filter((s) => s !== slug) } : d);
+        setData((d) =>
+          d
+            ? {
+                ...d,
+                userAddedSlugs: d.userAddedSlugs.filter((s) => s !== slug),
+              }
+            : d,
+        );
         // Instantly remove from sidebar
         removeTool(slug);
       } else {
@@ -125,20 +142,29 @@ export default function ExplorePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ slug }),
         });
-        setData((d) => d ? { ...d, userAddedSlugs: [...d.userAddedSlugs, slug] } : d);
+        setData((d) =>
+          d ? { ...d, userAddedSlugs: [...d.userAddedSlugs, slug] } : d,
+        );
         // Instantly add to sidebar
         addTool({ slug, name: toolName });
       }
     } catch {
       //
     } finally {
-      setToggling((s) => { const n = new Set(s); n.delete(slug); return n; });
+      setToggling((s) => {
+        const n = new Set(s);
+        n.delete(slug);
+        return n;
+      });
     }
   }
 
   const filteredTools = (data?.tools ?? []).filter((t) => {
     const matchKit = kitFilter === "all" || t.kits.includes(kitFilter);
-    const matchSearch = !search || t.name.toLowerCase().includes(search.toLowerCase()) || t.description.toLowerCase().includes(search.toLowerCase());
+    const matchSearch =
+      !search ||
+      t.name.toLowerCase().includes(search.toLowerCase()) ||
+      t.description.toLowerCase().includes(search.toLowerCase());
     return matchKit && matchSearch;
   });
 
@@ -183,7 +209,7 @@ export default function ExplorePage() {
                   "flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                   kitFilter === id
                     ? "bg-primary text-white"
-                    : "border border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
+                    : "border border-border text-muted-foreground hover:text-foreground hover:border-primary/40",
                 )}
               >
                 <KitIcon className="h-3.5 w-3.5" />
@@ -195,7 +221,8 @@ export default function ExplorePage() {
       </div>
 
       <p className="text-xs text-muted-foreground mb-4">
-        {filteredTools.length} tools · {data?.userAddedSlugs.length ?? 0} added to workspace
+        {filteredTools.length} tools · {data?.userAddedSlugs.length ?? 0} added
+        to workspace
       </p>
 
       {filteredTools.length === 0 ? (

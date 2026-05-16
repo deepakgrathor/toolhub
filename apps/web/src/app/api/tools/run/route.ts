@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 const AI_MODELS = [
   "claude-haiku-3-5", "claude-sonnet-4-5",
   "gpt-4o-mini", "gpt-4o",
-  "gemini-flash-2.0", "dall-e-3",
+  "gemini-flash-2.0", "gpt-image-1",
 ];
 
 type ToolDoc = {
@@ -106,8 +106,8 @@ async function callModel(
     return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   }
 
-  // ── DALL-E 3 ────────────────────────────────────────────────────────────────
-  if (model === "dall-e-3" && process.env.OPENAI_API_KEY) {
+  // ── GPT Image 1 ─────────────────────────────────────────────────────────────
+  if (model === "gpt-image-1" && process.env.OPENAI_API_KEY) {
     const fullPrompt = systemPrompt ? `${systemPrompt}\n${prompt}` : prompt;
     const res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
@@ -115,11 +115,12 @@ async function callModel(
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model: "dall-e-3", prompt: fullPrompt, n: 1, size: "1024x1024" }),
+      body: JSON.stringify({ model: "gpt-image-1", prompt: fullPrompt, n: 1, size: "1024x1024", quality: "low" }),
     });
-    if (!res.ok) throw new Error(`DALL-E error ${res.status}: ${await res.text()}`);
-    const data = await res.json();
-    return data?.data?.[0]?.url ?? "";
+    if (!res.ok) throw new Error(`Image generation error ${res.status}: ${await res.text()}`);
+    const data = await res.json() as { data?: { b64_json?: string }[] };
+    const b64 = data?.data?.[0]?.b64_json ?? "";
+    return b64 ? `data:image/png;base64,${b64}` : "";
   }
 
   // ── OpenAI ──────────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import { connectDB, CreditService, InsufficientCreditsError, ToolOutput, ToolConfig } from "@toolhub/db";
 import type { ToolEngineContext, ToolEngineResult } from "@toolhub/shared";
 import { applyWatermark } from "@/lib/watermark";
+import { invalidateBalance } from "@/lib/credit-cache";
 import type { BlogGeneratorInput } from "./schema";
 
 const LENGTH_WORDS = { short: 500, medium: 1000, long: 1500 } as const;
@@ -171,6 +172,7 @@ export async function execute(
     creditCost,
     context.toolSlug
   );
+  await invalidateBalance(context.userId);
 
   await ToolOutput.create({
     userId: context.userId,

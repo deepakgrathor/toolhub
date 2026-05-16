@@ -62,7 +62,7 @@ const AI_MODELS = [
   { value: "claude-sonnet-4-5", label: "Claude Sonnet (Smart, Quality)" },
   { value: "gpt-4o-mini",       label: "GPT-4o Mini (Fast, Cheap)" },
   { value: "gpt-4o",            label: "GPT-4o (Powerful)" },
-  { value: "dall-e-3",          label: "DALL-E 3 (Image Generation)" },
+  { value: "gpt-image-1",       label: "GPT Image 1 (Image Generation)" },
 ];
 
 // ── Field editor modal ────────────────────────────────────────────────────────

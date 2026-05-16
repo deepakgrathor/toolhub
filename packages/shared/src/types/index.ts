@@ -22,7 +22,7 @@ export type AIModel =
   | "claude-sonnet-4-5"
   | "gemini-flash-2.0"
   | "gemini-pro"
-  | "dall-e-3";
+  | "gpt-image-1";
 
 export interface Tool {
   id: string;

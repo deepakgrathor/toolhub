@@ -2,6 +2,7 @@ import { connectDB, CreditService, InsufficientCreditsError, ToolOutput, ToolCon
 import type { ToolEngineContext, ToolEngineResult } from "@toolhub/shared";
 import { callAI } from "@/lib/ai";
 import { applyWatermark } from "@/lib/watermark";
+import { invalidateBalance } from "@/lib/credit-cache";
 import type { WebsiteGeneratorInput } from "./schema";
 
 const COLOR_PALETTES: Record<string, string> = {
@@ -101,6 +102,7 @@ export async function execute(
     creditCost,
     context.toolSlug
   );
+  await invalidateBalance(context.userId);
 
   await ToolOutput.create({
     userId: context.userId,

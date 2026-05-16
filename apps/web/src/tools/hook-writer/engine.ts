@@ -2,6 +2,7 @@ import { connectDB, CreditService, ToolOutput, ToolConfig } from "@toolhub/db";
 import type { ToolEngineContext, ToolEngineResult } from "@toolhub/shared";
 import { applyWatermark } from "@/lib/watermark";
 import { callAI, extractJson } from "@/lib/ai";
+import { invalidateBalance } from "@/lib/credit-cache";
 import type { HookWriterInput } from "./schema";
 
 function buildPrompt(input: HookWriterInput): string {
@@ -54,6 +55,7 @@ export async function execute(
     creditCost,
     context.toolSlug
   );
+  await invalidateBalance(context.userId);
 
   await ToolOutput.create({
     userId: context.userId,

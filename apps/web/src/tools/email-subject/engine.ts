@@ -2,6 +2,7 @@ import { connectDB, CreditService, InsufficientCreditsError, ToolOutput, ToolCon
 import type { ToolEngineContext, ToolEngineResult } from "@toolhub/shared";
 import { applyWatermark } from "@/lib/watermark";
 import { callAI, extractJson } from "@/lib/ai";
+import { invalidateBalance } from "@/lib/credit-cache";
 import type { EmailSubjectInput } from "./schema";
 
 function buildPrompt(input: EmailSubjectInput): string {
@@ -49,6 +50,7 @@ export async function execute(
     creditCost,
     context.toolSlug
   );
+  await invalidateBalance(context.userId);
 
   await ToolOutput.create({
     userId: context.userId,

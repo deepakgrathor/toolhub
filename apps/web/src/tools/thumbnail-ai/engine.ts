@@ -1,5 +1,6 @@
 import { connectDB, CreditService, InsufficientCreditsError, ToolOutput, ToolConfig } from "@toolhub/db";
 import type { ToolEngineContext, ToolEngineResult } from "@toolhub/shared";
+import { invalidateBalance } from "@/lib/credit-cache";
 import type { ThumbnailAIInput } from "./schema";
 
 const STYLE_LABELS: Record<string, string> = {
@@ -14,13 +15,6 @@ function buildDallEPrompt(input: ThumbnailAIInput): string {
     ? `Include bold, readable text overlay: "${input.textOverlay}".`
     : "No text overlay.";
   return `Create a professional ${STYLE_LABELS[input.style]} for "${input.videoTitle}". ${input.colorScheme} color scheme, highly eye-catching. Main visual: ${input.mainSubject}. ${textNote} 16:9 aspect ratio, high resolution, suitable for ${input.style === "youtube-thumbnail" ? "YouTube" : "social media"}.`;
-}
-
-async function downloadImageBuffer(url: string): Promise<Buffer> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`);
-  const buf = await res.arrayBuffer();
-  return Buffer.from(buf);
 }
 
 async function uploadToR2(buffer: Buffer, key: string): Promise<string> {
@@ -94,11 +88,11 @@ export async function execute(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "dall-e-3",
+      model: "gpt-image-1",
       prompt,
       n: 1,
-      size: "1792x1024",
-      quality: "standard",
+      size: "1536x1024",
+      quality: "low",
     }),
   });
 
@@ -106,11 +100,11 @@ export async function execute(
     throw new Error(`DALL-E error ${dalleRes.status}: ${await dalleRes.text()}`);
   }
 
-  const dalleData = await dalleRes.json() as { data?: { url?: string }[] };
-  const tempUrl = dalleData?.data?.[0]?.url;
-  if (!tempUrl) throw new Error("No image URL in DALL-E response");
+  const dalleData = await dalleRes.json() as { data?: { b64_json?: string }[] };
+  const b64 = dalleData?.data?.[0]?.b64_json;
+  if (!b64) throw new Error("No image data in response");
 
-  const imageBuffer = await downloadImageBuffer(tempUrl);
+  const imageBuffer = Buffer.from(b64, "base64");
 
   const key = `thumbnails/${context.userId}/${Date.now()}.png`;
   const permanentUrl = await uploadToR2(imageBuffer, key);
@@ -121,6 +115,7 @@ export async function execute(
     creditCost,
     context.toolSlug
   );
+  await invalidateBalance(context.userId);
 
   await ToolOutput.create({
     userId: context.userId,

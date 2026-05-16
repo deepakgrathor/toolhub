@@ -237,7 +237,7 @@ interface BlogGeneratorToolProps { creditCost?: number }
 export default function BlogGeneratorTool({ creditCost: creditCostProp }: BlogGeneratorToolProps) {
   const creditCost = creditCostProp ?? blogGeneratorConfig.creditCost;
   const { data: session, status } = useSession();
-  const { balance, deductLocally } = useCreditStore();
+  const { balance, deductLocally, setBalance } = useCreditStore();
   const openAuthModal = useAuthStore((s) => s.openAuthModal);
   const openPaywall = usePaywallStore((s) => s.openPaywall);
 
@@ -290,7 +290,7 @@ export default function BlogGeneratorTool({ creditCost: creditCostProp }: BlogGe
       if (parsed) {
         setParsedOutput(parsed);
         if (stream.newBalance !== null) {
-          deductLocally(stream.newBalance);
+          setBalance(stream.newBalance);
         }
       }
     }

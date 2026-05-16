@@ -35,7 +35,7 @@ const MODEL_OPTIONS = [
   { value: "claude-haiku-3-5", label: "Haiku 3.5", provider: "anthropic" },
   { value: "claude-sonnet-4-5", label: "Sonnet 4.5", provider: "anthropic" },
   { value: "gemini-flash-2.0", label: "Gemini Flash", provider: "google" },
-  { value: "dall-e-3", label: "DALL-E 3", provider: "openai" },
+  { value: "gpt-image-1", label: "GPT Image 1", provider: "openai" },
 ];
 
 type RowState = {

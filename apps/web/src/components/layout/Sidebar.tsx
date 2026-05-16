@@ -97,13 +97,13 @@ function CreditsWidget({ isCollapsed }: { isCollapsed: boolean }) {
 interface SidebarStats {
   planSlug: string;
   planName: string;
-  currentCredits: number;
-  planCredits: number;
-  creditsUsed: number;
+  totalReceived: number;
 }
 
 function PlanWidget({ isCollapsed }: { isCollapsed: boolean }) {
   const [stats, setStats] = useState<SidebarStats | null>(null);
+  // Live balance always from Zustand — never from cached API
+  const balance = useCreditStore((s) => s.balance);
 
   useEffect(() => {
     fetch("/api/user/sidebar-stats")
@@ -114,10 +114,13 @@ function PlanWidget({ isCollapsed }: { isCollapsed: boolean }) {
 
   if (!stats) return null;
 
-  const { planName, planSlug, currentCredits, planCredits, creditsUsed } =
-    stats;
+  const { planName, planSlug, totalReceived } = stats;
+  // creditsUsed = total ever received minus what's left now
+  const creditsUsed = Math.max(0, totalReceived - balance);
   const pct =
-    planCredits > 0 ? Math.min(100, (creditsUsed / planCredits) * 100) : 0;
+    totalReceived > 0
+      ? Math.min(100, Math.round((creditsUsed / totalReceived) * 100))
+      : 0;
 
   const barColor =
     pct >= 80 ? "bg-red-500" : pct >= 60 ? "bg-amber-500" : "bg-green-500";
@@ -139,7 +142,7 @@ function PlanWidget({ isCollapsed }: { isCollapsed: boolean }) {
     return (
       <Link
         href="/credits"
-        title={`${currentCredits} credits · ${planName}`}
+        title={`${balance} credits · ${planName}`}
         className="flex justify-center rounded-lg px-3 py-2 hover:bg-muted/50 transition-colors"
       >
         <svg
@@ -172,7 +175,7 @@ function PlanWidget({ isCollapsed }: { isCollapsed: boolean }) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+    <div className="rounded-lg border border-border bg-accent/10 p-3 space-y-2">
       {/* Plan badge + upgrade */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
@@ -197,8 +200,8 @@ function PlanWidget({ isCollapsed }: { isCollapsed: boolean }) {
           />
         </div>
         <div className="flex justify-between text-[10px] text-muted-foreground">
-          <span>{currentCredits} left</span>
-          <span>{planCredits} total</span>
+          <span>{balance} left</span>
+          <span>{totalReceived} total</span>
         </div>
       </div>
 
@@ -267,7 +270,7 @@ function SectionHeader({
         "flex items-center gap-2 rounded-lg px-3 py-2 mb-1",
         variant === "kit"
           ? "bg-accent/5 border border-accent/20"
-          : "bg-muted/50 border border-border",
+          : "bg-accent/5 border border-accent/20",
       )}
     >
       <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
@@ -345,7 +348,7 @@ function SidebarContent({
           className={cn(
             "sidebar-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
             isDashboard
-              ? "bg-primary/10 text-primary font-medium"
+              ? " text-primary font-medium bg-accent/5 border border-accent/20"
               : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
             isCollapsed && "justify-center",
           )}
@@ -363,8 +366,8 @@ function SidebarContent({
           className={cn(
             "sidebar-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
             pathname === "/explore"
-              ? "bg-primary/10 text-primary font-medium"
-              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+              ? "bg-accent/5 border border-accent/20 text-primary font-medium"
+              : "text-muted-foreground hover:bg-accent/5 hover:text-foreground",
             isCollapsed && "justify-center",
           )}
         >
@@ -381,7 +384,7 @@ function SidebarContent({
           className={cn(
             "sidebar-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
             pathname === "/credits"
-              ? "bg-primary/10 text-primary font-medium"
+              ? "bg-accent/5 border border-accent/20 text-primary font-medium"
               : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
             isCollapsed && "justify-center",
           )}

@@ -49,7 +49,7 @@ export function CreditHealthWidget({ planSlug }: CreditHealthWidgetProps) {
           <p className="text-2xl font-semibold text-foreground">{balance ?? 0}</p>
         </div>
         <span className="text-[11px] font-semibold tracking-wide uppercase
-                         text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                         text-muted-foreground bg-muted/10 px-2 py-1 rounded-md">
           {safePlanSlug} plan
         </span>
       </div>

@@ -5,6 +5,7 @@ import { blogGeneratorSchema } from "@/tools/blog-generator/schema";
 import { runToolGuard } from "@/lib/tool-guard";
 import { callAIStream } from "@/lib/ai-stream";
 import { sanitizeUserInput } from "@/lib/prompt-sanitizer";
+import { invalidateBalance } from "@/lib/credit-cache";
 import type { BlogGeneratorInput } from "@/tools/blog-generator/schema";
 
 export const dynamic = "force-dynamic";
@@ -126,6 +127,7 @@ export async function POST(req: NextRequest) {
           creditCost,
           "blog-generator"
         );
+        await invalidateBalance(userId);
 
         await ToolOutput.create({
           userId,

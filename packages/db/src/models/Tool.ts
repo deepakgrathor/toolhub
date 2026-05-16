@@ -34,7 +34,7 @@ export interface ITool extends Document {
   kitRef: Types.ObjectId | null;
 
   // AI configuration
-  aiModel: "claude-haiku-3-5" | "claude-sonnet-4-5" | "gpt-4o-mini" | "gpt-4o" | "gemini-flash-2.0" | "dall-e-3";
+  aiModel: "claude-haiku-3-5" | "claude-sonnet-4-5" | "gpt-4o-mini" | "gpt-4o" | "gemini-flash-2.0" | "gpt-image-1";
   systemPrompt: string;
   promptTemplate: string;
   formFields: IFormField[];
@@ -98,7 +98,7 @@ const ToolSchema = new Schema<ITool>(
 
     aiModel: {
       type: String,
-      enum: ["claude-haiku-3-5", "claude-sonnet-4-5", "gpt-4o-mini", "gpt-4o", "gemini-flash-2.0", "dall-e-3"],
+      enum: ["claude-haiku-3-5", "claude-sonnet-4-5", "gpt-4o-mini", "gpt-4o", "gemini-flash-2.0", "gpt-image-1"],
       default: "gemini-flash-2.0",
     },
     systemPrompt:   { type: String, default: "" },

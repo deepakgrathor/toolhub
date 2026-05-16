@@ -97,7 +97,8 @@
       "Bash(ls /f/2026/AI_Project/toolhub/apps/web 2>/dev/null | head -5 || ls /d/2026/AI_Project/toolhub/apps/web 2>/dev/null | head -5 || echo \"checking...\")",
       "Bash(cd /f/2026/AI_Project/toolhub && which npm && which npx && ls node_modules/.bin/tsc 2>/dev/null | head -3)",
       "PowerShell(Get-ChildItem \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\" -Recurse -Name | Where-Object { $_ -match \"payment\" })",
-      "Bash(npx shadcn@latest add accordion --yes)"
+      "Bash(npx shadcn@latest add accordion --yes)",
+      "Bash(git -C F:/2026/AI_Project/toolhub add packages/db/src/seed.ts apps/web/src/tools/hook-writer/config.ts apps/web/src/tools/hook-writer/HookWriterTool.tsx apps/web/src/tools/caption-generator/config.ts apps/web/src/tools/caption-generator/CaptionGeneratorTool.tsx apps/web/src/tools/thumbnail-ai/config.ts apps/web/src/tools/website-generator/config.ts apps/web/src/tools/jd-generator/config.ts apps/web/src/tools/legal-notice/config.ts apps/web/src/tools/nda-generator/config.ts apps/web/src/app/api/public/tools/route.ts)"
     ]
   }
 }

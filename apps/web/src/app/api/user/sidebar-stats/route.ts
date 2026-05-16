@@ -1,15 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { connectDB, User } from "@toolhub/db";
+import { connectDB, User, CreditTransaction } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
-
-const PLAN_CREDITS: Record<string, number> = {
-  free: 10,
-  lite: 200,
-  pro: 700,
-  business: 1500,
-  enterprise: 9999,
-};
+import mongoose from "mongoose";
 
 const PLAN_NAMES: Record<string, string> = {
   free: "Free",
@@ -25,6 +18,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Only plan info is cached — balance always comes from Zustand on the client
   const cacheKey = `sidebar:${session.user.id}`;
 
   try {
@@ -36,27 +30,32 @@ export async function GET() {
   }
 
   await connectDB();
-  const user = await User.findById(session.user.id).select("credits plan").lean();
+  const uid = new mongoose.Types.ObjectId(session.user.id);
+
+  const [user, totalAgg] = await Promise.all([
+    User.findById(uid).select("plan").lean(),
+    // Sum all credits ever received (purchases + plan grants + referrals + bonuses)
+    CreditTransaction.aggregate([
+      { $match: { userId: uid, amount: { $gt: 0 } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+  ]);
 
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const planSlug = user.plan ?? "free";
-  const currentCredits = user.credits ?? 0;
-  // planCredits is the higher of the plan quota or current balance (bonuses can exceed plan quota)
-  const planCredits = Math.max(PLAN_CREDITS[planSlug] ?? 10, currentCredits);
-  const creditsUsed = Math.max(0, planCredits - currentCredits);
+  // totalReceived = all credits ever added to this account (packs + plan + referrals)
+  const totalReceived: number = totalAgg[0]?.total ?? 0;
 
   const data = {
     planSlug,
     planName: PLAN_NAMES[planSlug] ?? "Free",
-    currentCredits,
-    planCredits,
-    creditsUsed,
+    totalReceived,
   };
 
   try {
     const redis = getRedis();
-    await redis.set(cacheKey, JSON.stringify(data), { ex: 120 }); // 2 min TTL
+    await redis.set(cacheKey, JSON.stringify(data), { ex: 300 }); // 5 min TTL (plan changes rarely)
   } catch {
     // silent
   }

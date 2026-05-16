@@ -153,7 +153,7 @@ const AI_TOOLS: ToolDef[] = [
   },
   {
     slug: "thumbnail-ai", type: "ai", kitSlug: "creator",
-    aiModel: "dall-e-3",
+    aiModel: "gpt-image-1",
     systemPrompt: "Generate a high-quality YouTube thumbnail image that is eye-catching, bold, and optimised for click-through rates.",
     promptTemplate: "Create a YouTube thumbnail for a video titled '{{title}}'. Style: {{style}}. Include bold text overlay saying '{{textOverlay}}'. Make it vibrant, high contrast, and visually striking.",
     outputType: "image", outputLabel: "Thumbnail Image",

@@ -20,7 +20,7 @@ export const AI_MODELS = {
   CLAUDE_SONNET: "claude-sonnet-4-5",
   GEMINI_FLASH: "gemini-flash-2.0",
   GEMINI_PRO: "gemini-pro",
-  DALLE_3: "dall-e-3",
+  GPT_IMAGE_1: "gpt-image-1",
 } as const;
 
 // ── Routes ────────────────────────────────────────────────────────────────────
