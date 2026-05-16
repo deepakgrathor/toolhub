@@ -1,8 +1,29 @@
 # Handoff Note
-Updated: 2026-05-16 | Account: B | Session: Dash-1 | Features: Dashboard redesign — removed ToolsSection (All Tools), added CreditHealthWidget + QuickLaunchSection
+Updated: 2026-05-16 | Account: B | Session: CreditFix-1 | Features: Credit cost display audit — removed all hardcoded FREE/creditCost values, synced seed to master context v8.0 values
 
 ## Where We Are
-Session Dash-1 done. **TypeScript: 0 errors (apps/web).**
+Session CreditFix-1 done. **TypeScript: 0 errors (apps/web).**
+
+### Credit Audit State After CreditFix-1
+- **Root cause**: `HookWriterTool` + `CaptionGeneratorTool` had hardcoded `FREE` badges/buttons and discarded their `creditCost` prop (`_creditCost`). Backend engines were already DB-driven.
+- **seed.ts** updated — credit costs now match master context v8.0:
+  - hook-writer: 0→1cr, isAI:true, isFree:false
+  - caption-generator: 0→1cr, isAI:true, isFree:false
+  - thumbnail-ai: 7→10cr
+  - jd-generator: 3→2cr
+  - legal-notice: 12→8cr
+  - nda-generator: 12→10cr
+  - website-generator: 10→15cr
+- **config.ts fallbacks** in all 7 tools updated to match seed
+- **HookWriterTool + CaptionGeneratorTool**: now credit-aware — uses `creditCostProp ?? config.creditCost`, adds paywall check before submit, handles 402, calls `deductLocally` on success
+- **/api/public/tools**: upgraded to `$lookup` aggregation returning `creditCost` + `isFree` from toolconfigs; cache key bumped to `public:tools:v2`
+- **Explore page** (`/api/explore/tools` → `getAllTools()` → `$lookup`): was already correct — no change needed
+- **Tool page** (`/tools/[slug]/page.tsx`): was already correct — passes `tool.config.creditCost` from DB to components
+- **Post-deploy**: run `npm run db:seed` (or `ts-node packages/db/src/seed.ts`) to update DB credit costs to match the new seed values. **Without re-seeding, production DB still has old values** — the UI/backend engines read from DB at runtime, not from seed.ts.
+
+### Next Steps (unchanged)
+- Dash-2: Add `plan` + `professions[0]` to NextAuth JWT/session so CreditHealthWidget and QuickLaunchSection become truly dynamic
+- SEO-3: Kit landing page content (public pages for /kits/[slug])
 
 ### Dashboard State After Dash-1
 - `ToolsSection` async server component removed from `dashboard/page.tsx`
