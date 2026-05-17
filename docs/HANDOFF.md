@@ -1,8 +1,25 @@
 # Handoff Note
-Updated: 2026-05-17 | Account: B | Session: ThumbnailAI-1 | Features: Thumbnail AI complete redesign — smart progressive form, Haiku→GPT-Image-1 pipeline, dynamic face addon credits, platform-aware sizing, Own Face photo upload
+Updated: 2026-05-17 | Account: B | Session: ThumbnailAI-2 | Features: Thumbnail AI form redesign — ratio cards, template picker, platform icons, progressive reveal sections
 
 ## Where We Are
-Session ThumbnailAI-1 done. **TypeScript: 0 errors (apps/web).**
+Session ThumbnailAI-2 done. **TypeScript: 0 errors (apps/web).**
+
+### Thumbnail AI State After ThumbnailAI-2
+
+**Files changed:**
+- `apps/web/src/tools/thumbnail-ai/schema.ts` — added `selectedTemplate: z.string().optional()` to thumbnailAISchema
+- `apps/web/src/tools/thumbnail-ai/ThumbnailAITool.tsx` — full form redesign:
+  - Platform chips now include lucide-react icons (Youtube, Instagram, Linkedin, Twitter, Globe, Globe2 for Pinterest)
+  - Ratio cards (16:9, 1:1, 4:5, 9:16) with visual rectangle previews — auto-selected per platform via `selectedRatio` state; ratio card click updates both `selectedRatio` and `apiSize`
+  - Section 2 (Content) reveals on platform select with divider
+  - Section 3 (Style) restructured: header row + Niche/Mood/Color subsections with xs labels
+  - Section 4 (Template) — horizontal-scroll template picker, 6 placeholder cards with bg colors; "skip" button sets `selectedTemplate = null`
+  - Section 5 (Face) — gender toggle + upload area use RevealSection for smooth animation
+  - Credit bar + Generate button use `RevealSection show={platform !== ""}` with AlarmClock icon
+  - `generate()` now sends `selectedTemplate` in POST body
+  - All sections use `RevealSection` component for fade-in/slide-in animation
+
+**Note:** `selectedTemplate` is passed to the API but the engine.ts doesn't yet use it — backend template routing is Phase 2.
 
 ### Thumbnail AI State After ThumbnailAI-1
 
