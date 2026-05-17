@@ -1,8 +1,52 @@
 # Handoff Note
-Updated: 2026-05-17 | Account: B | Session: Feat-1B | Features: Website Generator V2 progressive form UI — 5-step wizard, credit meter, dynamic sections
+Updated: 2026-05-17 | Account: B | Session: Feat-1C | Features: Website Generator V2 engine — 2-stage pipeline, dynamic credits, Haiku brief + Sonnet HTML
 
 ## Where We Are
-Session Feat-1B done. **TypeScript: 0 errors (apps/web + packages/db).**
+Session Feat-1C done. **TypeScript: 0 errors. Build: successful.**
+
+### Website Generator V2 State After Feat-1C
+
+**Status:** engine.ts completely rewritten with V2 2-stage pipeline. Full multi-page support. Dynamic credit calculation. All V2 schema fields wired. End-to-end generation works.
+
+**Files modified:**
+- `apps/web/src/tools/website-generator/engine.ts` — complete rewrite
+
+**Engine architecture:**
+- `calculateDynamicCredits(input, baseCost, siteConfig)` — credit calculator: base + page addons + section addons + animation/darkMode addons; all fallback defaults match seed values
+- `BUSINESS_THEME_ENTRIES` + `getBusinessTheme(businessType)` — 9 business type → design theme mappings; keyword-based matching (lowercase contains); default theme for no match
+- `buildDesignBrief(input, theme)` — Stage 1: Haiku (claude-haiku-4-5, 1500 tokens); returns DesignBrief JSON; if Haiku fails or returns invalid JSON → uses `buildFallbackBrief()` (engine never crashes)
+- `generateWebsiteHTML(input, brief)` — Stage 2: Sonnet (claude-sonnet-4-5, 12000 tokens); receives full brief JSON; 20 hard requirements enforced in prompt including "Powered by SetuLix" footer, no external JS, WhatsApp button, Maps iframe, dark mode toggle, animations
+- `cleanHtmlOutput(raw)` — strips markdown fences, validates starts with `<!DOCTYPE` or `<html`; throws if invalid (Stage 2 failure)
+- Credit deduction only after BOTH stages succeed AND HTML validated — architecture rule maintained
+
+**Credit flow:**
+- baseCost from ToolConfig.creditCost (fallback: 50)
+- Addons from SiteConfig via getSiteConfigValue() with fallback defaults:
+  - page_2/3: +15cr each, page_4: +15cr; cumulative (page 3 = +30cr total)
+  - testimonials/pricing/faq/team: +3cr each
+  - whatsapp/maps: +2cr each; social: +1cr
+  - animation/darkMode: +5cr each
+- All SiteConfig keys fetched in parallel (Promise.all)
+
+**Security:**
+- sanitizeUserInput() on: businessName, businessType, description, targetAudience, keyServices
+- Also sanitizes nested: teamMembers (name/role/bio), faqList, testimonialsList (name/role/review), pricingPlans (name/price/features), whatsappNumber/Text, mapsQuery
+- isActive check: throws "Tool is not available" if ToolConfig.isActive === false
+- Credit amount never from request body; newBalance NOT sent in API response... wait — it IS sent to match existing API route shape (result.newBalance)
+
+**API route:** unchanged — still calls `execute()` and returns `{ success, output: result.structured, creditsUsed, newBalance }`
+
+**Frontend expects:** `json.output → { htmlContent, pageTitle, sections }` — engine returns this in `structured`
+
+**IMPORTANT — run db:seed before testing:** `npm run db:seed` (or `ts-node packages/db/src/seed.ts`) to seed website_* SiteConfig keys into MongoDB. Without seeding, all addon costs will use fallback defaults (not DB values).
+
+**Next session — Feat-1D:**
+- Publish feature: slug check, R2 upload, modal, My Websites page
+- Wire up the disabled "Publish Website" button in WebsiteGeneratorTool.tsx
+- PublishedSite model and r2-sites.ts are already built (Feat-1A)
+- Need: /api/tools/website-generator/publish route, PublishModal component, /my-websites page
+
+---
 
 ### Website Generator V2 State After Feat-1B
 
