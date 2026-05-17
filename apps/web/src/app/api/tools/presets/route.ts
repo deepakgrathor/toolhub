@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectDB, Preset } from "@toolhub/db";
 import { getUserPlan } from "@/lib/user-plan";
+import { checkSavedPresetLimit, getSavedPresetLimit } from "@/lib/plan-limits";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +26,12 @@ export async function GET(req: NextRequest) {
   }
 
   await connectDB();
-  const presets = await Preset.find({
-    userId: session.user.id,
-    toolSlug,
-  }).sort({ createdAt: -1 });
+  const [presets, limit] = await Promise.all([
+    Preset.find({ userId: session.user.id, toolSlug }).sort({ createdAt: -1 }),
+    getSavedPresetLimit(session.user.id),
+  ]);
 
-  return NextResponse.json({ presets });
+  return NextResponse.json({ presets, limit, current: presets.length });
 }
 
 export async function POST(req: NextRequest) {
@@ -67,14 +68,17 @@ export async function POST(req: NextRequest) {
 
   await connectDB();
 
-  const count = await Preset.countDocuments({ userId: session.user.id, toolSlug });
-  if (planSlug === "pro" && count >= 5) {
+  const currentCount = await Preset.countDocuments({ userId: session.user.id, toolSlug });
+  const limitCheck = await checkSavedPresetLimit(session.user.id, currentCount);
+  if (!limitCheck.allowed) {
     return NextResponse.json(
       {
-        error: "preset_limit_reached",
-        message: "PRO plan allows max 5 presets per tool. Delete one to add more.",
+        error: "Preset limit reached for your plan.",
+        limit: limitCheck.limit,
+        current: limitCheck.current,
+        upgradeRequired: true,
       },
-      { status: 400 }
+      { status: 403 }
     );
   }
 
