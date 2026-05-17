@@ -103,7 +103,20 @@
       "Bash(sort -k2)",
       "Bash(git -C F:/2026/AI_Project/toolhub add apps/web/public/favicon-16x16.png apps/web/public/favicon-32x32.png apps/web/public/favicon.ico apps/web/public/apple-touch-icon.png apps/web/public/android-chrome-192x192.png apps/web/public/android-chrome-512x512.png apps/web/public/og-default.png apps/web/public/favicon-96x96.png apps/web/public/web-app-manifest-192x192.png apps/web/public/web-app-manifest-512x512.png)",
       "Bash(git -C F:/2026/AI_Project/toolhub commit -m ' *)",
-      "Bash(git -C F:/2026/AI_Project/toolhub push origin main)"
+      "Bash(git -C F:/2026/AI_Project/toolhub push origin main)",
+      "PowerShell(New-Item -ItemType Directory -Path \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\tools\\\\website-generator\\\\check-slug\" -Force)",
+      "PowerShell(New-Item -ItemType Directory -Path \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\tools\\\\website-generator\\\\publish\" -Force)",
+      "PowerShell(New-Item -ItemType Directory -Path \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\tools\\\\website-generator\\\\update-site\" -Force)",
+      "PowerShell(New-Item -ItemType Directory -Path \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\user\\\\websites\" -Force)",
+      "PowerShell(git -C \"F:\\\\2026\\\\AI_Project\\\\toolhub\" pull origin master 2>&1)",
+      "Bash(set \"MONGODB_URI=mongodb+srv://deepakg:UNSBqYcJKkIyvPlY@cluster0.wbok0wx.mongodb.net/toolhub?retryWrites=true&w=majority\")",
+      "PowerShell($env:MONGODB_URI = \"mongodb+srv://deepakg:UNSBqYcJKkIyvPlY@cluster0.wbok0wx.mongodb.net/toolhub?retryWrites=true&w=majority\"; Set-Location \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\packages\\\\db\"; npx tsx src/seed.ts)",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__computer",
+      "mcp__Claude_in_Chrome__read_console_messages",
+      "mcp__Claude_in_Chrome__read_network_requests",
+      "mcp__Claude_in_Chrome__javascript_tool",
+      "Bash(mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\admin\\\\transactions\\\\analytics\" && mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\admin\\\\transactions\\\\[id]\")"
     ]
   }
 }

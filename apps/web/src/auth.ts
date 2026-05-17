@@ -5,7 +5,6 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { connectDB, User, applyReferral } from "@toolhub/db";
 import { generateReferralCode } from "@toolhub/shared";
-import { getSiteConfigValue } from "@/lib/site-config-cache";
 import type { NextAuthConfig } from "next-auth";
 
 const config: NextAuthConfig = {
@@ -79,15 +78,15 @@ const config: NextAuthConfig = {
 
           if (!dbUser) {
             // First Google login — create user with referral code
+            // Credits granted via onboarding/complete (with full audit trail)
             const referralCode = generateReferralCode();
-            const welcomeCredits = await getSiteConfigValue('welcome_bonus_credits', 10) as number;
             dbUser = await User.create({
               name: user.name ?? "User",
               email: user.email!,
               image: user.image,
               authProvider: "google",
               role: "user",
-              credits: welcomeCredits,
+              credits: 0,
               referralCode,
               onboardingCompleted: false,
               lastSeen: new Date(),
