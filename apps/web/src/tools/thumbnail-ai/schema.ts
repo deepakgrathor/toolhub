@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 export const PLATFORMS = [
   "youtube",
@@ -8,7 +8,7 @@ export const PLATFORMS = [
   "twitter",
   "blog",
   "pinterest",
-] as const
+] as const;
 
 export const SIZES = {
   youtube: { label: "1280×720 (16:9)", apiSize: "1536x1024" },
@@ -18,7 +18,7 @@ export const SIZES = {
   twitter: { label: "1200×675 (16:9)", apiSize: "1536x1024" },
   blog: { label: "1200×630 (16:9)", apiSize: "1536x1024" },
   pinterest: { label: "1000×1500 (2:3)", apiSize: "1024x1536" },
-} as const
+} as const;
 
 export const NICHES = [
   "Finance & Business",
@@ -32,7 +32,7 @@ export const NICHES = [
   "News & Current Affairs",
   "Travel",
   "Other",
-] as const
+] as const;
 
 export const MOODS = [
   "Urgency / Warning",
@@ -42,7 +42,7 @@ export const MOODS = [
   "Professional / Trust",
   "Fun / Humor",
   "Motivational",
-] as const
+] as const;
 
 export const COLOR_THEMES = [
   "Auto (recommended)",
@@ -52,17 +52,20 @@ export const COLOR_THEMES = [
   "Red & Black",
   "Blue & White",
   "Gold & Dark",
-] as const
+] as const;
 
-export const FACE_MODES = ["ai", "own", "none"] as const
-export const GENDERS = ["male", "female"] as const
+export const FACE_MODES = ["ai", "own", "none"] as const;
+export const GENDERS = ["male", "female"] as const;
 
 export const thumbnailAISchema = z.object({
   // Required
   platform: z.enum(PLATFORMS),
   apiSize: z.enum(["1536x1024", "1024x1024", "1024x1536"]),
   title: z.string().min(3, "Title must be at least 3 characters").max(200),
-  topic: z.string().min(10, "Please describe your content in at least 10 characters").max(500),
+  topic: z
+    .string()
+    .min(10, "Please describe your content in at least 10 characters")
+    .max(500),
 
   // Optional style
   niche: z.enum(NICHES).optional(),
@@ -78,6 +81,6 @@ export const thumbnailAISchema = z.object({
 
   // Template composition — null means "let AI decide"
   selectedTemplate: z.string().optional(),
-})
+});
 
-export type ThumbnailAIInput = z.infer<typeof thumbnailAISchema>
+export type ThumbnailAIInput = z.infer<typeof thumbnailAISchema>;
