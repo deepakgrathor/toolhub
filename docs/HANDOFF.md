@@ -1,5 +1,58 @@
 # Handoff Note
-Updated: 2026-05-17 | Account: B | Session: Feat-2 | Features: Admin SiteConfig Editor
+Updated: 2026-05-18 | Account: B | Session: Feat-5 | Features: Plan Limits System
+
+## Feat-5: Plan Limits System — COMPLETE
+
+**Status:** Full plan limits enforcement end-to-end. Schema updated, central helpers, runtime enforcement, admin UI. Build passes.
+
+### What Changed
+
+#### packages/db/src/models/Plan.ts
+- `PlanLimitsSchema` replaced: now 11 fields (`toolAccess`, `historyDays`, `teamSeats`, `businessProfiles`, `savedPresets`, `creditRolloverMonths`, `watermark`, `pdfDownload`, `customUrl`, `usageReport`, `prioritySupport`)
+- Exported `IPlanLimits` interface — use this everywhere limits typing is needed
+- Exported `DEFAULT_LIMITS` — fallback per-plan defaults (5 plans: free/lite/pro/business/enterprise)
+- `creditRollover` nested object kept for backward compat; `limits.creditRolloverMonths` is the new canonical field
+
+#### apps/web/src/lib/user-plan.ts
+- Added `getUserPlanLimits(userId)` — returns full `IPlanLimits`, cached 300s in Redis under `plan-limits:{userId}`
+- Added `invalidatePlanLimitsCache(userId)` — deletes the cache key (silent fail)
+- `getUserPlan()` unchanged — existing callers not affected
+
+#### apps/web/src/lib/plan-limits.ts (NEW)
+- Central helper — all routes import from here, never call `getUserPlanLimits()` directly
+- Exports: `hasWatermark`, `getPdfType`, `getHistoryDays`, `getBusinessProfileLimit`, `getSavedPresetLimit`, `getCreditRolloverMonths`, `checkBusinessProfileLimit`, `checkSavedPresetLimit`
+
+#### apps/web/src/app/api/user/history/route.ts
+- Removed hardcoded `DAY_LIMITS` map
+- Now calls `getHistoryDays(userId)` from `plan-limits`
+- `historyDays === -1` → no date filter (returns all history)
+- `historyDays === 0` → returns empty array with `upgradeRequired: true`
+
+#### apps/web/src/app/api/tools/download-pdf/route.tsx
+- Replaced `getUserPlan()` + string checks with `getPdfType(userId)`
+- `pdfType === "none"` → 403 (free users can no longer download PDFs)
+- `pdfType === "branded"` → SetuLix-branded PDF (LitePDFTemplate, no watermark)
+- `pdfType === "whitelabel"` → ProPDFTemplate with user's brand assets (or LitePDFTemplate fallback)
+
+#### apps/web/src/lib/payment-processor.ts
+- Added `redis.del("plan-limits:{userId}")` after plan upgrade — limits cache invalidated on every plan change
+
+#### apps/web/src/components/admin/PlansTable.tsx + page.tsx + API route
+- `PlanRow` and `EditState` now include a `limits` object
+- Edit modal has new "Plan Limits" section with all 11 fields (number inputs + toggles + pdfDownload select)
+- API route (`/api/admin/plans/[slug]`) accepts all new limits fields via Zod + saves via dot-notation update
+
+### Architecture Notes
+- Limits are DB-driven — admin changes take effect within 5 min (Redis TTL)
+- `DEFAULT_LIMITS` is the fallback when DB has no limits data (e.g. seed not yet run)
+- No route calls `getUserPlanLimits()` directly — always through `plan-limits.ts` helpers
+
+### Next: Feat-6 — Business Profiles Feature
+- Use `checkBusinessProfileLimit()` from `plan-limits.ts` in profile creation route
+- Use `getBusinessProfileLimit()` to show limit in UI
+- Business profile CRUD already partially wired (BusinessProfile model exists, download-pdf uses it)
+
+---
 
 ## Feat-2: Admin SiteConfig Editor — COMPLETE
 

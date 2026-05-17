@@ -93,6 +93,7 @@ export async function processPlanPayment(payment: IPayment) {
   await redis.del(`balance:${payment.userId}`);
   await redis.del(`sidebar:${payment.userId}`);
   await redis.del(`plan:${payment.userId}`);
+  await redis.del(`plan-limits:${payment.userId}`);
 
   const invoiceNumber = await generateInvoiceNumber();
   payment.invoiceNumber = invoiceNumber;

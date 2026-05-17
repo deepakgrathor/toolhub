@@ -5,25 +5,16 @@ import { ApiResponse } from "@/lib/api-response";
 import { connectDB, ToolOutput } from "@toolhub/db";
 import mongoose from "mongoose";
 import { TOOL_NAME_MAP } from "@/lib/tool-names";
-import { getUserPlan } from "@/lib/user-plan";
-
-const DAY_LIMITS: Record<string, number> = {
-  free: 0,
-  lite: 30,
-  pro: 90,
-  business: 365,
-  enterprise: 365,
-};
+import { getHistoryDays } from "@/lib/plan-limits";
 
 export async function GET(req: NextRequest) {
   const authResult = await requireAuth();
   if (!authResult.authenticated) return authResult.response;
   const { userId } = authResult;
 
-  const userPlan = await getUserPlan(userId);
-  const days = DAY_LIMITS[userPlan] ?? 0;
+  const historyDays = await getHistoryDays(userId);
 
-  if (days === 0) {
+  if (historyDays === 0) {
     return NextResponse.json({
       outputs: [],
       total: 0,
@@ -45,8 +36,13 @@ export async function GET(req: NextRequest) {
   await connectDB();
 
   const userObjectId = new mongoose.Types.ObjectId(userId);
-  const cutoff = new Date(Date.now() - days * 86400000);
-  const dateFilter = { userId: userObjectId, createdAt: { $gte: cutoff } };
+  const cutoff =
+    historyDays === -1
+      ? null
+      : new Date(Date.now() - historyDays * 86400000);
+  const dateFilter = cutoff
+    ? { userId: userObjectId, createdAt: { $gte: cutoff } }
+    : { userId: userObjectId };
 
   const [outputs, total] = await Promise.all([
     ToolOutput.find(dateFilter)
@@ -85,7 +81,7 @@ export async function GET(req: NextRequest) {
     total,
     page,
     totalPages: Math.ceil(total / limit),
-    planLimit: days,
+    planLimit: historyDays,
     upgradeRequired: false,
   });
 }

@@ -11,6 +11,19 @@ export interface PlanFeatureRow {
   highlight: string; // empty = no tag, non-empty = tag label e.g. "Coming Soon"
 }
 
+export interface PlanLimitsRow {
+  historyDays: number;
+  teamSeats: number;
+  businessProfiles: number;
+  savedPresets: number;
+  creditRolloverMonths: number;
+  watermark: boolean;
+  pdfDownload: "none" | "branded" | "whitelabel";
+  customUrl: boolean;
+  usageReport: boolean;
+  prioritySupport: boolean;
+}
+
 export interface PlanRow {
   id: string;
   name: string;
@@ -25,6 +38,7 @@ export interface PlanRow {
   yearlyBase: number;
   yearlyBaseCredits: number;
   features: PlanFeatureRow[];
+  limits: PlanLimitsRow;
 }
 
 interface EditState {
@@ -37,6 +51,18 @@ interface EditState {
   yearlyBase: string;
   yearlyBaseCredits: string;
   features: PlanFeatureRow[];
+  limits: {
+    historyDays: string;
+    teamSeats: string;
+    businessProfiles: string;
+    savedPresets: string;
+    creditRolloverMonths: string;
+    watermark: boolean;
+    pdfDownload: "none" | "branded" | "whitelabel";
+    customUrl: boolean;
+    usageReport: boolean;
+    prioritySupport: boolean;
+  };
 }
 
 function planToEdit(p: PlanRow): EditState {
@@ -50,6 +76,18 @@ function planToEdit(p: PlanRow): EditState {
     yearlyBase: String(p.yearlyBase),
     yearlyBaseCredits: String(p.yearlyBaseCredits),
     features: p.features.map((f) => ({ ...f })),
+    limits: {
+      historyDays:          String(p.limits.historyDays),
+      teamSeats:            String(p.limits.teamSeats),
+      businessProfiles:     String(p.limits.businessProfiles),
+      savedPresets:         String(p.limits.savedPresets),
+      creditRolloverMonths: String(p.limits.creditRolloverMonths),
+      watermark:            p.limits.watermark,
+      pdfDownload:          p.limits.pdfDownload,
+      customUrl:            p.limits.customUrl,
+      usageReport:          p.limits.usageReport,
+      prioritySupport:      p.limits.prioritySupport,
+    },
   };
 }
 
@@ -135,6 +173,13 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
     setForm((f) => (f ? { ...f, [key]: value } : f));
   }
 
+  function setLimit<K extends keyof EditState["limits"]>(
+    key: K,
+    value: EditState["limits"][K]
+  ) {
+    setForm((f) => (f ? { ...f, limits: { ...f.limits, [key]: value } } : f));
+  }
+
   function updateFeature(i: number, patch: Partial<PlanFeatureRow>) {
     setForm((f) => {
       if (!f) return f;
@@ -167,6 +212,11 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
     setError("");
     setSaving(true);
 
+    const parseNum = (v: string) => {
+      const n = parseInt(v, 10);
+      return isNaN(n) ? 0 : n;
+    };
+
     const payload = {
       name: form.name.trim(),
       tagline: form.tagline.trim(),
@@ -187,6 +237,18 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
         },
       },
       features: form.features.filter((f) => f.text.trim()),
+      limits: {
+        historyDays:          parseNum(form.limits.historyDays),
+        teamSeats:            Math.max(1, parseNum(form.limits.teamSeats)),
+        businessProfiles:     parseNum(form.limits.businessProfiles),
+        savedPresets:         parseNum(form.limits.savedPresets),
+        creditRolloverMonths: parseNum(form.limits.creditRolloverMonths),
+        watermark:            form.limits.watermark,
+        pdfDownload:          form.limits.pdfDownload,
+        customUrl:            form.limits.customUrl,
+        usageReport:          form.limits.usageReport,
+        prioritySupport:      form.limits.prioritySupport,
+      },
     };
 
     try {
@@ -210,6 +272,7 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
                 yearlyBase: payload.pricing.yearly.basePrice,
                 yearlyBaseCredits: payload.pricing.yearly.baseCredits,
                 features: payload.features,
+                limits: payload.limits,
               }
             : p
         )
@@ -356,6 +419,48 @@ export function PlansTable({ initialPlans }: { initialPlans: PlanRow[] }) {
                   <Input label="Credits/month" type="number" value={form.yearlyBaseCredits} onChange={(v) => setField("yearlyBaseCredits", v)} placeholder="200" />
                 </div>
                 <p className="text-xs text-muted-foreground">Annual total = yearly base × 12. Discount auto-set to 20%.</p>
+              </div>
+
+              {/* Plan Limits */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plan Limits</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <Input label="History Days (-1 = unlimited)" type="number" value={form.limits.historyDays} onChange={(v) => setLimit("historyDays", v)} placeholder="0" />
+                  <Input label="Team Seats" type="number" value={form.limits.teamSeats} onChange={(v) => setLimit("teamSeats", v)} placeholder="1" />
+                  <Input label="Business Profiles (-1 = unlimited)" type="number" value={form.limits.businessProfiles} onChange={(v) => setLimit("businessProfiles", v)} placeholder="0" />
+                  <Input label="Saved Presets (-1 = unlimited, 0 = off)" type="number" value={form.limits.savedPresets} onChange={(v) => setLimit("savedPresets", v)} placeholder="0" />
+                  <Input label="Credit Rollover (months, -1 = unlimited)" type="number" value={form.limits.creditRolloverMonths} onChange={(v) => setLimit("creditRolloverMonths", v)} placeholder="0" />
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">PDF Download</label>
+                    <select
+                      value={form.limits.pdfDownload}
+                      onChange={(e) => setLimit("pdfDownload", e.target.value as "none" | "branded" | "whitelabel")}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                    >
+                      <option value="none">None (blocked)</option>
+                      <option value="branded">Branded (SetuLix footer)</option>
+                      <option value="whitelabel">White-label (no branding)</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-6 pt-1">
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <Toggle value={form.limits.watermark} onChange={(v) => setLimit("watermark", v)} color="bg-amber-500" />
+                    <span className="text-sm text-foreground">Show Watermark</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <Toggle value={form.limits.customUrl} onChange={(v) => setLimit("customUrl", v)} />
+                    <span className="text-sm text-foreground">Custom URL</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <Toggle value={form.limits.usageReport} onChange={(v) => setLimit("usageReport", v)} />
+                    <span className="text-sm text-foreground">Usage Report</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <Toggle value={form.limits.prioritySupport} onChange={(v) => setLimit("prioritySupport", v)} />
+                    <span className="text-sm text-foreground">Priority Support</span>
+                  </label>
+                </div>
               </div>
 
               {/* Features */}

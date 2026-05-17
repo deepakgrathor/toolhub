@@ -39,9 +39,17 @@ const updateSchema = z.object({
   features: z.array(featureSchema).optional(),
   limits: z
     .object({
-      toolAccess: z.enum(["free_only", "all"]).optional(),
-      historyDays: z.number().int().optional(),
-      teamSeats: z.number().int().min(1).optional(),
+      toolAccess:           z.enum(["free_only", "all"]).optional(),
+      historyDays:          z.number().int().min(-1).optional(),
+      teamSeats:            z.number().int().min(1).optional(),
+      businessProfiles:     z.number().int().min(-1).optional(),
+      savedPresets:         z.number().int().min(-1).optional(),
+      creditRolloverMonths: z.number().int().min(-1).optional(),
+      watermark:            z.boolean().optional(),
+      pdfDownload:          z.enum(["none", "branded", "whitelabel"]).optional(),
+      customUrl:            z.boolean().optional(),
+      usageReport:          z.boolean().optional(),
+      prioritySupport:      z.boolean().optional(),
     })
     .optional(),
 });
@@ -82,11 +90,17 @@ export async function PATCH(
   if (data.features !== undefined) updateSet.features = data.features;
   if (data.limits) {
     const l = data.limits;
-    if (l.toolAccess !== undefined)
-      updateSet["limits.toolAccess"] = l.toolAccess;
-    if (l.historyDays !== undefined)
-      updateSet["limits.historyDays"] = l.historyDays;
-    if (l.teamSeats !== undefined) updateSet["limits.teamSeats"] = l.teamSeats;
+    if (l.toolAccess           !== undefined) updateSet["limits.toolAccess"]           = l.toolAccess;
+    if (l.historyDays          !== undefined) updateSet["limits.historyDays"]          = l.historyDays;
+    if (l.teamSeats            !== undefined) updateSet["limits.teamSeats"]            = l.teamSeats;
+    if (l.businessProfiles     !== undefined) updateSet["limits.businessProfiles"]     = l.businessProfiles;
+    if (l.savedPresets         !== undefined) updateSet["limits.savedPresets"]         = l.savedPresets;
+    if (l.creditRolloverMonths !== undefined) updateSet["limits.creditRolloverMonths"] = l.creditRolloverMonths;
+    if (l.watermark            !== undefined) updateSet["limits.watermark"]            = l.watermark;
+    if (l.pdfDownload          !== undefined) updateSet["limits.pdfDownload"]          = l.pdfDownload;
+    if (l.customUrl            !== undefined) updateSet["limits.customUrl"]            = l.customUrl;
+    if (l.usageReport          !== undefined) updateSet["limits.usageReport"]          = l.usageReport;
+    if (l.prioritySupport      !== undefined) updateSet["limits.prioritySupport"]      = l.prioritySupport;
   }
   if (data.pricing?.monthly) {
     const m = data.pricing.monthly;

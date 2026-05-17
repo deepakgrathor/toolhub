@@ -17,6 +17,20 @@ export interface IPlanPricing {
   discountPercent?: number;
 }
 
+export interface IPlanLimits {
+  toolAccess: string;
+  historyDays: number;
+  teamSeats: number;
+  businessProfiles: number;
+  savedPresets: number;
+  creditRolloverMonths: number; // -1 = unlimited
+  watermark: boolean;
+  pdfDownload: "none" | "branded" | "whitelabel";
+  customUrl: boolean;
+  usageReport: boolean;
+  prioritySupport: boolean;
+}
+
 export interface IPlan extends Document {
   name: string;
   slug: PlanSlug;
@@ -35,11 +49,7 @@ export interface IPlan extends Document {
     enabled: boolean;
     maxDays: number;
   };
-  limits: {
-    toolAccess: "free_only" | "all";
-    historyDays: number;
-    teamSeats: number;
-  };
+  limits: IPlanLimits;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +75,23 @@ const PlanFeatureSchema = new Schema<IPlanFeature>(
   { _id: false }
 );
 
+const PlanLimitsSchema = new Schema<IPlanLimits>(
+  {
+    toolAccess:           { type: String,  default: "all" },
+    historyDays:          { type: Number,  default: 0 },
+    teamSeats:            { type: Number,  default: 1 },
+    businessProfiles:     { type: Number,  default: 0 },
+    savedPresets:         { type: Number,  default: 0 },   // -1 = unlimited
+    creditRolloverMonths: { type: Number,  default: 0 },   // -1 = unlimited
+    watermark:            { type: Boolean, default: true },
+    pdfDownload:          { type: String,  default: "none" },
+    customUrl:            { type: Boolean, default: false },
+    usageReport:          { type: Boolean, default: false },
+    prioritySupport:      { type: Boolean, default: false },
+  },
+  { _id: false },
+);
+
 const PlanSchema = new Schema<IPlan>(
   {
     name: { type: String, required: true, trim: true },
@@ -84,17 +111,47 @@ const PlanSchema = new Schema<IPlan>(
       enabled: { type: Boolean, default: false },
       maxDays: { type: Number, default: 30 },
     },
-    limits: {
-      toolAccess: {
-        type: String,
-        enum: ["free_only", "all"],
-        default: "all",
-      },
-      historyDays: { type: Number, default: -1 },
-      teamSeats: { type: Number, default: 1 },
-    },
+    limits: { type: PlanLimitsSchema, default: () => ({}) },
   },
   { timestamps: true }
 );
 
 export const Plan: Model<IPlan> = getOrCreateModel<IPlan>("Plan", PlanSchema);
+
+export const DEFAULT_LIMITS: Record<string, IPlanLimits> = {
+  free: {
+    toolAccess: "all", historyDays: 0, teamSeats: 1,
+    businessProfiles: 0, savedPresets: 0,
+    creditRolloverMonths: 0, watermark: true,
+    pdfDownload: "none", customUrl: false,
+    usageReport: false, prioritySupport: false,
+  },
+  lite: {
+    toolAccess: "all", historyDays: 30, teamSeats: 1,
+    businessProfiles: 1, savedPresets: 0,
+    creditRolloverMonths: 1, watermark: false,
+    pdfDownload: "branded", customUrl: false,
+    usageReport: false, prioritySupport: false,
+  },
+  pro: {
+    toolAccess: "all", historyDays: 90, teamSeats: 1,
+    businessProfiles: 3, savedPresets: 5,
+    creditRolloverMonths: 2, watermark: false,
+    pdfDownload: "branded", customUrl: false,
+    usageReport: false, prioritySupport: false,
+  },
+  business: {
+    toolAccess: "all", historyDays: 365, teamSeats: 5,
+    businessProfiles: 10, savedPresets: -1,
+    creditRolloverMonths: 3, watermark: false,
+    pdfDownload: "whitelabel", customUrl: true,
+    usageReport: true, prioritySupport: true,
+  },
+  enterprise: {
+    toolAccess: "all", historyDays: -1, teamSeats: 999,
+    businessProfiles: -1, savedPresets: -1,
+    creditRolloverMonths: -1, watermark: false,
+    pdfDownload: "whitelabel", customUrl: true,
+    usageReport: true, prioritySupport: true,
+  },
+};

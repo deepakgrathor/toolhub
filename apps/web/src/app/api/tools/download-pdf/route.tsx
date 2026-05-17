@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/require-auth";
 import { ApiResponse } from "@/lib/api-response";
 // TODO: migrate remaining NextResponse.json calls to ApiResponse helpers
 import { connectDB, BusinessProfile, User } from "@toolhub/db";
-import { getUserPlan } from "@/lib/user-plan";
+import { getPdfType } from "@/lib/plan-limits";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { LitePDFTemplate, ProPDFTemplate } from "@/lib/pdf/templates";
 import React from "react";
@@ -17,8 +17,15 @@ export async function POST(req: NextRequest) {
     if (!authResult.authenticated) return authResult.response;
     const { userId } = authResult;
 
-    // STEP 1 — Auth + plan check (all plans allowed)
-    const planSlug = await getUserPlan(userId);
+    // STEP 1 — Auth + plan limits check
+    const pdfType = await getPdfType(userId);
+
+    if (pdfType === "none") {
+      return NextResponse.json(
+        { error: "PDF download requires LITE plan or above." },
+        { status: 403 }
+      );
+    }
 
     const body = await req.json() as {
       toolSlug: string;
@@ -33,8 +40,8 @@ export async function POST(req: NextRequest) {
       return ApiResponse.badRequest("Content too large for PDF generation");
     }
 
-    // STEP 2 — Fetch brand assets (PRO+ only)
-    const isProPlus = planSlug !== "free" && planSlug !== "lite";
+    // STEP 2 — Fetch brand assets (whitelabel only)
+    const isWhitelabel = pdfType === "whitelabel";
     let brandAssets: {
       logoUrl: string | null;
       signatureUrl: string | null;
@@ -47,7 +54,7 @@ export async function POST(req: NextRequest) {
       businessEmail?: string;
     } | null = null;
 
-    if (isProPlus) {
+    if (isWhitelabel) {
       await connectDB();
       const profile = await BusinessProfile.findOne({ userId }).lean();
       if (profile) {
@@ -76,8 +83,8 @@ export async function POST(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let pdfElement: React.ReactElement<any>;
 
-    if (isProPlus && brandAssets) {
-      // PRO+ → fully branded PDF
+    if (isWhitelabel && brandAssets) {
+      // Business/Enterprise → white-label PDF with user's own branding
       pdfElement = (
         <ProPDFTemplate
           title={toolName}
@@ -95,13 +102,13 @@ export async function POST(req: NextRequest) {
         />
       );
     } else {
-      // FREE → watermarked footer | LITE → clean footer
+      // Lite/Pro (branded) or whitelabel without brand assets → SetuLix-branded PDF
       pdfElement = (
         <LitePDFTemplate
           title={toolName}
           content={content}
           date={date}
-          showWatermark={planSlug === "free"}
+          showWatermark={false}
         />
       );
     }
