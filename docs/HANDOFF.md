@@ -1,5 +1,94 @@
 # Handoff Note
-Updated: 2026-05-18 | Account: B | Session: Feat-9A | Focus: Split credits into 3 buckets
+Updated: 2026-05-18 | Account: B | Session: Feat-9B | Focus: Credit rollover overhaul
+
+## Feat-9B: Credit Rollover Overhaul — COMPLETE
+
+**Status:** processUserRollover() fully rewritten. Atomic (MongoDB session). Idempotency guard. DB-driven — no hardcoded values. Expiry logic live. Cron checks SiteConfig flag. Credits page shows 3-bucket breakdown. 0 TypeScript errors. Committed + pushed.
+
+### What Changed
+
+#### 1. `apps/web/src/lib/credit-rollover.ts` — Full rewrite
+- **Removed:** Hardcoded `rolloverConfig` and `planCreditsMap` maps (violated architecture rule)
+- **Added:** MongoDB session (`mongoose.startSession()` / `withTransaction`) — all writes atomic
+- **Added:** Idempotency guard — checks `lastRolloverAt` month/year; skips if already ran this month
+- **Added:** DB-driven rollover months via `getCreditRolloverMonths(userId)` from `@/lib/plan-limits`
+- **Added:** DB-driven monthly credits via `Plan.findOne({ slug }).pricing.monthly.baseCredits`
+- **Added:** Expiry logic — if `rolloverExpiresAt` has passed, zeros `rolloverCredits` and creates `CreditTransaction` type `"expiry"`
+- **Fixed:** Carry-forward now uses `subscriptionCredits` only (not total balance) — `purchasedCredits` never touched
+- **Fixed:** `rolloverExpiresAt` set correctly (now + rolloverMonths months); `null` for enterprise (-1 = unlimited)
+- **Fixed:** `lastRolloverAt` set after each successful rollover
+- **Fixed:** `subscriptionCredits` reset to fresh monthly grant from DB (not hardcoded)
+- **Fixed:** Two CreditTransactions created per rollover: `"rollover"` (carry) + `"plan_upgrade"` (fresh grant)
+- **Fixed:** `invalidateBalance()` called outside transaction after commit
+
+#### 2. `apps/web/src/app/api/cron/rollover/route.ts` — Updated
+- **Added:** `getSiteConfigValue("credit_rollover_enabled", false)` check — exits early if disabled
+- **Fixed:** `enterprise` plan added to user filter (`$in: ["lite", "pro", "business", "enterprise"]`)
+- **Added:** `failed` counter — failed users logged individually, batch continues
+- **Added:** Response now includes `{ success, total, processed, failed }` (was just `{ success, processed }`)
+
+#### 3. `packages/db/src/seed.ts` — Updated
+- Added 2 new SiteConfig keys to `SITE_CONFIGS` array:
+  - `credit_rollover_enabled: true` — feature flag (admin can disable instantly)
+  - `credit_rollover_days: 30` — kept for reference; actual months come from Plan.limits
+
+#### 4. `apps/web/src/scripts/remove-stale-credits.ts` — NEW (do NOT run yet)
+- One-time cleanup: `$unset: { credits: "" }` from all users
+- Run only after verifying 3 buckets are correct in prod and Feat-9B is stable
+
+#### 5. `apps/web/src/app/api/user/credits/route.ts` — No change needed
+- Already returns `rolloverExpiresAt` (added in Feat-9A)
+
+#### 6. `apps/web/src/app/(site)/credits/page.tsx` — Updated
+- Added credit breakdown section inside the balance card:
+  - Purchased Credits row (CreditCard icon, teal) — "Never expire"
+  - Monthly Credits row (RefreshCcw icon, orange) — "Reset each billing cycle"
+  - Rollover Credits row (Clock icon, violet) — hidden when rolloverCredits = 0
+  - Expiry date shown when `rolloverExpiresAt` is set
+- Added `rollover` and `expiry` badge types to `TYPE_BADGE` config
+- Added `formatShortDate()` helper for expiry display
+- Breakdown fetched from `/api/user/credits` (separate from ledger)
+
+### Rollover Logic (How It Works)
+```
+Example — LITE user, June 1st cron:
+  subscriptionCredits: 150 (unused from May)
+  purchasedCredits: 500 (untouched)
+  
+  → Carry: 150 (all unused sub credits)
+  → subscriptionCredits = 200 (fresh June grant from DB)
+  → rolloverCredits = 150 (carried from May)
+  → rolloverExpiresAt = July 1st
+  → lastRolloverAt = June 1st
+  → CreditTransaction "rollover": +150
+  → CreditTransaction "plan_upgrade": +200
+
+July 1st cron:
+  → Check rolloverExpiresAt — expired today
+  → rolloverCredits: 150 → 0 (CreditTransaction "expiry": -150)
+  → Carry new July unused sub credits → rolloverCredits
+  → subscriptionCredits = 200 (fresh July grant)
+  → rolloverExpiresAt = August 1st
+```
+
+### Key Rules (Enforced)
+- `purchasedCredits` → NEVER touched by rollover
+- Only `subscriptionCredits` carries forward → `rolloverCredits`
+- `rolloverMonths = 0` → plan has no rollover (free plan)
+- `rolloverMonths = -1` → enterprise, never expires (`rolloverExpiresAt = null`)
+- Old rollover expires before new rollover is set
+
+### Verification
+- `pnpm tsc --noEmit` → 0 errors (web + db)
+- Manual trace (June 1st scenario): purchasedCredits unchanged, subscriptionCredits → 200, rolloverCredits → 150, rolloverExpiresAt → July 1st ✓
+- Cron: credit_rollover_enabled=false → returns `{ skipped: true, reason: "rollover_disabled" }` ✓
+- Enterprise users now included in cron filter ✓
+
+### Next
+- Run `remove-stale-credits.ts` after 1 week of prod verification
+- Feat-10 — Watermark verification
+
+---
 
 ## Feat-9A: Split Credits into 3 Buckets — COMPLETE
 

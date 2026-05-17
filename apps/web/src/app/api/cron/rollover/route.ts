@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { connectDB, User } from "@toolhub/db";
 import { processUserRollover } from "@/lib/credit-rollover";
+import { getSiteConfigValue } from "@/lib/site-config-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -20,27 +21,64 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Check credit_rollover_enabled SiteConfig flag before doing any work
+  const rolloverEnabled = await getSiteConfigValue(
+    "credit_rollover_enabled",
+    false
+  ) as boolean;
+
+  if (!rolloverEnabled) {
+    console.log("[cron/rollover] Credit rollover disabled via SiteConfig. Skipping.");
+    return NextResponse.json({
+      success: true,
+      skipped: true,
+      reason: "rollover_disabled",
+    });
+  }
+
   await connectDB();
 
+  // Include enterprise (creditRolloverMonths: -1 = unlimited)
   const subscribers = await User.find({
-    plan: { $in: ["lite", "pro", "business"] },
+    plan: { $in: ["lite", "pro", "business", "enterprise"] },
     isDeleted: { $ne: true },
   })
     .select("_id plan")
     .lean();
 
-  let processed = 0;
+  console.log(`[cron/rollover] Processing ${subscribers.length} users`);
+
   const batchSize = 50;
+  let processed = 0;
+  let failed = 0;
 
   for (let i = 0; i < subscribers.length; i += batchSize) {
     const batch = subscribers.slice(i, i + batchSize);
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       batch.map((user) =>
         processUserRollover(user._id.toString(), user.plan ?? "free")
       )
     );
-    processed += batch.length;
+
+    results.forEach((result, idx) => {
+      if (result.status === "fulfilled") {
+        processed++;
+      } else {
+        failed++;
+        console.error(
+          `[cron/rollover] Failed for user ${batch[idx]._id}:`,
+          result.reason
+        );
+      }
+    });
   }
 
-  return NextResponse.json({ success: true, processed });
+  console.log(`[cron/rollover] Complete. Processed: ${processed}, Failed: ${failed}`);
+
+  return NextResponse.json({
+    success: true,
+    total: subscribers.length,
+    processed,
+    failed,
+  });
 }

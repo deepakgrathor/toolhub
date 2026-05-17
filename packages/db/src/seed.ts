@@ -534,6 +534,9 @@ const SITE_CONFIGS = [
   { key: "website_darkmode_credits", value: 5 },
   { key: "website_publish_credits", value: 10 },
   { key: "website_update_credits", value: 5 },
+  // Credit rollover feature flags
+  { key: "credit_rollover_enabled", value: true },
+  { key: "credit_rollover_days", value: 30 },
 ];
 
 // ── Main ────────────────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Coins, Plus, Minus, ShoppingBag, ArrowUpRight,
   TrendingDown, Calendar, Hash, ChevronDown,
+  CreditCard, RefreshCcw, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,18 +39,27 @@ interface LedgerResponse {
   summary: Summary;
 }
 
+interface Breakdown {
+  purchased: number;
+  subscription: number;
+  rollover: number;
+  rolloverExpiresAt: string | null;
+}
+
 // ── Badge config ──────────────────────────────────────────────────────────────
 
 const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
-  welcome_bonus: { label: "Welcome", cls: "bg-primary/15 text-primary" },
-  referral_bonus: { label: "Referral", cls: "bg-green-500/15 text-green-500" },
-  referral_reward: { label: "Referral", cls: "bg-green-500/15 text-green-500" },
-  use: { label: "Tool Used", cls: "bg-blue-500/15 text-blue-500" },
-  purchase: { label: "Purchase", cls: "bg-teal-500/15 text-teal-500" },
-  credit_purchase: { label: "Purchase", cls: "bg-teal-500/15 text-teal-500" },
-  plan_upgrade: { label: "Plan Upgrade", cls: "bg-orange-500/15 text-orange-500" },
-  manual_admin: { label: "Admin", cls: "bg-muted text-muted-foreground" },
-  refund: { label: "Refund", cls: "bg-green-500/15 text-green-500" },
+  welcome_bonus:   { label: "Welcome",      cls: "bg-primary/15 text-primary" },
+  referral_bonus:  { label: "Referral",     cls: "bg-green-500/15 text-green-500" },
+  referral_reward: { label: "Referral",     cls: "bg-green-500/15 text-green-500" },
+  use:             { label: "Tool Used",    cls: "bg-blue-500/15 text-blue-500" },
+  purchase:        { label: "Purchase",     cls: "bg-teal-500/15 text-teal-500" },
+  credit_purchase: { label: "Purchase",     cls: "bg-teal-500/15 text-teal-500" },
+  plan_upgrade:    { label: "Plan Upgrade", cls: "bg-orange-500/15 text-orange-500" },
+  manual_admin:    { label: "Admin",        cls: "bg-muted text-muted-foreground" },
+  refund:          { label: "Refund",       cls: "bg-green-500/15 text-green-500" },
+  rollover:        { label: "Rollover",     cls: "bg-violet-500/15 text-violet-500" },
+  expiry:          { label: "Expired",      cls: "bg-red-500/15 text-red-500" },
 };
 
 function typeBadge(type: string) {
@@ -69,9 +79,17 @@ function getDescription(tx: Transaction): string {
 
 function formatDate(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) +
+  return (
+    d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) +
     " · " +
-    d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+  );
+}
+
+function formatShortDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-IN", {
+    day: "numeric", month: "short", year: "numeric",
+  });
 }
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
@@ -92,6 +110,39 @@ function StatCard({ label, value, icon: Icon, cls }: {
   );
 }
 
+// ── Credit breakdown row ───────────────────────────────────────────────────────
+
+function BreakdownRow({
+  icon: Icon,
+  iconCls,
+  label,
+  credits,
+  sublabel,
+}: {
+  icon: React.ElementType;
+  iconCls: string;
+  label: string;
+  credits: number;
+  sublabel: string;
+}) {
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-border last:border-b-0">
+      <div className="flex items-center gap-3">
+        <div className={cn("rounded-lg p-2", iconCls)}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-foreground">{label}</p>
+          <p className="text-xs text-muted-foreground">{sublabel}</p>
+        </div>
+      </div>
+      <span className="text-base font-bold text-foreground tabular-nums">
+        {credits} <span className="text-xs font-normal text-muted-foreground">cr</span>
+      </span>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function CreditsPage() {
@@ -99,6 +150,8 @@ export default function CreditsPage() {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<LedgerResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [breakdown, setBreakdown] = useState<Breakdown | null>(null);
+  const [breakdownLoading, setBreakdownLoading] = useState(true);
 
   const load = useCallback(async (f: string, p: number) => {
     setLoading(true);
@@ -110,6 +163,20 @@ export default function CreditsPage() {
       // silent
     }
     setLoading(false);
+  }, []);
+
+  // Fetch credit breakdown separately from the ledger
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/user/credits");
+        const json = await res.json() as { breakdown?: Breakdown };
+        if (json.breakdown) setBreakdown(json.breakdown);
+      } catch {
+        // silent
+      }
+      setBreakdownLoading(false);
+    })();
   }, []);
 
   useEffect(() => {
@@ -143,26 +210,70 @@ export default function CreditsPage() {
         </div>
       </div>
 
-      {/* Balance card */}
-      <div className="rounded-xl border border-border bg-card p-6 flex items-center gap-6">
-        <div className="rounded-full bg-primary/10 p-4">
-          <Coins className="h-8 w-8 text-primary" />
+      {/* Balance + Breakdown card */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        {/* Total balance header */}
+        <div className="flex items-center gap-6 p-6 border-b border-border">
+          <div className="rounded-full bg-primary/10 p-4">
+            <Coins className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Total Balance</p>
+            <p className="text-4xl font-bold text-foreground">
+              {loading ? "—" : (summary?.balance ?? 0)}
+              <span className="text-lg text-muted-foreground font-normal ml-1">credits</span>
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm text-muted-foreground">Current Balance</p>
-          <p className="text-4xl font-bold text-foreground">
-            {loading ? "—" : (summary?.balance ?? 0)}
-            <span className="text-lg text-muted-foreground font-normal ml-1">credits</span>
-          </p>
+
+        {/* Credit breakdown rows */}
+        <div className="px-6 py-2">
+          {breakdownLoading ? (
+            <div className="space-y-3 py-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-12 rounded-lg bg-muted/20 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <>
+              <BreakdownRow
+                icon={CreditCard}
+                iconCls="bg-teal-500/10 text-teal-500"
+                label="Purchased Credits"
+                credits={breakdown?.purchased ?? 0}
+                sublabel="Never expire"
+              />
+              <BreakdownRow
+                icon={RefreshCcw}
+                iconCls="bg-orange-500/10 text-orange-500"
+                label="Monthly Credits"
+                credits={breakdown?.subscription ?? 0}
+                sublabel="Reset each billing cycle"
+              />
+              {(breakdown?.rollover ?? 0) > 0 && (
+                <BreakdownRow
+                  icon={Clock}
+                  iconCls="bg-violet-500/10 text-violet-500"
+                  label="Rollover Credits"
+                  credits={breakdown?.rollover ?? 0}
+                  sublabel={
+                    breakdown?.rolloverExpiresAt
+                      ? `Expires ${formatShortDate(breakdown.rolloverExpiresAt)}`
+                      : "Never expire"
+                  }
+                />
+              )}
+            </>
+          )}
         </div>
       </div>
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total Earned" value={loading ? "—" : `+${summary?.earned ?? 0}`} icon={Plus} cls="bg-green-500/10" />
-        <StatCard label="Total Spent" value={loading ? "—" : `-${summary?.spent ?? 0}`} icon={Minus} cls="bg-red-500/10" />
-        <StatCard label="This Month" value={loading ? "—" : `-${summary?.thisMonth ?? 0}`} icon={Calendar} cls="bg-orange-500/10" />
-        <StatCard label="Transactions" value={loading ? "—" : (summary?.transactionCount ?? 0)} icon={Hash} />
+        <StatCard label="Total Earned"   value={loading ? "—" : `+${summary?.earned ?? 0}`}            icon={Plus}     cls="bg-green-500/10" />
+        <StatCard label="Total Spent"    value={loading ? "—" : `-${summary?.spent ?? 0}`}             icon={Minus}    cls="bg-red-500/10" />
+        <StatCard label="This Month"     value={loading ? "—" : `-${summary?.thisMonth ?? 0}`}         icon={Calendar} cls="bg-orange-500/10" />
+        <StatCard label="Transactions"   value={loading ? "—" : (summary?.transactionCount ?? 0)}      icon={Hash} />
       </div>
 
       {/* Filter tabs */}
