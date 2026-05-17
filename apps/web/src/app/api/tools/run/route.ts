@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/require-auth";
 import { ApiResponse } from "@/lib/api-response";
 // TODO: migrate remaining NextResponse.json calls to ApiResponse helpers
-import { connectDB, Tool, User, CreditTransaction } from "@toolhub/db";
+import { connectDB, Tool, User, CreditService, ToolOutput } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 import { checkAbuseLimit } from "@/lib/abuse-protection";
 import { applyWatermark } from "@/lib/watermark";
 import { getUserPlan } from "@/lib/user-plan";
 import { checkAndSendCreditAlert } from "@/lib/credit-alerts";
 import { sanitizeInputsObject } from "@/lib/prompt-sanitizer";
+import { invalidateBalance } from "@/lib/credit-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -270,32 +271,28 @@ export async function POST(req: NextRequest) {
       const userPlan = await getUserPlan(userId);
       const output = applyWatermark(aiOutput, userPlan, toolSlug);
 
-      // ── STEP 12 — Deduct credits ───────────────────────────────────────────
-      const newBalance = userCredits - creditCost;
-      await User.findByIdAndUpdate(userId, { $inc: { credits: -creditCost } });
-
-      const toolName: string = (tool as { name?: string }).name ?? toolSlug;
-      await CreditTransaction.create({
+      // ── STEP 12 — Deduct credits (atomic tx, type: "use") ────────────────
+      const { newBalance } = await CreditService.deductCredits(
         userId,
-        type: "tool_usage",
-        amount: -creditCost,
-        note: `${toolName} generation`,
-        toolName,
-        toolSlug,
-        balanceAfter: newBalance,
-        output,
-        outputPreview: output.replace(/<[^>]*>/g, "").slice(0, 100),
-      });
+        creditCost,
+        toolSlug
+      );
 
-      // Invalidate caches
+      // ── STEP 12b — Save output history (non-blocking) ─────────────────────
       try {
-        await Promise.all([
-          redis.del(`balance:${userId}`),
-          redis.del(`sidebar:${userId}`),
-        ]);
-      } catch {
-        // silent
+        await ToolOutput.create({
+          userId,
+          toolSlug,
+          inputSnapshot: sanitizedInputs,
+          outputText: output,
+          creditsUsed: creditCost,
+        });
+      } catch (histErr) {
+        console.error("[tool-runner] ToolOutput save failed:", histErr);
       }
+
+      // Invalidate balance cache
+      await invalidateBalance(userId);
 
       // ── STEP 13 — Low credit alert (fire-and-forget) ───────────────────────
       checkAndSendCreditAlert(userId, newBalance, userPlan).catch(console.error);
