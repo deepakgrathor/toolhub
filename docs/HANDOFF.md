@@ -1,5 +1,117 @@
 # Handoff Note
-Updated: 2026-05-18 | Account: B | Session: Feat-6 | Features: CreditPack model + 8 packs seeded
+Updated: 2026-05-18 | Account: B | Session: Feat-7 | Features: Admin Transaction History
+
+## Feat-7: Admin Transaction History — COMPLETE
+
+**Status:** Full transaction history admin panel — list, filters, pagination, detail, analytics. Build passes. 0 TypeScript errors.
+
+### Files Created
+
+#### apps/web/src/app/api/admin/transactions/route.ts (NEW)
+- GET handler with full query params: `q`, `type`, `direction`, `startDate`, `endDate`, `sortBy`, `sortOrder`, `page`, `limit`
+- **First properly paginated admin route** — `page`/`limit` with `countDocuments` + `skip` (not hard `limit(100)`)
+- Search: resolves email/userId → `userId: { $in: [...] }` query
+- Returns: `{ transactions[], pagination{total, page, limit, totalPages, hasNext, hasPrev}, summary{totalCreditsIn, totalCreditsOut, uniqueUsers} }`
+- Enriches each transaction with user `{ email, name, plan, credits }` via userMap
+
+#### apps/web/src/app/api/admin/transactions/[id]/route.ts (NEW)
+- GET single transaction by ObjectId
+- Populates full user object (email, name, plan, credits, createdAt)
+- If `type === "use"` and `toolSlug` exists: fetches ToolConfig (creditCost, aiModel, aiProvider)
+- Returns `{ transaction: { ...fields, user, tool } }`
+
+#### apps/web/src/app/api/admin/transactions/analytics/route.ts (NEW)
+- Aggregation pipeline: totalCreditsIssued, totalCreditsConsumed, todayCount, byType[], dailyTrend[], topUsers[], topTools[]
+- Daily trend: last 30 days grouped by date
+- Top 10 users by credits consumed (enriched with email/name)
+- Top 10 tools by usage count (type=use only)
+
+#### apps/web/src/app/admin/transactions/page.tsx (NEW)
+- Server Component — fetches data directly from DB (matches users/page.tsx pattern)
+- Auth via `verifyAdminToken(cookie)` → redirect to login if not admin
+- Exports: `AdminTransactionRow`, `TransactionPagination`, `TransactionSummary`, `TransactionAnalytics` interfaces
+- Passes `initialTransactions`, `initialPagination`, `initialSummary`, `initialAnalytics`, `initialQuery` to `TransactionsTable`
+
+#### apps/web/src/components/admin/TransactionsTable.tsx (NEW)
+- Client Component — matches UsersTable.tsx pattern exactly
+- 4 analytics stat cards (credits issued, consumed, active users, today count)
+- Filters: search input (debounced 300ms), type dropdown, direction dropdown, date range, sort select, reset button
+- Table: 9 columns — #, User (email+name+plan badge), Type (colored badge), Amount (green/red), Balance After, Tool slug, Note (truncated), Date, View link
+- Row click → navigate to `/admin/transactions/[id]`
+- Pagination: prev/next buttons, page jump input, per-page selector (25/50/100), "Showing X–Y of Z" count
+- All filters update URL params → server re-renders with fresh data
+
+#### apps/web/src/app/admin/transactions/[id]/page.tsx (NEW)
+- Server Component detail page
+- Two-column layout: Transaction card (left) + User card (right)
+- Transaction card: ID (copyable via CopyButton), type badge, amount, balanceAfter, date/time, note, meta JSON
+- User card: email (link to /admin/users?q=email), name, plan badge, credits, member since
+- Tool card (below, only if type=use): toolSlug, creditCost, aiModel, aiProvider
+- Back button → /admin/transactions
+
+#### apps/web/src/components/admin/CopyButton.tsx (NEW)
+- Tiny "use client" component for clipboard copy
+- Used in detail page for Transaction ID
+
+### Files Modified
+
+#### apps/web/src/app/admin/layout.tsx
+- Added `ArrowLeftRight` to lucide-react imports
+- Added `{ href: "/admin/transactions", label: "Transactions", icon: ArrowLeftRight, exact: false }` to NAV_ITEMS — between Payments and Gateways
+
+### Architecture Notes
+- All 3 API routes use `requireAdmin(req)` — return 401 if not admin
+- All routes: `export const dynamic = "force-dynamic"`
+- Pagination: `countDocuments(query)` + `.skip((page-1)*limit).limit(limit)` pattern — reuse for future large collections
+- `TransactionSummary` is computed from the current page's data; `TransactionAnalytics` is global aggregation (all-time)
+
+### Next: Feat-8 — Business Profiles Feature
+- Use `checkBusinessProfileLimit()` from `plan-limits.ts` in profile creation route
+- Use `getBusinessProfileLimit()` to show limit badge in UI
+- BusinessProfile model already exists, download-pdf route already uses it
+
+---
+
+## BFix-4: Fix Google OAuth Double Welcome Credits Grant — COMPLETE
+
+**Status:** Google OAuth users no longer get double welcome credits. Single source of truth: `onboarding/complete`. Build passes.
+
+### Root Cause
+`auth.ts` created Google users with `credits: welcomeCredits` (10 credits) baked into the document at creation time, but did NOT set `welcomeCreditGiven: true` and did NOT create a `CreditTransaction` record. When onboarding completed, `releaseOnboardingCredits()` saw `welcomeCreditGiven` as false and granted another 10 credits — double grant.
+
+### Fix (2 lines changed in auth.ts)
+**`apps/web/src/auth.ts`**
+1. Removed `getSiteConfigValue('welcome_bonus_credits', 10)` call — no longer needed at creation time
+2. Removed `getSiteConfigValue` import (no longer used anywhere in file)
+3. Changed `credits: welcomeCredits` → `credits: 0` in `User.create()`
+4. Added comment explaining credits are granted via `onboarding/complete`
+
+### Why onboarding/complete is the right place
+`releaseOnboardingCredits()` in `onboarding/complete/route.ts` already:
+- Creates `CreditTransaction` with correct fields (`userId`, `type: "welcome_bonus"`, `amount`, `balanceAfter`, `note`)
+- Sets `welcomeCreditGiven: true` atomically with credit grant
+- Guards against double-grant via the flag check
+- Handles both referred and direct signup users
+- Handles both email and Google OAuth users identically
+
+### All 4 Signup Scenarios — Correct After Fix
+| Scenario | Path | Result |
+|---|---|---|
+| Email (no referral) | `signup/route.ts` grants 10cr + sets flag → `onboarding/complete` skips (flag set) | ✅ |
+| Email (with referral) | `signup/route.ts` skips → `onboarding/complete` grants joining_bonus | ✅ |
+| Google (no referral) | `auth.ts` → credits: 0, flag unset → `onboarding/complete` grants welcomeBonus + sets flag + CreditTransaction | ✅ |
+| Google (with referral) | `auth.ts` → credits: 0, `applyReferral()` → `onboarding/complete` grants joining_bonus + sets flag | ✅ |
+
+### No Changes to
+- `onboarding/complete/route.ts` — already correct
+- `signup/route.ts` — already correct
+- `CreditTransaction` model — no changes
+
+### Next: Feat-7 — Transaction History Feature
+
+---
+
+## Feat-6: CreditPack Model + Seed Update — COMPLETE
 
 ## Feat-6: CreditPack Model + Seed Update — COMPLETE
 
