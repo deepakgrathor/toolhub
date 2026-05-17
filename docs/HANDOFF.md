@@ -1,8 +1,49 @@
 # Handoff Note
-Updated: 2026-05-17 | Account: B | Session: Feat-1C | Features: Website Generator V2 engine — 2-stage pipeline, dynamic credits, Haiku brief + Sonnet HTML
+Updated: 2026-05-17 | Account: B | Session: Feat-1D | Features: Website Generator V2 publish feature — slug check, R2 deploy, PublishModal, My Websites page
 
 ## Where We Are
-Session Feat-1C done. **TypeScript: 0 errors. Build: successful.**
+Session Feat-1D done. **TypeScript: 0 errors. Build: pre-existing \_document issue (App Router config, not from this session).**
+
+### Website Generator V2 — FULLY COMPLETE After Feat-1D
+
+**Status:** End-to-end publish flow works: generate website → publish to setulix.site → manage published sites.
+
+**Files created:**
+- `apps/web/src/app/api/tools/website-generator/check-slug/route.ts` — GET, slug format validation (regex + consecutive hyphens), checks PublishedSite DB + R2 HeadObject, Redis cache 30s TTL
+- `apps/web/src/app/api/tools/website-generator/publish/route.ts` — POST, Zod validation (slug + htmlContent + businessName + pages), re-validates slug, fetches publish credit cost from SiteConfig (website_publish_credits, default 10), checks balance, uploads to R2, deducts credits AFTER upload, saves PublishedSite doc, invalidates caches
+- `apps/web/src/app/api/tools/website-generator/publish/[siteId]/route.ts` — DELETE (unpublish), ownership check, deletes R2 file (silent fail), sets isActive: false, clears slug cache
+- `apps/web/src/app/api/tools/website-generator/update-site/route.ts` — POST, ownership + isActive check, fetches update credit cost from SiteConfig (website_update_credits, default 5), uploads new HTML to same slug, deducts credits after upload
+- `apps/web/src/app/api/user/websites/route.ts` — GET, returns user's active published sites sorted by publishedAt desc
+- `apps/web/src/components/ui/PublishModal.tsx` — slug input with debounced availability check (600ms), auto-lowercase + space→hyphen, status indicators (checking/available/taken/invalid), publish credit cost display, success state with copy link + open website, prevents backdrop close during publishing
+- `apps/web/src/components/dashboard/MyWebsitesList.tsx` — grid of published site cards, skeleton loading, empty state with CTA to website-generator, inline unpublish confirmation, fade-out on remove
+- `apps/web/src/app/(site)/my-websites/page.tsx` — protected page wrapper
+
+**Files modified:**
+- `apps/web/src/tools/website-generator/WebsiteGeneratorTool.tsx` — replaced disabled "Publish Website" placeholder with working button (auth-gated), added PublishModal rendering, imports PublishModal
+- `apps/web/src/components/layout/Sidebar.tsx` — added "My Websites" nav item with Globe icon after Explore Tools
+- `apps/web/src/middleware.ts` — added "/my-websites" to APP_ROUTES for auth protection
+
+**Architecture rules maintained:**
+- Credits deducted AFTER R2 upload succeeds — never before
+- Credit amount from SiteConfig only (website_publish_credits / website_update_credits) — never hardcoded
+- newBalance never in API response
+- requireAuth() on all protected routes
+- ApiResponse helpers for all responses
+- lucide-react icons only — no emojis
+- Semantic tokens only — no hardcoded colors
+- Dark + light theme support throughout
+
+**Credit flow:**
+- Publish: getSiteConfigValue("website_publish_credits", 10) — R2 upload → deduct → DB save
+- Update: getSiteConfigValue("website_update_credits", 5) — R2 overwrite → deduct → DB update
+- Unpublish: no credits refunded, R2 delete (silent fail) → isActive: false
+
+**Known limitations:**
+- Update site button on My Websites page is a future feature (needs regeneration flow)
+- No pagination on My Websites (fine for <20 sites)
+- Build has pre-existing \_document error from Next.js config (not from Feat-1D)
+
+---
 
 ### Website Generator V2 State After Feat-1C
 

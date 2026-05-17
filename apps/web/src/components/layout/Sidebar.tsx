@@ -17,6 +17,7 @@ import {
   Plus,
   History,
   TrendingUp,
+  Globe,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
@@ -373,6 +374,24 @@ function SidebarContent({
         >
           <Compass className="h-[18px] w-[18px] shrink-0" />
           {!isCollapsed && <span>Explore Tools</span>}
+        </Link>
+      </div>
+
+      {/* My Websites link */}
+      <div className="px-2 pb-1 shrink-0">
+        <Link
+          href="/my-websites"
+          title={isCollapsed ? "My Websites" : undefined}
+          className={cn(
+            "sidebar-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
+            pathname === "/my-websites"
+              ? "bg-accent/5 border border-accent/20 text-primary font-medium"
+              : "text-muted-foreground hover:bg-accent/5 hover:text-foreground",
+            isCollapsed && "justify-center",
+          )}
+        >
+          <Globe className="h-[18px] w-[18px] shrink-0" />
+          {!isCollapsed && <span>My Websites</span>}
         </Link>
       </div>
 

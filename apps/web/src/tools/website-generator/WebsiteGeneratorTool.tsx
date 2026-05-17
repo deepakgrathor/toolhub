@@ -38,6 +38,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { usePaywallStore } from "@/store/paywall-store";
 import { useCreditStore } from "@/store/credits-store";
 import { PresetSelector } from "@/components/ui/PresetSelector";
+import { PublishModal } from "@/components/ui/PublishModal";
 import { usePresets } from "@/hooks/usePresets";
 import { useWebsiteCredits } from "@/hooks/useWebsiteCredits";
 import { validateImageFile } from "@/lib/file-validation";
@@ -237,6 +238,7 @@ export default function WebsiteGeneratorTool({ creditCost: creditCostProp }: { c
   // ── Generation state ──────────────────────────────────────────────────────
   const [isGenerating, setIsGenerating] = useState(false);
   const [output, setOutput] = useState<WebsiteOutput | null>(null);
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(LOADING_MESSAGES[0]);
   const loadingMsgRef = useRef(0);
 
@@ -1015,15 +1017,38 @@ export default function WebsiteGeneratorTool({ creditCost: creditCostProp }: { c
 
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">{totalCredits} credits used</p>
-              <button type="button" disabled
-                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground cursor-not-allowed opacity-60"
-                title="Coming in next update">
+              <button
+                type="button"
+                onClick={() => {
+                  if (status !== "authenticated") {
+                    openAuthModal("login");
+                    return;
+                  }
+                  setIsPublishModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface transition-colors"
+              >
                 <Globe className="h-3.5 w-3.5" /> Publish Website
               </button>
             </div>
           </div>
         )}
       </div>
+
+      {output && (
+        <PublishModal
+          isOpen={isPublishModalOpen}
+          onClose={() => setIsPublishModalOpen(false)}
+          htmlContent={output.htmlContent}
+          businessName={watch("businessName") || "My Website"}
+          pages={parseInt(watch("pages") || "1")}
+          onPublishSuccess={(siteUrl) => {
+            setIsPublishModalOpen(false);
+            toast.success("Website published!");
+            void siteUrl;
+          }}
+        />
+      )}
     </div>
   );
 }
