@@ -58,7 +58,7 @@ export function PublishModal({
     fetch("/api/public/website-credits")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (d?.credits?.publish != null) setPublishCredits(d.credits.publish);
+        if (d?.publish != null) setPublishCredits(d.publish);
         else setPublishCredits(10);
       })
       .catch(() => setPublishCredits(10));
