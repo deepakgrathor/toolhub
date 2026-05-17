@@ -1,5 +1,38 @@
 # Handoff Note
-Updated: 2026-05-18 | Account: B | Session: BFix-5 | Focus: Critical run route fixes
+Updated: 2026-05-18 | Account: B | Session: Feat-8 | Focus: DB-driven preset limits
+
+## Feat-8: Preset Limit — DB-driven via plan-limits — COMPLETE
+
+**Status:** Hardcoded planSlug check replaced with DB-driven functions. 0 new TypeScript errors. Committed + pushed.
+
+### What Changed
+**File:** `apps/web/src/app/api/tools/presets/route.ts`
+
+#### POST /api/tools/presets
+- **Before:** `if (planSlug === "pro" && count >= 5)` — hardcoded, violated architecture rule
+- **After:** `checkSavedPresetLimit(userId, currentCount)` from `@/lib/plan-limits`
+- Returns `{ error, limit, current, upgradeRequired: true }` with 403 on block
+- Handles all plan tiers:
+  - `limit === 0` → free/lite → 403 (also caught by early plan check above)
+  - `limit === -1` → business/enterprise → unlimited
+  - `limit > 0` → pro → capped at DB value (default 5, admin-configurable)
+
+#### GET /api/tools/presets
+- **Before:** returned `{ presets }` only — no limit info
+- **After:** runs `getSavedPresetLimit(userId)` in parallel with `Preset.find()` via `Promise.all`
+- Returns `{ presets, limit, current: presets.length }` — UI can now use DB-driven limit
+- `limit: -1` = unlimited, `limit: 0` = none, `limit: N` = capped
+
+### Architecture Notes
+- `getUserPlan` import retained — still used by early free/lite guard in both GET and POST
+- `checkSavedPresetLimit` + `getSavedPresetLimit` imported from `@/lib/plan-limits`
+- PresetSelector counter (`{presets.length}/5`) still hardcodes `5` — hook doesn't read `limit` from GET response. The data is now available in the API response; wiring it to the UI counter requires updating `preset-store` + `usePresets` hook (Feat-9 scope or separate fix)
+- All pre-existing TypeScript errors (missing `@/auth`, `@/lib/user-plan`, `@/lib/plan-limits` path aliases) existed before this session — zero new errors introduced
+
+### Next
+- Feat-9 — Credit Rollover overhaul
+
+---
 
 ## BFix-5: Fix /api/tools/run — COMPLETE
 
