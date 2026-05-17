@@ -400,7 +400,7 @@ Return ONLY this JSON structure (no markdown, no explanation):
 
   let rawResponse: string;
   try {
-    rawResponse = await callAI(prompt, "claude-haiku-4-5", "anthropic", 1500);
+    rawResponse = await callAI(prompt, "claude-haiku-4-5", "anthropic", 4096);
   } catch (err) {
     console.error("[website-generator] Stage 1 Haiku failed:", err);
     return buildFallbackBrief(input, theme);
@@ -445,9 +445,9 @@ async function generateWebsiteHTML(
 ): Promise<string> {
   const pageCount = parseInt(input.pages, 10);
 
-  const logoInstruction = input.logoBase64
-    ? `LOGO PROVIDED: Embed as <img src="data:image/png;base64,${input.logoBase64}" alt="${input.businessName} logo" style="height:40px;width:auto;object-fit:contain;"> in the header/navbar.`
-    : `LOGO: None provided — use text-based logo (business name styled) in header.`;
+  // const logoInstruction = input.logoBase64
+  //   ? `LOGO PROVIDED: Embed as <img src="data:image/png;base64,${input.logoBase64}" alt="${input.businessName} logo" style="height:40px;width:auto;object-fit:contain;"> in the header/navbar.`
+  //   : `LOGO: None provided — use text-based logo (business name styled) in header.`;
 
   const contactBlock = input.includeContact
     ? `Phone: ${input.phone ?? ""}\nEmail: ${input.email ?? ""}`
@@ -473,8 +473,6 @@ async function generateWebsiteHTML(
 DESIGN BRIEF:
 ${JSON.stringify(brief, null, 2)}
 
-${logoInstruction}
-
 CONTACT INFO:
 ${contactBlock}
 ${waBlock ? "\n" + waBlock : ""}
@@ -491,7 +489,6 @@ ABSOLUTE REQUIREMENTS — NEVER VIOLATE:
 8. Mobile responsive — CSS Grid + Flexbox + media queries
 9. Multi-page: all pages in one HTML file, JS tab switching (no page reload — JS shows/hides page divs)
 10. Navigation: smooth, highlight active page
-11. ${input.logoBase64 ? "Logo provided as base64: embed as <img> in header as instructed above" : "Use text-based logo (business name) in header"}
 12. WhatsApp button: fixed bottom-right floating button if enabled (enabled=${input.sections.whatsapp})
 13. Google Maps: <iframe> embed using the maps query if enabled (enabled=${input.sections.maps})
 14. Dark mode: CSS class toggle on <body> if enabled (darkMode=${input.darkMode})
@@ -600,8 +597,8 @@ export async function execute(
   // 4. Check balance
   const hasBalance = await CreditService.checkBalance(context.userId, dynamicCreditCost);
   if (!hasBalance) {
-    const balance = await CreditService.getBalance(context.userId);
-    throw new InsufficientCreditsError(balance, dynamicCreditCost);
+    const currentBalance = await CreditService.getBalance(context.userId);
+    throw new InsufficientCreditsError(currentBalance, dynamicCreditCost);
   }
 
   // 5. Sanitize all user text inputs
@@ -657,7 +654,13 @@ export async function execute(
 
   // 8. Stage 2 — Generate HTML (Sonnet, max 12000 tokens)
   // If Stage 2 throws, credits are NOT deducted (we haven't called deductCredits yet)
-  const rawHtml = await generateWebsiteHTML(sanitizedInput, designBrief);
+  let rawHtml: string;
+  try {
+    rawHtml = await generateWebsiteHTML(sanitizedInput, designBrief);
+  } catch (err) {
+    console.error("[WG] Stage 2 Sonnet failed:", err instanceof Error ? err.message : String(err));
+    throw err;
+  }
 
   // 9. Clean and validate HTML
   const htmlContent = cleanHtmlOutput(rawHtml);

@@ -126,22 +126,39 @@ export function repairJson(raw: string): string {
 }
 
 export function extractJson(raw: string): Record<string, unknown> {
-  const candidates = [
-    raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim(),
-    repairJson(raw),
-  ];
+  const firstBrace = raw.indexOf("{");
+  const lastBrace = raw.lastIndexOf("}");
+
+  const candidates: string[] = [];
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    candidates.push(raw.slice(firstBrace, lastBrace + 1));
+  }
+
+  candidates.push(
+    raw
+      .replace(/^[\s\S]*?```(?:json)?\s*/i, "")
+      .replace(/\s*```[\s\S]*$/i, "")
+      .trim()
+  );
+
+  candidates.push(repairJson(raw));
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    candidates.push(repairJson(raw.slice(firstBrace, lastBrace + 1)));
+  }
+
   for (const c of candidates) {
+    if (!c || !c.trim().startsWith("{")) continue;
     try {
       const obj = JSON.parse(c);
-      if (obj && typeof obj === "object" && !Array.isArray(obj)) return obj;
+      if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+        return obj;
+      }
     } catch {
-      // try next
+      // try next candidate
     }
   }
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (match) {
-    try { return JSON.parse(match[0]); } catch { /* fall through */ }
-    try { return JSON.parse(repairJson(match[0])); } catch { /* fall through */ }
-  }
+
   throw new Error("Could not parse JSON from AI response");
 }

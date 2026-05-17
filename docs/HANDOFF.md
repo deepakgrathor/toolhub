@@ -1,5 +1,53 @@
 # Handoff Note
-Updated: 2026-05-18 | Account: B | Session: Feat-9B | Focus: Credit rollover overhaul
+Updated: 2026-05-18 | Account: B | Session: BFix-9 | Focus: Credit deduction field select bug
+
+## BFix-9: Remove .select() from deductCredits() user fetch — COMPLETE
+
+**Status:** Root cause confirmed via debug logs — `.select()` chained with `.session()` in Mongoose caused credit fields to return `undefined` inside the transaction. Removed `.select()`. Full document fetched. 0 TypeScript errors. Committed + pushed.
+
+### Root Cause
+Inside `deductCredits()`, the user was fetched with:
+```ts
+User.findById(userId).select("purchasedCredits subscriptionCredits rolloverCredits").session(session)
+```
+Mongoose `.select()` + `.session()` combination returned the user document but with credit fields as `undefined`, making `total = 0` and throwing `InsufficientCreditsError` even when the user had sufficient balance.
+
+### Fix
+`packages/db/src/credit-service.ts` — removed `.select()` from the `deductCredits()` user fetch:
+```ts
+// Before (broken)
+const user = await User.findById(userId)
+  .select("purchasedCredits subscriptionCredits rolloverCredits")
+  .session(session);
+
+// After (fixed)
+const user = await User.findById(userId)
+  .session(session);
+```
+Note: `addCredits()` has the same `.select()` pattern — left unchanged as it does not exhibit the bug (writes route through switch/case which handles undefined via `?? 0`). Can be cleaned up later.
+
+---
+
+## BFix-8: extractJson fix + Haiku token increase — COMPLETE
+
+**Status:** extractJson() rewritten with firstBrace/lastBrace approach. Haiku max_tokens raised 1500→4096 (was truncating long JSON responses). Stage 2 wrapped in try-catch logging `[WG] Stage 2 Sonnet failed:`. All debug logs removed. 0 TypeScript errors. Committed + pushed.
+
+### What Changed
+
+#### 1. `apps/web/src/lib/ai.ts` — `extractJson()` rewritten
+- **Replaced:** Regex-only approach with firstBrace/lastBrace direct extraction
+- **Now handles:** All Haiku formats: `` ```json\n{...}``` ``, `Here is the JSON: {...}`, plain `{...}`, leading whitespace + fences
+- **Candidate order:** (1) brace-position slice, (2) strip fences + trim, (3) repairJson(raw), (4) repairJson(brace-slice)
+
+#### 2. `apps/web/src/tools/website-generator/engine.ts`
+- **Raised:** Haiku callAI max_tokens 1500→4096 (prevents JSON truncation)
+- **Added:** try-catch around `generateWebsiteHTML()` — logs `[WG] Stage 2 Sonnet failed:` then re-throws
+- **Removed:** All debug logs
+
+### Pending
+- BFix-7 retry logic for 429 rate limit errors still needed
+
+---
 
 ## Feat-9B: Credit Rollover Overhaul — COMPLETE
 

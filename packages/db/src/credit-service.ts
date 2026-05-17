@@ -39,7 +39,6 @@ export class CreditService {
 
     await session.withTransaction(async () => {
       const user = await User.findById(userId)
-        .select("purchasedCredits subscriptionCredits rolloverCredits")
         .session(session);
       if (!user) throw new Error("User not found");
 
