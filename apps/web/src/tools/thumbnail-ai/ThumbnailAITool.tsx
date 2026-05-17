@@ -7,8 +7,8 @@ import { usePaywallStore } from "@/store/paywall-store"
 import { useCreditStore } from "@/store/credits-store"
 import { usePresets } from "@/hooks/usePresets"
 import { PresetSelector } from "@/components/ui/PresetSelector"
-import { ThumbnailHistory } from "./ThumbnailHistory"
 import { thumbnailAIConfig } from "./config"
+import Link from "next/link"
 import {
   PLATFORMS, SIZES, NICHES, MOODS, COLOR_THEMES,
   type ThumbnailAIInput,
@@ -76,6 +76,15 @@ const TEMPLATE_CARDS = [
   { id: "bold-red",     name: "Bold Red",     bgClass: "bg-red-950"   },
   { id: "clean-light",  name: "Clean Light",  bgClass: "bg-gray-100"  },
 ]
+
+// ── History item type ──────────────────────────────────────────────────────
+
+interface HistoryItem {
+  _id: string
+  outputText: string
+  toolSlug?: string
+  createdAt: string
+}
 
 // ── Chip component ─────────────────────────────────────────────────────────
 
@@ -147,6 +156,10 @@ export default function ThumbnailAITool({
   const [lastInput, setLastInput] = useState<ThumbnailAIInput | null>(null)
   const [newThumbnail, setNewThumbnail] = useState<{ imageUrl: string; prompt: string } | null>(null)
 
+  // History state
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([])
+  const [historyLoading, setHistoryLoading] = useState(true)
+
   // Presets
   const [planSlug, setPlanSlug] = useState("free")
   const { presets, isFetched, fetchPresets } = usePresets("thumbnail-ai")
@@ -196,6 +209,40 @@ export default function ThumbnailAITool({
       setFacePreviewUrl(null)
     }
   }, [faceFile])
+
+  // Fetch history
+  useEffect(() => {
+    if (status !== "authenticated") {
+      setHistoryLoading(false)
+      return
+    }
+    fetch("/api/user/history?page=1&limit=20")
+      .then((r) => r.json())
+      .then((data: { outputs?: (HistoryItem & { toolSlug?: string })[] }) => {
+        setHistoryItems(
+          (data.outputs ?? [])
+            .filter((o) => o.toolSlug === "thumbnail-ai")
+            .slice(0, 8)
+        )
+      })
+      .catch(() => setHistoryItems([]))
+      .finally(() => setHistoryLoading(false))
+  }, [status])
+
+  // Prepend newly generated thumbnail to history
+  useEffect(() => {
+    if (newThumbnail) {
+      setHistoryItems((prev) => [
+        {
+          _id: Date.now().toString(),
+          outputText: newThumbnail.imageUrl,
+          toolSlug: "thumbnail-ai",
+          createdAt: new Date().toISOString(),
+        },
+        ...prev,
+      ])
+    }
+  }, [newThumbnail])
 
   const currentInputs = { platform, apiSize, title, topic, niche, mood, colorTheme, faceMode, gender }
 
@@ -248,10 +295,13 @@ export default function ThumbnailAITool({
       }
 
       const json = await res.json()
-      const result = json.output as { imageUrl: string }
-      setOutput(result)
+      const imageUrl =
+        typeof json.output === "string"
+          ? json.output
+          : (json.output as { imageUrl: string }).imageUrl
+      setOutput({ imageUrl })
       deductLocally(totalCredits)
-      setNewThumbnail({ imageUrl: result.imageUrl, prompt: title })
+      setNewThumbnail({ imageUrl, prompt: title })
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Generation failed."
       toast.error(
@@ -687,72 +737,128 @@ export default function ThumbnailAITool({
           </div>
         </div>
 
-        {/* RIGHT PANEL — Output (unchanged) */}
+        {/* RIGHT PANEL — unified 3-column grid */}
         <div className="lg:w-[55%] p-4 md:p-6 overflow-y-auto">
-          {!isGenerating && !output && (
-            <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border bg-surface/50 p-8">
-              <ImageIcon className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground">Your thumbnail will appear here</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Fill in the form and click Generate
-              </p>
-            </div>
-          )}
 
-          {isGenerating && (
-            <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center p-8 space-y-4">
-              <Loader2 className="h-10 w-10 animate-spin text-accent" />
-              <p className="text-sm font-semibold text-foreground">Creating your thumbnail...</p>
-              <p className="text-xs text-muted-foreground">
-                {faceMode === "own"
-                  ? "Using your photo with AI generation"
-                  : "Building cinematic prompt with AI, then generating image"}
-              </p>
-              <p className="text-xs text-muted-foreground">This takes 20–30 seconds</p>
-            </div>
-          )}
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-semibold text-foreground">Your thumbnails</p>
+            <Link href="/history" className="text-xs text-primary hover:underline">
+              View all →
+            </Link>
+          </div>
 
-          {!isGenerating && output && (
-            <div className="space-y-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={output.imageUrl}
-                alt="Generated thumbnail"
-                className="w-full rounded-xl border border-border object-cover"
-              />
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
-                  {totalCredits} credits used
-                </span>
-                <div className="flex gap-2">
+          {/* Unified 3-column grid */}
+          <div className="grid grid-cols-3 gap-3">
+
+            {/* CARD 1 — generating placeholder */}
+            {isGenerating && (
+              <div className="aspect-video rounded-xl border-2 border-dashed border-accent/50 bg-accent/5 flex flex-col items-center justify-center gap-2 col-span-1">
+                <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                <p className="text-[10px] text-accent text-center leading-tight">
+                  Generating...
+                </p>
+              </div>
+            )}
+
+            {/* CARD 1 — just generated */}
+            {!isGenerating && output && (
+              <div className="relative rounded-xl overflow-hidden border border-accent/40 group col-span-1">
+                <div className="aspect-video">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={output.imageUrl}
+                    alt="Generated thumbnail"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = "none" }}
+                  />
+                </div>
+                {/* Hover overlay with actions */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2">
                   <button
                     type="button"
                     onClick={downloadImage}
-                    className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface transition-colors"
+                    className="rounded-lg bg-white/20 backdrop-blur-sm p-2"
                   >
-                    <Download className="h-3.5 w-3.5" />Download
+                    <Download className="h-4 w-4 text-white" />
                   </button>
                   <button
                     type="button"
-                    onClick={() => lastInput && generate()}
+                    onClick={generate}
                     disabled={isGenerating}
-                    className="flex items-center gap-1.5 rounded-lg bg-accent/10 border border-accent/30 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/20 disabled:opacity-60 transition-colors"
+                    className="rounded-lg bg-white/20 backdrop-blur-sm p-2"
                   >
-                    <RefreshCw className="h-3.5 w-3.5" />Regenerate
+                    <RefreshCw className="h-4 w-4 text-white" />
                   </button>
                 </div>
+                {/* New badge */}
+                <div className="absolute top-1.5 left-1.5">
+                  <span className="rounded-full bg-accent text-white text-[10px] font-semibold px-1.5 py-0.5">
+                    New
+                  </span>
+                </div>
               </div>
+            )}
+
+            {/* CARD 1 — empty state */}
+            {!isGenerating && !output && (
+              <div className="aspect-video rounded-xl border border-dashed border-border bg-surface/50 flex flex-col items-center justify-center gap-1 col-span-1">
+                <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                <p className="text-[10px] text-muted-foreground text-center leading-tight px-2">
+                  Generate your first thumbnail
+                </p>
+              </div>
+            )}
+
+            {/* Past thumbnails */}
+            {historyLoading
+              ? Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="aspect-video rounded-xl bg-muted animate-pulse" />
+                ))
+              : historyItems.map((item) => (
+                  <div
+                    key={item._id}
+                    className="relative rounded-xl overflow-hidden border border-border group"
+                  >
+                    <div className="aspect-video">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.outputText}
+                        alt="Thumbnail"
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.currentTarget.style.display = "none" }}
+                      />
+                    </div>
+                    {/* Download on hover */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all opacity-0 group-hover:opacity-100 flex items-end justify-end p-1.5">
+                      <a
+                        href={item.outputText}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-lg bg-white/20 backdrop-blur-sm p-1.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Download className="h-3 w-3 text-white" />
+                      </a>
+                    </div>
+                  </div>
+                ))
+            }
+
+          </div>
+
+          {/* Credits used — shown below grid when output exists */}
+          {output && !isGenerating && (
+            <div className="mt-3 flex items-center gap-2">
+              <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
+                {totalCredits} credits used
+              </span>
             </div>
           )}
+
         </div>
       </div>
-
-      {/* History gallery */}
-      {status === "authenticated" && (
-        <div className="border-t border-border px-4 md:px-6 pb-8">
-          <ThumbnailHistory newThumbnail={newThumbnail} />
-        </div>
-      )}
     </div>
   )
 }
