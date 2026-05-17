@@ -8,6 +8,14 @@ export interface IUser extends Document {
   image?: string;
   mobile?: string | null;
   role: "user" | "admin";
+  // Credit buckets (replaces single `credits` field)
+  purchasedCredits: number;
+  subscriptionCredits: number;
+  rolloverCredits: number;
+  // Rollover tracking
+  rolloverExpiresAt?: Date | null;
+  lastRolloverAt?: Date | null;
+  // Virtual — sum of all 3 buckets (read-only)
   credits: number;
   plan: "free" | "lite" | "pro" | "business" | "enterprise";
   kitPreference?: string;
@@ -56,7 +64,13 @@ const UserSchema = new Schema<IUser>(
     image: { type: String },
     mobile: { type: String, sparse: true, unique: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
-    credits: { type: Number, default: 0, min: 0 },
+    // Credit buckets (replaces single credits field)
+    purchasedCredits:    { type: Number, default: 0, min: 0 },
+    subscriptionCredits: { type: Number, default: 0, min: 0 },
+    rolloverCredits:     { type: Number, default: 0, min: 0 },
+    // Rollover tracking
+    rolloverExpiresAt:   { type: Date, default: null },
+    lastRolloverAt:      { type: Date, default: null },
     plan: {
       type: String,
       enum: ["free", "lite", "pro", "business", "enterprise"],
@@ -103,7 +117,17 @@ const UserSchema = new Schema<IUser>(
     planExpiry: { type: Date, default: null },
     renewalReminderSent: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+// Virtual — returns total credit balance (sum of all 3 buckets).
+// Read-only: writes must target the 3 bucket fields explicitly.
+UserSchema.virtual("credits").get(function () {
+  return (
+    (this.purchasedCredits ?? 0) +
+    (this.subscriptionCredits ?? 0) +
+    (this.rolloverCredits ?? 0)
+  );
+});
 
 export const User: Model<IUser> = getOrCreateModel<IUser>("User", UserSchema);

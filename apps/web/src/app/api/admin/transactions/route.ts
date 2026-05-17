@@ -76,10 +76,21 @@ export async function GET(req: NextRequest) {
 
   // Populate user info
   const userIds = [...new Set(transactions.map((t) => t.userId.toString()))];
-  const users = await User.find({ _id: { $in: userIds } })
-    .select("email name plan credits")
+  const usersRaw = await User.find({ _id: { $in: userIds } })
+    .select("email name plan purchasedCredits subscriptionCredits rolloverCredits")
     .lean();
-  const userMap = Object.fromEntries(users.map((u) => [(u._id as mongoose.Types.ObjectId).toString(), u]));
+  const userMap = Object.fromEntries(
+    usersRaw.map((u) => [
+      (u._id as mongoose.Types.ObjectId).toString(),
+      {
+        ...u,
+        credits:
+          (u.purchasedCredits ?? 0) +
+          (u.subscriptionCredits ?? 0) +
+          (u.rolloverCredits ?? 0),
+      },
+    ])
+  );
 
   const enriched = transactions.map((t) => ({
     ...t,

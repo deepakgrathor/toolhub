@@ -44,7 +44,10 @@ const config: NextAuthConfig = {
           name: user.name,
           image: user.image,
           role: user.role,
-          credits: user.credits,
+          credits:
+            (user.purchasedCredits ?? 0) +
+            (user.subscriptionCredits ?? 0) +
+            (user.rolloverCredits ?? 0),
           onboardingCompleted: user.onboardingCompleted ?? false,
         };
       },
@@ -86,7 +89,9 @@ const config: NextAuthConfig = {
               image: user.image,
               authProvider: "google",
               role: "user",
-              credits: 0,
+              purchasedCredits: 0,
+              subscriptionCredits: 0,
+              rolloverCredits: 0,
               referralCode,
               onboardingCompleted: false,
               lastSeen: new Date(),
@@ -111,7 +116,10 @@ const config: NextAuthConfig = {
 
           token.id = dbUser._id.toString();
           token.role = dbUser.role;
-          token.credits = dbUser.credits;
+          token.credits =
+            (dbUser.purchasedCredits ?? 0) +
+            (dbUser.subscriptionCredits ?? 0) +
+            (dbUser.rolloverCredits ?? 0);
           token.image = user.image ?? dbUser.image ?? null;
           token.onboardingCompleted = dbUser.onboardingCompleted ?? false;
         } else {

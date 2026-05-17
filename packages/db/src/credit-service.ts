@@ -2,7 +2,7 @@ import _mongoose from "mongoose";
 const mongoose =
   (_mongoose as unknown as { default: typeof _mongoose }).default ?? _mongoose;
 import { User } from "./models/User";
-import { CreditTransaction, ICreditTransaction } from "./models/CreditTransaction";
+import { CreditTransaction, ICreditTransaction, CreditTransactionType } from "./models/CreditTransaction";
 
 export class InsufficientCreditsError extends Error {
   constructor(public readonly balance: number, required: number) {
@@ -12,14 +12,20 @@ export class InsufficientCreditsError extends Error {
 }
 
 export class CreditService {
-  static async checkBalance(userId: string, required: number): Promise<boolean> {
-    const user = await User.findById(userId).select("credits").lean();
-    return (user?.credits ?? 0) >= required;
+  static async getBalance(userId: string): Promise<number> {
+    const user = await User.findById(userId)
+      .select("purchasedCredits subscriptionCredits rolloverCredits")
+      .lean();
+    return (
+      (user?.purchasedCredits ?? 0) +
+      (user?.subscriptionCredits ?? 0) +
+      (user?.rolloverCredits ?? 0)
+    );
   }
 
-  static async getBalance(userId: string): Promise<number> {
-    const user = await User.findById(userId).select("credits").lean();
-    return user?.credits ?? 0;
+  static async checkBalance(userId: string, required: number): Promise<boolean> {
+    const balance = await CreditService.getBalance(userId);
+    return balance >= required;
   }
 
   static async deductCredits(
@@ -32,16 +38,48 @@ export class CreditService {
     let result: { newBalance: number; transaction: ICreditTransaction };
 
     await session.withTransaction(async () => {
-      const user = await User.findById(userId).select("credits").session(session);
+      const user = await User.findById(userId)
+        .select("purchasedCredits subscriptionCredits rolloverCredits")
+        .session(session);
       if (!user) throw new Error("User not found");
 
-      if (user.credits < amount) {
-        throw new InsufficientCreditsError(user.credits, amount);
+      const total =
+        (user.purchasedCredits ?? 0) +
+        (user.subscriptionCredits ?? 0) +
+        (user.rolloverCredits ?? 0);
+
+      if (total < amount) {
+        throw new InsufficientCreditsError(total, amount);
       }
 
-      const newBalance = user.credits - amount;
-      user.credits = newBalance;
+      // Deduction order: purchased → subscription → rollover
+      let remaining = amount;
+
+      // 1. Deduct from purchasedCredits first (never expire)
+      const fromPurchased = Math.min(remaining, user.purchasedCredits ?? 0);
+      user.purchasedCredits -= fromPurchased;
+      remaining -= fromPurchased;
+
+      // 2. Deduct from subscriptionCredits
+      if (remaining > 0) {
+        const fromSub = Math.min(remaining, user.subscriptionCredits ?? 0);
+        user.subscriptionCredits -= fromSub;
+        remaining -= fromSub;
+      }
+
+      // 3. Deduct from rolloverCredits last
+      if (remaining > 0) {
+        const fromRollover = Math.min(remaining, user.rolloverCredits ?? 0);
+        user.rolloverCredits -= fromRollover;
+        remaining -= fromRollover;
+      }
+
       await user.save({ session });
+
+      const newBalance =
+        (user.purchasedCredits ?? 0) +
+        (user.subscriptionCredits ?? 0) +
+        (user.rolloverCredits ?? 0);
 
       const [tx] = await CreditTransaction.create(
         [
@@ -66,7 +104,7 @@ export class CreditService {
   static async addCredits(
     userId: string,
     amount: number,
-    type: "purchase" | "referral_bonus" | "referral_reward" | "welcome_bonus" | "refund" | "manual_admin" | "plan_upgrade" | "credit_purchase",
+    type: CreditTransactionType,
     meta?: object
   ): Promise<{ newBalance: number; transaction: ICreditTransaction }> {
     const session = await mongoose.startSession();
@@ -74,12 +112,44 @@ export class CreditService {
     let result: { newBalance: number; transaction: ICreditTransaction };
 
     await session.withTransaction(async () => {
-      const user = await User.findById(userId).select("credits").session(session);
+      const user = await User.findById(userId)
+        .select("purchasedCredits subscriptionCredits rolloverCredits")
+        .session(session);
       if (!user) throw new Error("User not found");
 
-      const newBalance = user.credits + amount;
-      user.credits = newBalance;
+      // Route to the correct bucket based on transaction type
+      switch (type) {
+        case "credit_purchase":
+        case "purchase":
+        case "refund":
+          // Purchased credits — never expire
+          user.purchasedCredits = (user.purchasedCredits ?? 0) + amount;
+          break;
+
+        case "rollover":
+          // Rollover credits must be set directly via processUserRollover(),
+          // not through addCredits, to ensure expiry tracking is also updated.
+          throw new Error(
+            "Use processUserRollover() for rollover credits, not addCredits()"
+          );
+
+        case "plan_upgrade":
+        case "welcome_bonus":
+        case "referral_bonus":
+        case "referral_reward":
+        case "manual_admin":
+        default:
+          // Subscription-type credits
+          user.subscriptionCredits = (user.subscriptionCredits ?? 0) + amount;
+          break;
+      }
+
       await user.save({ session });
+
+      const newBalance =
+        (user.purchasedCredits ?? 0) +
+        (user.subscriptionCredits ?? 0) +
+        (user.rolloverCredits ?? 0);
 
       const [tx] = await CreditTransaction.create(
         [
@@ -88,7 +158,7 @@ export class CreditService {
             type,
             amount: +amount,
             balanceAfter: newBalance,
-            meta,
+            ...(meta ? { meta } : {}),
           },
         ],
         { session }

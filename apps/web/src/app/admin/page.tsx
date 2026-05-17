@@ -44,8 +44,24 @@ async function getDashboardData() {
         { $match: { type: "use" } },
         { $group: { _id: null, total: { $sum: "$amount" } } },
       ]),
-      User.find().sort({ createdAt: -1 }).limit(8).lean(),
-      User.countDocuments({ credits: { $lt: 5 }, role: "user" }),
+      User.find()
+        .select("name email purchasedCredits subscriptionCredits rolloverCredits authProvider createdAt")
+        .sort({ createdAt: -1 })
+        .limit(8)
+        .lean(),
+      User.countDocuments({
+        $expr: {
+          $lt: [
+            { $add: [
+              { $ifNull: ["$purchasedCredits", 0] },
+              { $ifNull: ["$subscriptionCredits", 0] },
+              { $ifNull: ["$rolloverCredits", 0] },
+            ]},
+            5,
+          ],
+        },
+        role: "user",
+      }),
       SiteConfig.findOne({ key: "announcement_banner" }).lean(),
       SiteConfig.findOne({ key: "announcement_visible" }).lean(),
       Preset.countDocuments(),
@@ -61,7 +77,10 @@ async function getDashboardData() {
         _id: u._id.toString(),
         name: u.name,
         email: u.email,
-        credits: u.credits,
+        credits:
+          (u.purchasedCredits ?? 0) +
+          (u.subscriptionCredits ?? 0) +
+          (u.rolloverCredits ?? 0),
         authProvider: u.authProvider,
         createdAt: u.createdAt,
       })),

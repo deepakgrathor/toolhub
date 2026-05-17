@@ -186,7 +186,9 @@ export async function POST(req: NextRequest) {
     if (!authResult.authenticated) return authResult.response;
     const { userId } = authResult;
 
-    const userDoc = await User.findById(userId).select("credits plan isDeleted").lean();
+    const userDoc = await User.findById(userId)
+      .select("purchasedCredits subscriptionCredits rolloverCredits plan isDeleted")
+      .lean();
     if (!userDoc || userDoc.isDeleted) {
       return ApiResponse.forbidden();
     }
@@ -202,7 +204,10 @@ export async function POST(req: NextRequest) {
     }
 
     // ── STEP 5 — Credit check ─────────────────────────────────────────────────
-    const userCredits: number = (userDoc as { credits?: number }).credits ?? 0;
+    const userCredits: number =
+      ((userDoc as { purchasedCredits?: number }).purchasedCredits ?? 0) +
+      ((userDoc as { subscriptionCredits?: number }).subscriptionCredits ?? 0) +
+      ((userDoc as { rolloverCredits?: number }).rolloverCredits ?? 0);
     if (userCredits < creditCost) {
       return ApiResponse.error("insufficient_credits", 402);
     }

@@ -1,5 +1,103 @@
 # Handoff Note
-Updated: 2026-05-18 | Account: B | Session: BFix-6 | Focus: Raw credit mutation fixes
+Updated: 2026-05-18 | Account: B | Session: Feat-9A | Focus: Split credits into 3 buckets
+
+## Feat-9A: Split Credits into 3 Buckets — COMPLETE
+
+**Status:** User model split into 3 credit buckets + virtual. CreditService rewritten. All lean() reads fixed (10 files). Migration ran successfully (16 users migrated). 0 new TypeScript errors in db package. Committed + pushed.
+
+### What Changed
+
+#### 1. `packages/db/src/models/User.ts`
+- **Removed:** `credits: { type: Number, default: 0, min: 0 }` (schema field)
+- **Added 3 credit bucket fields:**
+  - `purchasedCredits` — never expire (credit pack purchases, refunds)
+  - `subscriptionCredits` — monthly plan grant + bonuses (welcome, referral, admin)
+  - `rolloverCredits` — carry-forward from previous month (Feat-9B cron will populate)
+- **Added 2 rollover tracking fields:** `rolloverExpiresAt`, `lastRolloverAt`
+- **Added virtual:** `UserSchema.virtual("credits").get(...)` — returns sum of all 3 buckets
+  - `toJSON: { virtuals: true }, toObject: { virtuals: true }` enabled on schema
+  - Virtual is **read-only** — writes must target bucket fields explicitly
+  - Works on non-lean Mongoose documents; `.lean()` reads must compute sum manually
+
+#### 2. `packages/db/src/models/CreditTransaction.ts`
+- Added `"expiry"` to `CreditTransactionType` enum (for Feat-9B expiry events)
+
+#### 3. `packages/db/src/credit-service.ts`
+- **`getBalance()`** — sums all 3 bucket fields (lean query)
+- **`checkBalance()`** — delegates to `getBalance()`
+- **`deductCredits()`** — deduction order: purchased → subscription → rollover (atomic tx)
+- **`addCredits()`** — routes to correct bucket by transaction type:
+  - `credit_purchase`, `purchase`, `refund` → `purchasedCredits`
+  - `plan_upgrade`, `welcome_bonus`, `referral_bonus`, `referral_reward`, `manual_admin`, default → `subscriptionCredits`
+  - `rollover` → throws (use `processUserRollover()` directly instead)
+
+#### 4. `packages/db/src/referral-service.ts`
+- **Before:** Raw `newUser.credits += 15` / `ref.credits += 10` (inside session — broken with virtual)
+- **After:** `newUser.subscriptionCredits += 15` / `ref.subscriptionCredits += 10`
+- Selects the 3 bucket fields instead of `credits`
+- Computes `balanceAfter` from sum of all 3
+
+#### 5. `apps/web/src/auth.ts`
+- `token.credits` for Google login: explicit `(dbUser.purchasedCredits ?? 0) + ...` sum
+- `token.credits` for Credentials login: uses `authorize()` return value which already computes sum
+- `User.create()` for new Google users: uses 3 bucket fields instead of `credits: 0`
+
+#### 6. `apps/web/src/app/api/user/credits/route.ts`
+- **Before:** `{ balance, transactions }`
+- **After:** `{ balance, breakdown: { purchased, subscription, rollover, rolloverExpiresAt }, transactions }`
+- `balance` field unchanged — Zustand store still works without modification
+- `breakdown` is additive — frontend can use it optionally for detailed credit display
+
+#### 7. `apps/web/src/app/api/auth/signup/route.ts`
+- `User.create()` now uses `purchasedCredits: 0, subscriptionCredits: 0, rolloverCredits: 0`
+
+#### 8. Lean() read fixes — all 10 files updated to select 3 bucket fields + compute sum:
+- `apps/web/src/app/api/tools/run/route.ts` — credit check before AI call
+- `apps/web/src/app/api/user/credits/ledger/route.ts` — balance summary
+- `apps/web/src/app/api/admin/transactions/[id]/route.ts` — user.credits in response
+- `apps/web/src/app/api/admin/transactions/route.ts` — user credits in enriched list
+- `apps/web/src/app/api/admin/export/users/route.ts` — CSV export
+- `apps/web/src/lib/credit-rollover.ts` — current balance read (write still raw, Feat-9B)
+- `apps/web/src/app/admin/users/page.tsx` — admin user table
+- `apps/web/src/app/admin/page.tsx` — dashboard recent users + low credit count
+- `apps/web/src/app/admin/transactions/page.tsx` — transaction list user credits
+- `apps/web/src/app/admin/transactions/[id]/page.tsx` — transaction detail user credits
+
+#### 9. `apps/web/src/scripts/migrate-credits.ts` (NEW)
+- Idempotent migration script — safe to run multiple times
+- Step 1: copies old `credits` → `subscriptionCredits` for unmigrated users
+- Step 2: initialises bucket fields to 0 for users without any credits
+- **Ran successfully:** 16 users migrated, 0 initialized
+
+#### 10. Migration Result (verified)
+- All 16 existing users: `subscriptionCredits = old credits value`
+- All users: `purchasedCredits = 0`, `rolloverCredits = 0`
+- Old `credits` field still in MongoDB (not unset) — Feat-9B cleanup optional
+
+### Architecture Notes
+- `User.credits` virtual = sum of all 3 buckets — works on Mongoose doc instances only
+- `.lean()` reads MUST compute the sum manually (virtuals don't apply)
+- Deduction order: `purchasedCredits` → `subscriptionCredits` → `rolloverCredits`
+- `addCredits("rollover", ...)` throws intentionally — use `processUserRollover()` in Feat-9B
+- `credit-rollover.ts` write (`$set: { credits: newBalance }`) left as-is — Feat-9B rewrites it
+- `CreditTransaction` enum now includes `"expiry"` for Feat-9B expiry events
+
+### Verification
+- `packages/db/src/models/User.ts` has 5 new fields + virtual
+- `packages/db/src/models/CreditTransaction.ts` has "expiry" type
+- `packages/db` tsc → 0 errors
+- Migration ran: 16 users migrated to subscriptionCredits bucket
+- All admin pages + API routes compute credits from 3 buckets
+- Frontend `balance` field unchanged — no Zustand changes needed
+
+### Next
+- Feat-9B — Rollover logic overhaul + expiry cron
+  - Rewrite `processUserRollover()` to use `rolloverCredits` bucket directly
+  - Add rollover expiry cron (monthly reset → move balance to rolloverCredits)
+  - Set `rolloverExpiresAt` + `lastRolloverAt` during rollover
+  - Optionally `$unset` the old `credits` MongoDB field
+
+---
 
 ## BFix-6: Fix Raw Credit Mutations, Wrong Redis Keys — COMPLETE
 

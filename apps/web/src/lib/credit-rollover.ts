@@ -24,10 +24,17 @@ export async function processUserRollover(
   const planCredits = planCreditsMap[planSlug] ?? 0;
 
   await connectDB();
-  const user = await User.findById(userId).select("credits").lean();
+  const user = await User.findById(userId)
+    .select("purchasedCredits subscriptionCredits rolloverCredits")
+    .lean();
   if (!user) return;
 
-  const currentBalance = user.credits ?? 0;
+  // Feat-9B will rewrite this to use rolloverCredits bucket directly.
+  // For now, carry-forward uses total balance as a proxy.
+  const currentBalance =
+    (user.purchasedCredits ?? 0) +
+    (user.subscriptionCredits ?? 0) +
+    (user.rolloverCredits ?? 0);
   const carryAmount = Math.min(currentBalance, config.maxCarry);
 
   if (carryAmount <= 0) return;

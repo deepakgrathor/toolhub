@@ -74,7 +74,7 @@ export default async function TransactionDetailPage({ params }: Props) {
   if (!txn) notFound();
 
   const user = await User.findById(txn.userId)
-    .select("email name plan credits createdAt referredBy")
+    .select("email name plan purchasedCredits subscriptionCredits rolloverCredits createdAt referredBy")
     .lean();
 
   let tool: { toolSlug: string; creditCost: number; aiModel: string; aiProvider: string } | null = null;
@@ -194,7 +194,13 @@ export default async function TransactionDetailPage({ params }: Props) {
               </DetailRow>
 
               <DetailRow label="Current Credits">
-                <span className="font-semibold">{user.credits.toLocaleString("en-IN")}</span>
+                <span className="font-semibold">
+                  {(
+                    (user.purchasedCredits ?? 0) +
+                    (user.subscriptionCredits ?? 0) +
+                    (user.rolloverCredits ?? 0)
+                  ).toLocaleString("en-IN")}
+                </span>
               </DetailRow>
 
               <DetailRow label="Member Since">

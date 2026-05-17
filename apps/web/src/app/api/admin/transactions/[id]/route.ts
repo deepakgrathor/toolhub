@@ -23,7 +23,7 @@ export async function GET(
   if (!txn) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const user = await User.findById(txn.userId)
-    .select("email name plan credits createdAt referredBy")
+    .select("email name plan purchasedCredits subscriptionCredits rolloverCredits createdAt referredBy")
     .lean();
 
   let tool = null;
@@ -57,7 +57,10 @@ export async function GET(
             email: user.email,
             name: user.name,
             plan: user.plan,
-            credits: user.credits,
+            credits:
+              (user.purchasedCredits ?? 0) +
+              (user.subscriptionCredits ?? 0) +
+              (user.rolloverCredits ?? 0),
             createdAt: user.createdAt,
           }
         : null,

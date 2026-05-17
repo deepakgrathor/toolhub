@@ -38,7 +38,11 @@ async function getUsers(query?: string): Promise<AdminUserRow[]> {
         }
       : {};
 
-    const users = await User.find(filter).sort({ createdAt: -1 }).limit(100).lean();
+    const users = await User.find(filter)
+      .select("name email purchasedCredits subscriptionCredits rolloverCredits plan role isBanned lastSeen createdAt")
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
     if (users.length === 0) return [];
 
     const userIds = users.map((u) => u._id);
@@ -68,7 +72,10 @@ async function getUsers(query?: string): Promise<AdminUserRow[]> {
         _id: id,
         name: u.name,
         email: u.email,
-        credits: u.credits,
+        credits:
+          (u.purchasedCredits ?? 0) +
+          (u.subscriptionCredits ?? 0) +
+          (u.rolloverCredits ?? 0),
         creditsBought: boughtMap.get(id) ?? 0,
         creditsUsed: usedMap.get(id) ?? 0,
         toolsRun: toolMap.get(id) ?? 0,

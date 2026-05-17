@@ -34,7 +34,9 @@ export async function GET(req: NextRequest) {
       .limit(LIMIT)
       .lean(),
     CreditTransaction.countDocuments(matchFilter),
-    User.findById(session.user.id).select("credits").lean(),
+    User.findById(session.user.id)
+      .select("purchasedCredits subscriptionCredits rolloverCredits")
+      .lean(),
   ]);
 
   // Summary stats (always from all transactions, not filtered)
@@ -77,7 +79,10 @@ export async function GET(req: NextRequest) {
     totalPages: Math.ceil(totalCount / LIMIT),
     page,
     summary: {
-      balance: user?.credits ?? 0,
+      balance:
+        (user?.purchasedCredits ?? 0) +
+        (user?.subscriptionCredits ?? 0) +
+        (user?.rolloverCredits ?? 0),
       earned: earnedAgg[0]?.total ?? 0,
       spent: Math.abs(spentAgg[0]?.total ?? 0),
       thisMonth: Math.abs(thisMonthAgg[0]?.total ?? 0),
