@@ -1,5 +1,47 @@
 # Handoff Note
-Updated: 2026-05-18 | Account: B | Session: Feat-7 | Features: Admin Transaction History
+Updated: 2026-05-18 | Account: B | Session: BFix-5 | Focus: Critical run route fixes
+
+## BFix-5: Fix /api/tools/run — COMPLETE
+
+**Status:** All 3 critical bugs fixed. 0 TypeScript errors. Build clean.
+
+### Bugs Fixed
+
+#### 1. Wrong CreditTransaction enum type (silent DB failure)
+- **Before:** `CreditTransaction.create({ type: "tool_usage", ... })` — `"tool_usage"` is NOT a valid enum value → document created without type, silent failure
+- **After:** `CreditService.deductCredits(userId, creditCost, toolSlug)` — uses `type: "use"` (valid enum), wrapped in MongoDB session/transaction
+
+#### 2. Raw `$inc` credit deduction (race condition)
+- **Before:** `User.findByIdAndUpdate(userId, { $inc: { credits: -creditCost } })` — no transaction, race condition possible under concurrent requests
+- **After:** `CreditService.deductCredits()` — atomic MongoDB session, checks balance inside transaction before deducting
+
+#### 3. Missing ToolOutput history save
+- **Before:** `ToolOutput.create()` never called in generic runner — users had no history for these tools
+- **After:** `ToolOutput.create({ userId, toolSlug, inputSnapshot: sanitizedInputs, outputText: output, creditsUsed: creditCost })` called after successful credit deduction; wrapped in try/catch so failure never blocks the response
+
+#### 4. Wrong Redis cache key invalidation (bonus fix)
+- **Before:** `redis.del('balance:{userId}')` and `redis.del('sidebar:{userId}')` — wrong keys, balance cache never actually cleared
+- **After:** `invalidateBalance(userId)` from `@/lib/credit-cache` — correct key `SetuLix:credits:{userId}`, matches blog-generator streaming pattern
+
+### File Changed
+- `apps/web/src/app/api/tools/run/route.ts`
+  - Import: `CreditTransaction` removed → `CreditService, ToolOutput` added
+  - Import: `invalidateBalance` from `@/lib/credit-cache` added
+  - STEP 12: Raw `$inc` + wrong `CreditTransaction.create` replaced with `CreditService.deductCredits()`
+  - STEP 12b: `ToolOutput.create()` added (non-blocking, try/catch)
+  - Cache: `redis.del()` calls replaced with `invalidateBalance()`
+
+### Architecture Notes
+- All generic-runner tools now create ToolOutput records → history viewable for all tool types
+- CreditService is the single source of truth for credit deductions across all routes
+- `isActive` check was already present (line 199) — no change needed
+- `checkAndSendCreditAlert` fire-and-forget was already correct — no change needed
+
+### Next
+- Feat-8 — Preset limit fix: use `checkBusinessProfileLimit()` from `plan-limits.ts`
+- Feat-9 — Credit Rollover overhaul
+
+---
 
 ## Feat-7: Admin Transaction History — COMPLETE
 
