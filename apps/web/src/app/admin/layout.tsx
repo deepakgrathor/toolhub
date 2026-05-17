@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Wrench, Users, CreditCard, Settings,
+  LayoutDashboard, Wrench, Users, CreditCard, Settings, Database,
   ArrowLeft, ClipboardList, LogOut, Gift, Megaphone, Package, Receipt, LayoutGrid, Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/admin/payment-gateways", label: "Gateways", icon: Landmark, exact: false },
   { href: "/admin/notifications", label: "Notifications", icon: Megaphone, exact: false },
   { href: "/admin/audit", label: "Audit Log", icon: ClipboardList, exact: false },
+  { href: "/admin/site-config", label: "Site Config", icon: Database, exact: false },
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },
 ];
 

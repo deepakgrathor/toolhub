@@ -1,5 +1,32 @@
 # Handoff Note
-Updated: 2026-05-17 | Account: B | Session: Feat-1-Verify | Features: Website Generator V2 verification pass
+Updated: 2026-05-17 | Account: B | Session: Feat-2 | Features: Admin SiteConfig Editor
+
+## Feat-2: Admin SiteConfig Editor — COMPLETE
+
+**Status:** Full admin page for viewing/editing all SiteConfig key-value pairs. Build passes.
+
+### Files Created
+- `apps/web/src/app/admin/site-config/page.tsx` — Server page wrapper with metadata
+- `apps/web/src/components/admin/SiteConfigEditor.tsx` — Client component (~480 lines): grouped collapsible sections, search filter, inline editing, add new key form
+- `apps/web/src/app/api/admin/site-config/route.ts` — GET (list all configs) + PATCH (upsert single key with audit log + cache invalidation)
+
+### Files Modified
+- `apps/web/src/app/admin/layout.tsx` — Added "Site Config" nav item with Database icon
+
+### Features
+- **Grouped display**: Keys grouped by prefix (Website Generator, Thumbnail AI, Referral, Welcome Credits, Defaults, Credit System, Announcement, Maintenance, General catch-all)
+- **Collapsible sections**: First group expanded by default, rest collapsed
+- **Search/filter**: Real-time filter across keys and values
+- **Inline editing**: Click pencil → input appears → Enter to save, Escape to cancel
+- **Add new key**: Snake_case validated, auto-detects type (boolean/number/string)
+- **Audit logging**: Every save creates AuditLog entry with before/after values
+- **Cache invalidation**: `invalidateSiteConfigCache(key)` called on every save
+
+### API Design
+- `GET /api/admin/site-config` — Returns all SiteConfig docs sorted by key
+- `PATCH /api/admin/site-config` — Upserts { key, value } with Zod validation, audit log, cache invalidation
+
+---
 
 ## Verification Results (Feat-1-Verify)
 
