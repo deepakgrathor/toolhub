@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { connectDB, User, OtpToken, Referral, CreditTransaction } from "@toolhub/db";
+import { connectDB, User, OtpToken, Referral, CreditService } from "@toolhub/db";
+import { invalidateBalance } from "@/lib/credit-cache";
 import { generateReferralCode } from "@toolhub/shared";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rate-limit";
@@ -103,18 +104,9 @@ export async function POST(req: NextRequest) {
         const welcomeCredits = await getSiteConfigValue('welcome_bonus_credits', 10) as number;
 
         if (welcomeCredits > 0) {
-          await User.findByIdAndUpdate(newUser._id, {
-            $inc: { credits: welcomeCredits },
-            welcomeCreditGiven: true,
-          });
-
-          await CreditTransaction.create({
-            userId: newUser._id,
-            type: "welcome_bonus",
-            amount: welcomeCredits,
-            description: "Welcome credits",
-            balanceAfter: welcomeCredits,
-          });
+          await User.findByIdAndUpdate(newUser._id, { welcomeCreditGiven: true });
+          await CreditService.addCredits(newUser._id.toString(), welcomeCredits, "welcome_bonus");
+          await invalidateBalance(newUser._id.toString());
         }
       } catch (err) {
         // Silent fail — never break signup on credit error

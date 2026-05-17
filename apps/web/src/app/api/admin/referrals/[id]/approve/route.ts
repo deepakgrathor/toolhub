@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB, Referral, User, CreditTransaction } from "@toolhub/db";
+import { connectDB, Referral, User, CreditService } from "@toolhub/db";
 import { requireAdmin } from "@/lib/admin-auth";
-import { getRedis } from "@toolhub/shared";
+import { invalidateBalance } from "@/lib/credit-cache";
 import { createNotification } from "@/lib/notifications";
 import { getSiteConfigValue } from "@/lib/site-config-cache";
 
@@ -34,17 +34,14 @@ export async function POST(
 
   // Credit referred user (only if not yet given)
   if (!referredUser.welcomeCreditGiven) {
-    referredUser.credits += referralCredit;
-    referredUser.welcomeCreditGiven = true;
-    await referredUser.save();
-
-    await CreditTransaction.create({
-      userId: referredUser._id,
-      type: "referral_bonus",
-      amount: referralCredit,
-      balanceAfter: referredUser.credits,
-      meta: { referredBy: referral.referrerId.toString(), approvedByAdmin: true },
-    });
+    await User.findByIdAndUpdate(referredUser._id, { welcomeCreditGiven: true });
+    await CreditService.addCredits(
+      referredUser._id.toString(),
+      referralCredit,
+      "referral_bonus",
+      { referredBy: referral.referrerId.toString(), approvedByAdmin: true }
+    );
+    await invalidateBalance(referredUser._id.toString());
 
     await createNotification({
       userId: referredUser._id.toString(),
@@ -54,36 +51,29 @@ export async function POST(
     });
   }
 
-  // Credit referrer
-  referrer.credits += referralCredit;
-  await referrer.save();
+  // Credit referrer — wrapped in try/catch so referred user is always credited first
+  try {
+    await CreditService.addCredits(
+      referrer._id.toString(),
+      referralCredit,
+      "referral_reward",
+      { referredUser: referral.referredId.toString(), approvedByAdmin: true }
+    );
+    await invalidateBalance(referrer._id.toString());
 
-  await CreditTransaction.create({
-    userId: referrer._id,
-    type: "referral_reward",
-    amount: referralCredit,
-    balanceAfter: referrer.credits,
-    meta: { referredUser: referral.referredId.toString(), approvedByAdmin: true },
-  });
-
-  const firstName = referredUser.name?.split(" ")[0] ?? "Someone";
-  await createNotification({
-    userId: referrer._id.toString(),
-    type: "referral_joined",
-    title: "Friend Joined!",
-    message: `${firstName} joined SetuLix using your referral link. You got ${referralCredit} credits!`,
-  });
+    const firstName = referredUser.name?.split(" ")[0] ?? "Someone";
+    await createNotification({
+      userId: referrer._id.toString(),
+      type: "referral_joined",
+      title: "Friend Joined!",
+      message: `${firstName} joined SetuLix using your referral link. You got ${referralCredit} credits!`,
+    });
+  } catch (err) {
+    console.error("[referrals/approve] Referrer credit failed:", err);
+    // Continue — referred user already credited
+  }
 
   await Referral.findByIdAndUpdate(id, { status: "completed", completedAt: new Date() });
-
-  // Invalidate balance caches
-  try {
-    const redis = getRedis();
-    await Promise.all([
-      redis.del(`balance:${referredUser._id.toString()}`),
-      redis.del(`balance:${referrer._id.toString()}`),
-    ]);
-  } catch { /* silent */ }
 
   return NextResponse.json({ success: true });
 }

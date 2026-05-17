@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectDB, User } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
+import { invalidateBalance } from "@/lib/credit-cache";
 import { sendEmail } from "@/lib/email/sender";
 import { accountDeletionEmail } from "@/lib/email/templates";
 
@@ -23,7 +24,7 @@ export async function POST() {
     const redis = getRedis();
     const userId = session.user.id;
     await Promise.all([
-      redis.del(`balance:${userId}`),
+      invalidateBalance(userId),
       redis.del(`workspace:${userId}`),
       redis.del(`sidebar:${userId}`),
       redis.del(`autofill:${userId}`),

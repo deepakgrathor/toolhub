@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { connectDB, User, CreditTransaction } from "@toolhub/db";
+import { connectDB, User, CreditTransaction, Plan } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
 import mongoose from "mongoose";
 
@@ -47,10 +47,17 @@ export async function GET() {
   // totalReceived = all credits ever added to this account (packs + plan + referrals)
   const totalReceived: number = totalAgg[0]?.total ?? 0;
 
+  // Load plan's monthly baseCredits from DB — never hardcoded
+  const planDoc = await Plan.findOne({ slug: planSlug })
+    .select("pricing.monthly.baseCredits")
+    .lean() as { pricing?: { monthly?: { baseCredits?: number } } } | null;
+  const baseCredits: number = planDoc?.pricing?.monthly?.baseCredits ?? 0;
+
   const data = {
     planSlug,
     planName: PLAN_NAMES[planSlug] ?? "Free",
     totalReceived,
+    baseCredits,
   };
 
   try {

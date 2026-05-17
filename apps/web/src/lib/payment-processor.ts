@@ -1,30 +1,22 @@
-import { User, Payment, CreditTransaction, Notification, UserSubscription, Plan } from "@toolhub/db";
+import { User, Payment, Notification, UserSubscription, Plan, CreditService } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
+import { invalidateBalance } from "@/lib/credit-cache";
 import { generateInvoiceNumber } from "@/lib/email/invoice-number";
 import { sendEmail } from "@/lib/email/sender";
 import { creditPurchaseEmail, planUpgradeEmail } from "@/lib/email/templates";
 import type { IPayment } from "@toolhub/db";
 
 export async function processCreditPackPayment(payment: IPayment) {
-  await User.findByIdAndUpdate(payment.userId, {
-    $inc: { credits: payment.credits },
-  });
+  await CreditService.addCredits(
+    payment.userId.toString(),
+    payment.credits,
+    "credit_purchase",
+    { paymentId: payment._id }
+  );
+  await invalidateBalance(payment.userId.toString());
 
   const user = await User.findById(payment.userId);
   if (!user) return;
-
-  await CreditTransaction.create({
-    userId: payment.userId,
-    type: "credit_purchase",
-    amount: payment.credits,
-    note: `Credit pack purchase — ${payment.credits} credits`,
-    balanceAfter: user.credits,
-    description: `${payment.credits} Credit Pack`,
-  });
-
-  const redis = getRedis();
-  await redis.del(`balance:${payment.userId}`);
-  await redis.del(`sidebar:${payment.userId}`);
 
   const invoiceNumber = await generateInvoiceNumber();
   payment.invoiceNumber = invoiceNumber;
@@ -58,8 +50,15 @@ export async function processPlanPayment(payment: IPayment) {
   await User.findByIdAndUpdate(payment.userId, {
     plan: planValue,
     planExpiry: planExpiry,
-    $inc: { credits: payment.credits },
   });
+
+  await CreditService.addCredits(
+    payment.userId.toString(),
+    payment.credits,
+    "plan_upgrade",
+    { planSlug: payment.planSlug, billingCycle: payment.billingCycle }
+  );
+  await invalidateBalance(payment.userId.toString());
 
   await UserSubscription.findOneAndUpdate(
     { userId: payment.userId },
@@ -80,20 +79,16 @@ export async function processPlanPayment(payment: IPayment) {
   const user = await User.findById(payment.userId);
   if (!user) return;
 
-  await CreditTransaction.create({
-    userId: payment.userId,
-    type: "plan_upgrade",
-    amount: payment.credits,
-    note: `${payment.planSlug} plan — ${payment.billingCycle}`,
-    balanceAfter: user.credits,
-    description: `${(payment.planSlug || "").toUpperCase()} Plan Activation`,
-  });
-
-  const redis = getRedis();
-  await redis.del(`balance:${payment.userId}`);
-  await redis.del(`sidebar:${payment.userId}`);
-  await redis.del(`plan:${payment.userId}`);
-  await redis.del(`plan-limits:${payment.userId}`);
+  // Bust plan-related caches (not credit cache — invalidateBalance handles that)
+  try {
+    const redis = getRedis();
+    await Promise.all([
+      redis.del(`plan:${payment.userId}`),
+      redis.del(`plan-limits:${payment.userId}`),
+    ]);
+  } catch {
+    // silent
+  }
 
   const invoiceNumber = await generateInvoiceNumber();
   payment.invoiceNumber = invoiceNumber;

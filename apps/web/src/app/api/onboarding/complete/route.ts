@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { connectDB, User, BusinessProfile, Referral, CreditTransaction, SiteConfig } from "@toolhub/db";
+import { connectDB, User, BusinessProfile, Referral, SiteConfig, CreditService } from "@toolhub/db";
 import { getRedis } from "@toolhub/shared";
+import { invalidateBalance } from "@/lib/credit-cache";
 import { createNotification } from "@/lib/notifications";
 import { sendEmail } from "@/lib/email/sender";
 import { welcomeEmail } from "@/lib/email/templates";
@@ -65,13 +66,12 @@ export async function POST(req: NextRequest) {
     void sendEmail({ to: session.user.email, subject, html });
   }
 
-  // Invalidate user + workspace cache
+  // Invalidate user + workspace cache (not credit cache — releaseOnboardingCredits handles that)
   try {
     const redis = getRedis();
     await Promise.all([
       redis.del(`SetuLix:user:${session.user.id}`),
       redis.del(`workspace:${session.user.id}`),
-      redis.del(`balance:${session.user.id}`),
     ]);
   } catch {
     // silent
@@ -95,20 +95,11 @@ async function releaseOnboardingCredits(userId: string): Promise<void> {
       const referredUser = await User.findById(userId).select("credits welcomeCreditGiven");
       if (!referredUser || referredUser.welcomeCreditGiven) return;
 
-      await User.findByIdAndUpdate(userId, {
-        $inc: { credits: joiningBonus },
-        welcomeCreditGiven: true,
+      await User.findByIdAndUpdate(userId, { welcomeCreditGiven: true });
+      await CreditService.addCredits(userId, joiningBonus, "referral_bonus", {
+        referredBy: referral.referrerId?.toString(),
       });
-      const referredNewBalance = (referredUser.credits ?? 0) + joiningBonus;
-
-      await CreditTransaction.create({
-        userId,
-        type: "referral_bonus",
-        amount: joiningBonus,
-        note: "Joining bonus — joined via referral link",
-        balanceAfter: referredNewBalance,
-        meta: { referredBy: referral.referrerId?.toString() },
-      });
+      await invalidateBalance(userId);
 
       await createNotification({
         userId,
@@ -119,19 +110,11 @@ async function releaseOnboardingCredits(userId: string): Promise<void> {
 
       // ── Referrer: give reward ──────────────────────────────────────────────
       const referrerId = referral.referrerId?.toString() ?? "";
-      const referrer = await User.findById(referrerId).select("credits");
-      if (referrer) {
-        await User.findByIdAndUpdate(referrerId, { $inc: { credits: referrerReward } });
-        const referrerNewBalance = (referrer.credits ?? 0) + referrerReward;
-
-        await CreditTransaction.create({
-          userId: referrerId,
-          type: "referral_reward",
-          amount: referrerReward,
-          note: "Referral reward — friend joined SetuLix",
-          balanceAfter: referrerNewBalance,
-          meta: { referredUser: userId },
+      if (referrerId) {
+        await CreditService.addCredits(referrerId, referrerReward, "referral_reward", {
+          referredUser: userId,
         });
+        await invalidateBalance(referrerId);
 
         await createNotification({
           userId: referrerId,
@@ -148,33 +131,14 @@ async function releaseOnboardingCredits(userId: string): Promise<void> {
         completedAt: new Date(),
       });
 
-      // ── Invalidate both users' balance cache ───────────────────────────────
-      try {
-        const redis = getRedis();
-        await Promise.all([
-          redis.del(`balance:${userId}`),
-          ...(referrerId ? [redis.del(`balance:${referrerId}`)] : []),
-        ]);
-      } catch { /* silent */ }
-
     } else {
       // ── Direct signup: give welcome bonus ──────────────────────────────────
       const user = await User.findById(userId).select("credits welcomeCreditGiven");
       if (!user || user.welcomeCreditGiven) return;
 
-      await User.findByIdAndUpdate(userId, {
-        $inc: { credits: welcomeBonus },
-        welcomeCreditGiven: true,
-      });
-      const newBalance = (user.credits ?? 0) + welcomeBonus;
-
-      await CreditTransaction.create({
-        userId,
-        type: "welcome_bonus",
-        amount: welcomeBonus,
-        note: "Welcome to SetuLix",
-        balanceAfter: newBalance,
-      });
+      await User.findByIdAndUpdate(userId, { welcomeCreditGiven: true });
+      await CreditService.addCredits(userId, welcomeBonus, "welcome_bonus");
+      await invalidateBalance(userId);
 
       await createNotification({
         userId,
@@ -182,11 +146,6 @@ async function releaseOnboardingCredits(userId: string): Promise<void> {
         title: "Welcome to SetuLix!",
         message: `You got ${welcomeBonus} free credits to get started.`,
       });
-
-      try {
-        const redis = getRedis();
-        await redis.del(`balance:${userId}`);
-      } catch { /* silent */ }
     }
   } catch (err) {
     console.error("[releaseOnboardingCredits]", err);

@@ -1,14 +1,8 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useCreditStore } from '@/store/credits-store'
-
-const PLAN_CREDITS: Record<string, number> = {
-  free: 10,
-  lite: 200,
-  pro: 700,
-  business: 1500,
-}
 
 interface CreditHealthWidgetProps {
   planSlug: string
@@ -16,14 +10,22 @@ interface CreditHealthWidgetProps {
 
 export function CreditHealthWidget({ planSlug }: CreditHealthWidgetProps) {
   const { balance, isLoading } = useCreditStore()
+  const [baseCredits, setBaseCredits] = useState<number>(0)
 
-  const total = PLAN_CREDITS[planSlug] ?? 10
-  const safePlanSlug = planSlug in PLAN_CREDITS ? planSlug : 'free'
-  const effectiveTotal = Math.max(total, balance ?? 0)
+  useEffect(() => {
+    fetch('/api/user/sidebar-stats')
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { baseCredits?: number } | null) => {
+        if (data?.baseCredits) setBaseCredits(data.baseCredits)
+      })
+      .catch(() => {})
+  }, [])
+
+  const safePlanSlug = planSlug || 'free'
+  const effectiveTotal = Math.max(baseCredits, balance ?? 0)
   const percent = effectiveTotal > 0
     ? Math.min(100, Math.round(((balance ?? 0) / effectiveTotal) * 100))
     : 0
-  const tasksLeft = Math.floor((balance ?? 0) / 3)
 
   const barColor =
     percent > 40 ? 'bg-primary' :
@@ -62,11 +64,8 @@ export function CreditHealthWidget({ planSlug }: CreditHealthWidgetProps) {
         />
       </div>
 
-      {/* Row 3 — tasks + percent */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">
-          ~{tasksLeft} tasks remaining
-        </span>
+      {/* Row 3 — percent */}
+      <div className="flex items-center justify-end">
         <span className="text-xs text-muted-foreground">
           {percent}% left
         </span>

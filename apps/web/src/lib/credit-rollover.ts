@@ -1,5 +1,5 @@
 import { connectDB, User, CreditTransaction } from "@toolhub/db";
-import { getRedis } from "@toolhub/shared";
+import { invalidateBalance } from "@/lib/credit-cache";
 import { createNotification } from "@/lib/notifications";
 
 const rolloverConfig: Record<string, { maxCarry: number }> = {
@@ -51,13 +51,5 @@ export async function processUserRollover(
     message: `${carryAmount} unused credits have been carried forward to this month.`,
   });
 
-  try {
-    const redis = getRedis();
-    await Promise.all([
-      redis.del(`balance:${userId}`),
-      redis.del(`sidebar:${userId}`),
-    ]);
-  } catch {
-    // silent
-  }
+  await invalidateBalance(userId);
 }
