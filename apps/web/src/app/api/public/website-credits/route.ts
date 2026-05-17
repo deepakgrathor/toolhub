@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSiteConfigValue } from "@/lib/site-config-cache";
 import { withCache } from "@/lib/with-cache";
+import { connectDB, ToolConfig } from "@toolhub/db";
 
 const CACHE_KEY = "website-credits-config";
 const CACHE_TTL = 3600; // 1 hour
@@ -8,8 +9,13 @@ const CACHE_TTL = 3600; // 1 hour
 export async function GET() {
   try {
     const config = await withCache(CACHE_KEY, CACHE_TTL, async () => {
+      await connectDB();
+      const toolConfig = await ToolConfig.findOne({ toolSlug: "website-generator" })
+        .select("creditCost")
+        .lean();
+      const base = toolConfig?.creditCost ?? 50;
+
       const [
-        base,
         page2,
         page3,
         page4,
@@ -25,7 +31,6 @@ export async function GET() {
         publish,
         update,
       ] = await Promise.all([
-        getSiteConfigValue("website_base_credits", 50),
         getSiteConfigValue("website_page_2_credits", 15),
         getSiteConfigValue("website_page_3_credits", 15),
         getSiteConfigValue("website_page_4_credits", 15),
@@ -43,7 +48,7 @@ export async function GET() {
       ]);
 
       return {
-        base: Number(base),
+        base,
         page2: Number(page2),
         page3: Number(page3),
         page4: Number(page4),

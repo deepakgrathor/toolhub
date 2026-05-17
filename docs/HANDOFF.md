@@ -21,12 +21,12 @@ Updated: 2026-05-17 | Account: B | Session: Feat-1-Verify | Features: Website Ge
 ### Bugs Found and Fixed
 
 1. **PublishModal credit config access** (`PublishModal.tsx:61`) — accessed `d?.credits?.publish` but API returns flat `{ publish: 10 }`. Fixed to `d?.publish`. Fallback to 10 was masking the bug.
-2. **Engine base cost mismatch** (`engine.ts:551`) — engine used ToolConfig `creditCost` (15cr) as base, but frontend used SiteConfig `website_base_credits` (50cr). User would see 50cr, get charged 15cr. Fixed engine to fetch and use `website_base_credits` from SiteConfig.
+2. **Frontend base cost mismatch** (`/api/public/website-credits`) — API returned base from SiteConfig `website_base_credits` (50cr), but engine uses ToolConfig `creditCost` as the authoritative base. Fixed API to fetch base from ToolConfig so frontend and backend always agree. ToolConfig is the single source of truth for base credit cost (per CLAUDE.md architecture rules).
 
 ### No Remaining Blockers
 
 - Website Generator V2 is production-ready across all 4 features (Feat-1A through 1D)
-- Dynamic credit system is consistent between frontend and backend
+- Dynamic credit system is consistent: base from ToolConfig, addons from SiteConfig
 - All architecture rules maintained (credits after success, no hardcoded values, auth protection)
 
 ---
@@ -91,7 +91,7 @@ Session Feat-1D done. **TypeScript: 0 errors. Build: pre-existing \_document iss
 - Credit deduction only after BOTH stages succeed AND HTML validated — architecture rule maintained
 
 **Credit flow:**
-- baseCost from SiteConfig `website_base_credits` (fallback: 50) — fixed in Feat-1-Verify (was incorrectly reading from ToolConfig)
+- baseCost from ToolConfig.creditCost (fallback: 50) — authoritative source per architecture rules
 - Addons from SiteConfig via getSiteConfigValue() with fallback defaults:
   - page_2/3: +15cr each, page_4: +15cr; cumulative (page 3 = +30cr total)
   - testimonials/pricing/faq/team: +3cr each

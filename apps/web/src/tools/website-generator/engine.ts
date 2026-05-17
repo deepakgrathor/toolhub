@@ -548,9 +548,10 @@ export async function execute(
     throw new Error("Tool is not available");
   }
 
-  // 2. Fetch SiteConfig addon keys in parallel (including base cost)
+  const baseCost = toolConfigDoc?.creditCost ?? 50;
+
+  // 2. Fetch SiteConfig addon keys in parallel
   const [
-    baseCreditsRaw,
     page2Credits,
     page3Credits,
     page4Credits,
@@ -564,7 +565,6 @@ export async function execute(
     animationCredits,
     darkmodeCredits,
   ] = await Promise.all([
-    getSiteConfigValue("website_base_credits", 50),
     getSiteConfigValue("website_page_2_credits", 15),
     getSiteConfigValue("website_page_3_credits", 15),
     getSiteConfigValue("website_page_4_credits", 15),
@@ -594,8 +594,7 @@ export async function execute(
     website_darkmode_credits: Number(darkmodeCredits),
   };
 
-  // 3. Calculate dynamic credit cost (base from SiteConfig, not ToolConfig)
-  const baseCost = Number(baseCreditsRaw);
+  // 3. Calculate dynamic credit cost
   const dynamicCreditCost = calculateDynamicCredits(input, baseCost, siteConfig);
 
   // 4. Check balance
