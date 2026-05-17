@@ -1,8 +1,52 @@
 # Handoff Note
-Updated: 2026-05-17 | Account: B | Session: Feat-1A | Features: Website Generator V2 foundation — schema, seed keys, credit API, hook, PublishedSite model, R2 sites utility
+Updated: 2026-05-17 | Account: B | Session: Feat-1B | Features: Website Generator V2 progressive form UI — 5-step wizard, credit meter, dynamic sections
 
 ## Where We Are
-Session Feat-1A done. **TypeScript: 0 errors (apps/web + packages/db).**
+Session Feat-1B done. **TypeScript: 0 errors (apps/web + packages/db).**
+
+### Website Generator V2 State After Feat-1B
+
+**Status:** 5-step progressive form complete. engine.ts NOT touched — V1 engine still runs end-to-end. Existing generation still works.
+
+**Files modified:**
+- `apps/web/src/tools/website-generator/WebsiteGeneratorTool.tsx` — complete rewrite: 5-step wizard form
+
+**Form structure:**
+- Step 1: Business Info (name, type, description with char count, audience, services, language pills, contact toggle)
+- Step 2: Goals & Tone (4 goal cards with lucide icons, 4 tone pills)
+- Step 3: Pages & Sections (page count cards with addon cost, 7 section toggle cards with credits from config)
+- Step 4: Section Details — CONDITIONAL (only shown if sections enabled); uses useFieldArray for testimonials, pricing plans, FAQ, team members; WhatsApp number/text, Google Maps query, social media URLs
+- Step 5: Design & Extras (color scheme pills with dots, style pills, animation/darkMode toggles with costs, logo drag-drop upload with SVG/PNG/JPG validation + preview)
+
+**Key features:**
+- Single react-hook-form instance across all 5 steps
+- Step validation via `trigger()` on Next click (Step 1: required fields, Step 2: goal+tone)
+- Step 4 skip logic: if no sections enabled in Step 3, Next goes directly to Step 5 (and Back returns to Step 3)
+- useWebsiteCredits hook provides live credit breakdown + total
+- Credit meter always visible (above Generate button) — shows only active addon lines
+- Logo upload: file-validation.ts for PNG/JPG, manual SVG validation, base64 client-side encoding, preview thumbnail
+- Generate button: same auth/paywall/credit logic as before, rotating loading messages every 7s
+- PresetSelector preserved on Step 1
+- Output panel unchanged + new disabled "Publish Website" button placeholder (tooltip: "Coming in next update")
+- ProgressBar component shows "Step X of 5" with animated bar
+- All animations use Tailwind animate-in classes (no framer-motion)
+- Dark + light theme via semantic tokens throughout
+
+**IMPORTANT — websiteGoal/tone remain .optional() in schema:**
+The form UI validates them as effectively required via Step 2 trigger(). They stay .optional() in Zod schema for backward compatibility with the V1 engine (which doesn't use them). They will become required in schema when V2 engine (Feat-1C) is built.
+
+**Publish button is placeholder only:**
+Appears after successful generation, disabled state, Globe icon, tooltip "Coming in next update". No publish logic wired — that is Feat-1D.
+
+**Next session — Feat-1C:**
+- Website Generator V2 engine rewrite
+- Stage 1: Haiku builds site brief + section content
+- Stage 2: Sonnet generates full HTML from brief
+- Multi-page support in engine
+- Uses all new schema fields (websiteGoal, tone, pages, sections, animation, darkMode, logo)
+- Credit deduction uses dynamic total from useWebsiteCredits config keys
+
+---
 
 ### Website Generator V2 State After Feat-1A
 
@@ -18,19 +62,6 @@ Session Feat-1A done. **TypeScript: 0 errors (apps/web + packages/db).**
 - `apps/web/src/tools/website-generator/schema.ts` — expanded: added language, websiteGoal, tone (optional — required in Feat-1B form), pages, sections (testimonials/pricing/faq/team/whatsapp/maps/social with full sub-schemas), animation, darkMode, logoBase64, logoFileName; kept all original fields
 - `packages/db/src/seed.ts` — added 15 website_* SiteConfig keys: website_base_credits(50), page_2/3/4(15 each), testimonials/pricing/faq/team(3), whatsapp/maps(2), social(1), animation/darkmode(5), publish(10), update(5)
 - `packages/db/src/index.ts` — added `export * from "./models/PublishedSite"`
-
-**IMPORTANT — websiteGoal/tone are .optional() for now:**
-These V2 fields are optional in schema so the current WebsiteGeneratorTool.tsx form (which doesn't include them) keeps working. They will be made required when Feat-1B replaces the form UI.
-
-**Post-deploy:**
-- Run `npm run db:seed` to seed the 15 website credit keys into MongoDB
-- Add to .env: `CLOUDFLARE_SITES_R2_ACCOUNT_ID`, `CLOUDFLARE_SITES_R2_ACCESS_KEY_ID`, `CLOUDFLARE_SITES_R2_SECRET_ACCESS_KEY`, `CLOUDFLARE_SITES_R2_BUCKET_NAME`, `CLOUDFLARE_SITES_BASE_URL`
-
-**Next session — Feat-1B:**
-- Progressive form UI (5-step wizard) in WebsiteGeneratorTool.tsx
-- Integrate useWebsiteCredits hook into the form for live credit display
-- websiteGoal + tone become required in the UI
-- DO NOT touch engine.ts yet (engine V2 is Feat-1C)
 
 ---
 
