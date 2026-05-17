@@ -1,8 +1,40 @@
 # Handoff Note
-Updated: 2026-05-17 | Account: B | Session: ThumbnailAI-2 | Features: Thumbnail AI form redesign — ratio cards, template picker, platform icons, progressive reveal sections
+Updated: 2026-05-17 | Account: B | Session: Feat-1A | Features: Website Generator V2 foundation — schema, seed keys, credit API, hook, PublishedSite model, R2 sites utility
 
 ## Where We Are
-Session ThumbnailAI-2 done. **TypeScript: 0 errors (apps/web).**
+Session Feat-1A done. **TypeScript: 0 errors (apps/web + packages/db).**
+
+### Website Generator V2 State After Feat-1A
+
+**Status:** Foundation complete. engine.ts and tool UI NOT touched. Existing website-generator functionality unchanged.
+
+**Files created:**
+- `apps/web/src/app/api/public/website-credits/route.ts` — GET endpoint (no auth), reads 15 website_* SiteConfig keys, caches in Redis 1hr, returns credit cost breakdown JSON, Cache-Control: public s-maxage=3600
+- `apps/web/src/hooks/useWebsiteCredits.ts` — client hook, fetches /api/public/website-credits on mount, calculates live credit total + breakdown from form values (pages, sections, animation, darkMode)
+- `packages/db/src/models/PublishedSite.ts` — Mongoose model for published sites (userId, siteSlug unique, siteUrl, r2Key, businessName, pageTitle, pages, creditsUsed, publishCreditsUsed, isActive, customDomain, toolOutputId, publishedAt, timestamps)
+- `apps/web/src/lib/r2-sites.ts` — server-side R2 utility for second Cloudflare account (CLOUDFLARE_SITES_R2_*): uploadSiteHtml, deleteSiteHtml, checkSlugAvailability
+
+**Files modified:**
+- `apps/web/src/tools/website-generator/schema.ts` — expanded: added language, websiteGoal, tone (optional — required in Feat-1B form), pages, sections (testimonials/pricing/faq/team/whatsapp/maps/social with full sub-schemas), animation, darkMode, logoBase64, logoFileName; kept all original fields
+- `packages/db/src/seed.ts` — added 15 website_* SiteConfig keys: website_base_credits(50), page_2/3/4(15 each), testimonials/pricing/faq/team(3), whatsapp/maps(2), social(1), animation/darkmode(5), publish(10), update(5)
+- `packages/db/src/index.ts` — added `export * from "./models/PublishedSite"`
+
+**IMPORTANT — websiteGoal/tone are .optional() for now:**
+These V2 fields are optional in schema so the current WebsiteGeneratorTool.tsx form (which doesn't include them) keeps working. They will be made required when Feat-1B replaces the form UI.
+
+**Post-deploy:**
+- Run `npm run db:seed` to seed the 15 website credit keys into MongoDB
+- Add to .env: `CLOUDFLARE_SITES_R2_ACCOUNT_ID`, `CLOUDFLARE_SITES_R2_ACCESS_KEY_ID`, `CLOUDFLARE_SITES_R2_SECRET_ACCESS_KEY`, `CLOUDFLARE_SITES_R2_BUCKET_NAME`, `CLOUDFLARE_SITES_BASE_URL`
+
+**Next session — Feat-1B:**
+- Progressive form UI (5-step wizard) in WebsiteGeneratorTool.tsx
+- Integrate useWebsiteCredits hook into the form for live credit display
+- websiteGoal + tone become required in the UI
+- DO NOT touch engine.ts yet (engine V2 is Feat-1C)
+
+---
+
+### Thumbnail AI State After ThumbnailAI-2
 
 ### Thumbnail AI State After ThumbnailAI-2
 

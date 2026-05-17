@@ -23,3 +23,4 @@ export * from "./models/Payment";
 export * from "./models/Kit";
 export * from "./models/Preset";
 export * from "./models/PaymentGateway";
+export * from "./models/PublishedSite";

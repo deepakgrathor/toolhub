@@ -518,6 +518,22 @@ const SITE_CONFIGS = [
   { key: "announcement_visible", value: false },
   { key: "welcome_bonus_credits", value: 10 },
   { key: "thumbnail_face_addon_credits", value: 3 },
+  // Website Generator V2 credit costs
+  { key: "website_base_credits", value: 50 },
+  { key: "website_page_2_credits", value: 15 },
+  { key: "website_page_3_credits", value: 15 },
+  { key: "website_page_4_credits", value: 15 },
+  { key: "website_testimonials_credits", value: 3 },
+  { key: "website_pricing_credits", value: 3 },
+  { key: "website_faq_credits", value: 3 },
+  { key: "website_team_credits", value: 3 },
+  { key: "website_whatsapp_credits", value: 2 },
+  { key: "website_maps_credits", value: 2 },
+  { key: "website_social_credits", value: 1 },
+  { key: "website_animation_credits", value: 5 },
+  { key: "website_darkmode_credits", value: 5 },
+  { key: "website_publish_credits", value: 10 },
+  { key: "website_update_credits", value: 5 },
 ];
 
 // ── Main ────────────────────────────────────────────────────────────────────
