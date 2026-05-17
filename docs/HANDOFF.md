@@ -1,5 +1,67 @@
 # Handoff Note
-Updated: 2026-05-18 | Account: B | Session: Feat-8 | Focus: DB-driven preset limits
+Updated: 2026-05-18 | Account: B | Session: BFix-6 | Focus: Raw credit mutation fixes
+
+## BFix-6: Fix Raw Credit Mutations, Wrong Redis Keys — COMPLETE
+
+**Status:** All credit mutations now use CreditService. All cache busts use invalidateBalance(). No raw $inc anywhere in codebase. 0 TypeScript errors. Committed + pushed.
+
+### What Changed
+
+#### 1. `apps/web/src/lib/payment-processor.ts`
+- **Before:** Raw `$inc: { credits }` + manual `CreditTransaction.create` + `redis.del('balance:...')` + `redis.del('sidebar:...')` (wrong keys)
+- **After:** `CreditService.addCredits(userId, credits, "credit_purchase"|"plan_upgrade", meta)` + `invalidateBalance(userId)`
+- `processPlanPayment`: Plan/planExpiry update remains separate; only `$inc` removed
+- Plan-related keys (`plan:`, `plan-limits:`) remain — those are not credit cache keys
+
+#### 2. `apps/web/src/app/api/onboarding/complete/route.ts`
+- **Before:** 3 raw `$inc` credit writes (welcome bonus, joining bonus, referrer reward) + manual `CreditTransaction.create` + `redis.del('balance:...')` (wrong key)
+- **After:** All 3 replaced with `CreditService.addCredits()` + `invalidateBalance()`
+- `welcomeCreditGiven: true` flag still set via `User.findByIdAndUpdate` (separate call, non-credit)
+- Wrong `redis.del('balance:...')` in outer POST handler also removed
+
+#### 3. `apps/web/src/app/api/admin/referrals/[id]/approve/route.ts`
+- **Before:** Two `.save()` calls for credit mutation (no session, no CreditService)
+- **After:** `CreditService.addCredits()` for referred user; referrer credit wrapped in `try/catch`
+- `welcomeCreditGiven` flag set via `User.findByIdAndUpdate` before CreditService call
+- Graceful: if referrer credit fails → logs error, referred user already credited
+
+#### 4. `apps/web/src/lib/credit-rollover.ts`
+- **Before:** `redis.del('balance:...')` + `redis.del('sidebar:...')` (wrong keys, never actually cleared balance)
+- **After:** `invalidateBalance(userId)` from `@/lib/credit-cache`
+- `$set` raw write kept intentionally — Feat-9B will rewrite `processUserRollover()` fully
+
+#### 5. `apps/web/src/components/dashboard/CreditHealthWidget.tsx`
+- **Before:** Hardcoded `PLAN_CREDITS = { free: 10, lite: 200, pro: 700, business: 1500 }` — violated architecture rule
+- **After:** Self-fetches `baseCredits` from `/api/user/sidebar-stats` via `useEffect`
+- `tasksLeft = Math.floor(balance / 3)` removed (no reliable data source)
+
+#### 6. `apps/web/src/app/api/user/sidebar-stats/route.ts`
+- Added `baseCredits` field: `Plan.findOne({ slug }).select("pricing.monthly.baseCredits")`
+- Response now includes `{ planSlug, planName, totalReceived, baseCredits }`
+
+#### 7. `apps/web/src/app/api/auth/signup/route.ts` (bonus fix)
+- **Before:** Raw `$inc` + `CreditTransaction.create` for direct signup welcome credits
+- **After:** `CreditService.addCredits()` + `invalidateBalance()` (found during final grep scan)
+
+#### 8. `apps/web/src/app/api/user/delete-account/route.ts` (bonus fix)
+- **Before:** `redis.del('balance:...')` (wrong key)
+- **After:** `invalidateBalance(userId)` (found during final grep scan)
+
+### Architecture Notes
+- `CreditService.addCredits()` does NOT call `invalidateBalance()` internally — always call it explicitly after
+- Correct Redis key: `SetuLix:credits:{userId}` (via `invalidateBalance()` from `@/lib/credit-cache`)
+- `balance:` and `sidebar:` prefixes were legacy wrong keys — now completely eliminated from codebase
+- CreditHealthWidget `planSlug` prop still passes from dashboard page (which hardcodes `'free'`) — full fix in Feat-9A when User model credit fields are split
+
+### Verification
+- `grep -r "\$inc.*credits" apps/web/src --include="*.ts"` → 0 results
+- `grep -r "balance:\${" apps/web/src --include="*.ts"` → 0 results
+- `pnpm tsc --noEmit` → 0 errors
+
+### Next
+- Feat-9A — User model credit fields split (baseCredits, bonusCredits, rolloverCredits)
+
+---
 
 ## Feat-8: Preset Limit — DB-driven via plan-limits — COMPLETE
 
