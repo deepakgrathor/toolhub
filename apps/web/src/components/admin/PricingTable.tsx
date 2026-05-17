@@ -20,6 +20,8 @@ export interface PackRow {
   credits: number;
   price: number;
   pricePerCredit: number;
+  savingsPercent: number;
+  tagline: string;
   isPopular: boolean;
   isActive: boolean;
   order: number;
@@ -30,6 +32,8 @@ interface FormState {
   credits: string;
   price: string;
   pricePerCredit: string;
+  savingsPercent: string;
+  tagline: string;
   isPopular: boolean;
   isActive: boolean;
   order: string;
@@ -40,6 +44,8 @@ const EMPTY_FORM: FormState = {
   credits: "",
   price: "",
   pricePerCredit: "",
+  savingsPercent: "0",
+  tagline: "",
   isPopular: false,
   isActive: true,
   order: "0",
@@ -51,6 +57,8 @@ function packToForm(p: PackRow): FormState {
     credits: String(p.credits),
     price: String(p.price),
     pricePerCredit: String(p.pricePerCredit),
+    savingsPercent: String(p.savingsPercent ?? 0),
+    tagline: p.tagline ?? "",
     isPopular: p.isPopular,
     isActive: p.isActive,
     order: String(p.order),
@@ -109,6 +117,8 @@ export function PricingTable({ initialPacks }: { initialPacks: PackRow[] }) {
     if (isNaN(credits) || credits < 1) return setError("Credits must be ≥ 1.");
     if (isNaN(price) || price < 0) return setError("Price must be ≥ 0.");
 
+    const savingsPercent = parseFloat(form.savingsPercent);
+
     setSaving(true);
     try {
       const payload = {
@@ -116,6 +126,8 @@ export function PricingTable({ initialPacks }: { initialPacks: PackRow[] }) {
         credits,
         price,
         pricePerCredit,
+        savingsPercent: isNaN(savingsPercent) ? 0 : Math.min(100, Math.max(0, savingsPercent)),
+        tagline: form.tagline.trim(),
         isPopular: form.isPopular,
         isActive: form.isActive,
         order: isNaN(order) ? 0 : order,
@@ -142,6 +154,7 @@ export function PricingTable({ initialPacks }: { initialPacks: PackRow[] }) {
         const newPack: PackRow = { id: data.pack._id, ...payload };
         setPacks((prev) => [...prev, newPack]);
       }
+
       closeModal();
       toast.success("Pack saved");
     } catch (e) {
@@ -314,6 +327,17 @@ export function PricingTable({ initialPacks }: { initialPacks: PackRow[] }) {
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Pack Name</label>
                 <input type="text" value={form.name} onChange={(e) => setField("name", e.target.value)} placeholder="e.g. Starter Pack" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">Tagline</label>
+                  <input type="text" value={form.tagline} onChange={(e) => setField("tagline", e.target.value)} placeholder='e.g. "SME sweet spot"' className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">Savings % (0 = no badge)</label>
+                  <input type="number" min={0} max={100} value={form.savingsPercent} onChange={(e) => setField("savingsPercent", e.target.value)} placeholder="0" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]" />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

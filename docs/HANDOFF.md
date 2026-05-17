@@ -1,5 +1,53 @@
 # Handoff Note
-Updated: 2026-05-18 | Account: B | Session: Feat-5 | Features: Plan Limits System
+Updated: 2026-05-18 | Account: B | Session: Feat-6 | Features: CreditPack model + 8 packs seeded
+
+## Feat-6: CreditPack Model + Seed Update — COMPLETE
+
+**Status:** savingsPercent + tagline added to model and admin UI. 8 credit packs live in production. Plan limits synced. Build passes.
+
+### What Changed
+
+#### packages/db/src/models/CreditPack.ts
+- Added `savingsPercent: number` (default 0) — vs Starter pack (₹2.98 base), shown as savings badge in UI
+- Added `tagline: string` (default "") — short tagline e.g. "SME sweet spot", "Try karo"
+- Both fields in `ICreditPack` interface
+
+#### apps/web/src/components/admin/PricingTable.tsx
+- `PackRow` and `FormState` now include `savingsPercent` and `tagline`
+- Edit/add modal has two new fields: "Tagline" text input + "Savings % (0 = no badge)" number input
+- Both included in form submit payload
+
+#### apps/web/src/app/admin/credit-packs/page.tsx
+- `getPacks()` now reads `savingsPercent` and `tagline` from DB and passes to `PricingTable`
+
+#### apps/web/src/app/api/admin/credit-packs/route.ts + [id]/route.ts
+- Both Zod schemas (`createSchema` + `updateSchema`) accept `savingsPercent` (0–100) and `tagline` (max 200)
+
+#### apps/web/src/scripts/seed-plans.ts (already up to date — no changes needed)
+- Seed already had 8 packs + correct plan limits matching `IPlanLimits` schema
+- `creditRollover` nested object not present in seed (already cleaned in previous session)
+
+### Production State After Seed
+- **5 plans** seeded: FREE / LITE / PRO / BUSINESS / ENTERPRISE (all with full 11-field limits)
+- **8 credit packs** seeded (₹2.98 → ₹1.40 per credit):
+  - Starter: 50cr → ₹149 (0% savings)
+  - Basic: 100cr → ₹269 (10% savings)
+  - Standard: 200cr → ₹499 (16% savings)
+  - Growth: 500cr → ₹999 (33% savings) ← popular
+  - Pro: 750cr → ₹1,349 (40% savings)
+  - Business: 1,000cr → ₹1,699 (43% savings)
+  - Elite: 1,500cr → ₹2,249 (50% savings)
+  - Power: 2,000cr → ₹2,799 (53% savings)
+- 1 stale pack removed during seed
+
+### Next: Feat-7 — Business Profiles Feature
+- Use `checkBusinessProfileLimit()` from `plan-limits.ts` in profile creation route
+- Use `getBusinessProfileLimit()` to show limit badge in UI
+- BusinessProfile model already exists, download-pdf route already uses it
+
+---
+
+## Feat-5: Plan Limits System — COMPLETE
 
 ## Feat-5: Plan Limits System — COMPLETE
 

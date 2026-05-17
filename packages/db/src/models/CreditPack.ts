@@ -5,6 +5,8 @@ export interface ICreditPack extends Document {
   credits: number;
   price: number;
   pricePerCredit: number;
+  savingsPercent: number;
+  tagline: string;
   isActive: boolean;
   isPopular: boolean;
   order: number;
@@ -18,6 +20,8 @@ const CreditPackSchema = new Schema<ICreditPack>(
     credits: { type: Number, required: true, min: 1 },
     price: { type: Number, required: true, min: 0 },
     pricePerCredit: { type: Number, required: true, min: 0, default: 0 },
+    savingsPercent: { type: Number, default: 0 },
+    tagline: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
     isPopular: { type: Boolean, default: false },
     order: { type: Number, default: 0 },

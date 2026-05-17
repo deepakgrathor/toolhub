@@ -11,6 +11,8 @@ const createSchema = z.object({
   credits: z.number().int().min(1),
   price: z.number().min(0),
   pricePerCredit: z.number().min(0).optional(),
+  savingsPercent: z.number().min(0).max(100).default(0),
+  tagline: z.string().max(200).default(""),
   isPopular: z.boolean().default(false),
   isActive: z.boolean().default(true),
   order: z.number().int().min(0).default(0),

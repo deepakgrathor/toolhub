@@ -23,6 +23,8 @@ async function getPacks(): Promise<PackRow[]> {
         credits,
         price,
         pricePerCredit,
+        savingsPercent: (p.savingsPercent as number | undefined) ?? (raw.savingsPercent as number | undefined) ?? 0,
+        tagline: (p.tagline as string | undefined) ?? (raw.tagline as string | undefined) ?? "",
         isPopular: p.isPopular ?? raw.isFeatured ?? false,
         isActive: p.isActive ?? true,
         order: p.order ?? raw.sortOrder ?? 0,

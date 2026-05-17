@@ -11,6 +11,8 @@ const updateSchema = z.object({
   credits: z.number().int().min(1).optional(),
   price: z.number().min(0).optional(),
   pricePerCredit: z.number().min(0).optional(),
+  savingsPercent: z.number().min(0).max(100).optional(),
+  tagline: z.string().max(200).optional(),
   isPopular: z.boolean().optional(),
   isActive: z.boolean().optional(),
   order: z.number().int().min(0).optional(),
