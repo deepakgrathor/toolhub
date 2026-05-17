@@ -231,7 +231,7 @@ export async function execute(
   // Stage 1: Haiku builds cinematic prompt
   const imagePrompt = await buildImagePromptWithHaiku(input)
 
-  // Stage 2: GPT-Image-1 generation
+  // Stage 2: gpt-image-1.5 Generation
   let imageBuffer: Buffer
 
   if (input.faceMode === "own" && input.faceImageBase64) {
@@ -241,7 +241,7 @@ export async function execute(
     const faceBlob = new Blob([faceBuffer], { type: "image/png" })
     formData.append("image", faceBlob, "face.png")
     formData.append("prompt", imagePrompt)
-    formData.append("model", "gpt-image-1")
+    formData.append("model", "gpt-image-1.5")
     formData.append("size", input.apiSize)
     formData.append("quality", "low")
     formData.append("n", "1")
@@ -253,7 +253,7 @@ export async function execute(
     })
 
     if (!editRes.ok) {
-      throw new Error(`GPT-Image-1 edit error ${editRes.status}: ${await editRes.text()}`)
+      throw new Error(`GPT-Image-1.5 edit error ${editRes.status}: ${await editRes.text()}`)
     }
 
     const editData = await editRes.json() as { data?: { b64_json?: string }[] }
@@ -269,7 +269,7 @@ export async function execute(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-image-1",
+        model: "gpt-image-1.5",
         prompt: imagePrompt,
         n: 1,
         size: input.apiSize,
@@ -278,7 +278,7 @@ export async function execute(
     })
 
     if (!dalleRes.ok) {
-      throw new Error(`GPT-Image-1 error ${dalleRes.status}: ${await dalleRes.text()}`)
+      throw new Error(`GPT-Image-1.5 error ${dalleRes.status}: ${await dalleRes.text()}`)
     }
 
     const dalleData = await dalleRes.json() as { data?: { b64_json?: string }[] }

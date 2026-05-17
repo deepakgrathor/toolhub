@@ -25,13 +25,6 @@ const DAILY_CAPS: Record<string, Record<string, number | null>> = {
     business: 10,
     enterprise: 10,
   },
-  "thumbnail-ai": {
-    free: 5,
-    lite: 5,
-    pro: 5,
-    business: 5,
-    enterprise: 5,
-  },
 };
 
 const COOLDOWN_SECONDS = 30;

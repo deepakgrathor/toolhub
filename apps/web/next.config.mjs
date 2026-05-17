@@ -4,6 +4,17 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
+// R2 public URL hostname — added to CSP img-src at build time
+const r2PublicHost = process.env.CLOUDFLARE_R2_PUBLIC_URL
+  ? (() => {
+      try {
+        return new URL(process.env.CLOUDFLARE_R2_PUBLIC_URL.replace(/^﻿/, "")).hostname
+      } catch {
+        return null
+      }
+    })()
+  : null
+
 const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
   {
@@ -24,8 +35,9 @@ const securityHeaders = [
       // Next.js requires 'unsafe-inline' + 'unsafe-eval'; Cashfree JS SDK + PostHog
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.cashfree.com https://us.i.posthog.com",
       "style-src 'self' 'unsafe-inline'",
-      // R2 public bucket, Google avatars (NextAuth)
-      "img-src 'self' blob: data: https://*.r2.cloudflarestorage.com https://lh3.googleusercontent.com",
+      // R2 public bucket (*.r2.dev = free R2 subdomain, *.r2.cloudflarestorage.com = private endpoint)
+      // r2PublicHost covers any custom domain set in CLOUDFLARE_R2_PUBLIC_URL
+      `img-src 'self' blob: data: https://*.r2.cloudflarestorage.com https://*.r2.dev${r2PublicHost ? ` https://${r2PublicHost}` : ""} https://lh3.googleusercontent.com`,
       // next/font/google self-hosts fonts at build time — no external font CDN needed
       "font-src 'self'",
       "connect-src 'self' https://us.i.posthog.com https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com",

@@ -7,7 +7,6 @@ export const PLATFORMS = [
   "linkedin",
   "twitter",
   "blog",
-  "pinterest",
 ] as const;
 
 export const SIZES = {
@@ -17,7 +16,6 @@ export const SIZES = {
   linkedin: { label: "1200×628 (1.91:1)", apiSize: "1536x1024" },
   twitter: { label: "1200×675 (16:9)", apiSize: "1536x1024" },
   blog: { label: "1200×630 (16:9)", apiSize: "1536x1024" },
-  pinterest: { label: "1000×1500 (2:3)", apiSize: "1024x1536" },
 } as const;
 
 export const NICHES = [

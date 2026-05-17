@@ -98,7 +98,12 @@
       "Bash(cd /f/2026/AI_Project/toolhub && which npm && which npx && ls node_modules/.bin/tsc 2>/dev/null | head -3)",
       "PowerShell(Get-ChildItem \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\" -Recurse -Name | Where-Object { $_ -match \"payment\" })",
       "Bash(npx shadcn@latest add accordion --yes)",
-      "Bash(git -C F:/2026/AI_Project/toolhub add packages/db/src/seed.ts apps/web/src/tools/hook-writer/config.ts apps/web/src/tools/hook-writer/HookWriterTool.tsx apps/web/src/tools/caption-generator/config.ts apps/web/src/tools/caption-generator/CaptionGeneratorTool.tsx apps/web/src/tools/thumbnail-ai/config.ts apps/web/src/tools/website-generator/config.ts apps/web/src/tools/jd-generator/config.ts apps/web/src/tools/legal-notice/config.ts apps/web/src/tools/nda-generator/config.ts apps/web/src/app/api/public/tools/route.ts)"
+      "Bash(git -C F:/2026/AI_Project/toolhub add packages/db/src/seed.ts apps/web/src/tools/hook-writer/config.ts apps/web/src/tools/hook-writer/HookWriterTool.tsx apps/web/src/tools/caption-generator/config.ts apps/web/src/tools/caption-generator/CaptionGeneratorTool.tsx apps/web/src/tools/thumbnail-ai/config.ts apps/web/src/tools/website-generator/config.ts apps/web/src/tools/jd-generator/config.ts apps/web/src/tools/legal-notice/config.ts apps/web/src/tools/nda-generator/config.ts apps/web/src/app/api/public/tools/route.ts)",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(sort -k2)",
+      "Bash(git -C F:/2026/AI_Project/toolhub add apps/web/public/favicon-16x16.png apps/web/public/favicon-32x32.png apps/web/public/favicon.ico apps/web/public/apple-touch-icon.png apps/web/public/android-chrome-192x192.png apps/web/public/android-chrome-512x512.png apps/web/public/og-default.png apps/web/public/favicon-96x96.png apps/web/public/web-app-manifest-192x192.png apps/web/public/web-app-manifest-512x512.png)",
+      "Bash(git -C F:/2026/AI_Project/toolhub commit -m ' *)",
+      "Bash(git -C F:/2026/AI_Project/toolhub push origin main)"
     ]
   }
 }
