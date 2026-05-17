@@ -13,9 +13,11 @@ import {
   PLATFORMS, SIZES, NICHES, MOODS, COLOR_THEMES,
   type ThumbnailAIInput,
 } from "./schema"
+import type { LucideIcon } from "lucide-react"
 import {
   Image as ImageIcon, Coins, Loader2, Download, RefreshCw,
-  AlertTriangle, User, Upload, X, Sparkles,
+  User, Upload, X, Sparkles, AlarmClock,
+  Youtube, Instagram, Linkedin, Twitter, Globe, Globe2,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -30,6 +32,50 @@ const PLATFORM_LABELS: Record<string, string> = {
   blog: "Blog / Website",
   pinterest: "Pinterest",
 }
+
+// ── Platform icons ─────────────────────────────────────────────────────────
+
+const PLATFORM_ICONS: Record<string, LucideIcon> = {
+  youtube: Youtube,
+  "instagram-post": Instagram,
+  "instagram-reels": Instagram,
+  linkedin: Linkedin,
+  twitter: Twitter,
+  blog: Globe,
+  pinterest: Globe2,
+}
+
+// ── Platform → ratio auto-selection ───────────────────────────────────────
+
+const PLATFORM_RATIO: Record<string, string> = {
+  youtube: "16:9",
+  "instagram-post": "1:1",
+  "instagram-reels": "9:16",
+  linkedin: "16:9",
+  twitter: "16:9",
+  blog: "16:9",
+  pinterest: "9:16",
+}
+
+// ── Ratio cards ────────────────────────────────────────────────────────────
+
+const RATIO_CARDS = [
+  { ratio: "16:9", sub: "Landscape", w: 48, h: 28, apiSize: "1536x1024" as const },
+  { ratio: "1:1",  sub: "Square",    w: 32, h: 32, apiSize: "1024x1024" as const },
+  { ratio: "4:5",  sub: "Portrait",  w: 26, h: 32, apiSize: "1024x1024" as const },
+  { ratio: "9:16", sub: "Vertical",  w: 20, h: 36, apiSize: "1024x1536" as const },
+]
+
+// ── Template cards ─────────────────────────────────────────────────────────
+
+const TEMPLATE_CARDS = [
+  { id: "dark-finance", name: "Dark Finance", bgClass: "bg-slate-900" },
+  { id: "neon-tech",    name: "Neon Tech",    bgClass: "bg-green-950" },
+  { id: "warm-vlog",    name: "Warm Vlog",    bgClass: "bg-amber-950" },
+  { id: "data-viz",     name: "Data Viz",     bgClass: "bg-blue-950"  },
+  { id: "bold-red",     name: "Bold Red",     bgClass: "bg-red-950"   },
+  { id: "clean-light",  name: "Clean Light",  bgClass: "bg-gray-100"  },
+]
 
 // ── Chip component ─────────────────────────────────────────────────────────
 
@@ -80,21 +126,17 @@ export default function ThumbnailAITool({
   // Form state
   const [platform, setPlatform] = useState<string>("")
   const [apiSize, setApiSize] = useState<string>("")
+  const [selectedRatio, setSelectedRatio] = useState<string>("")
   const [title, setTitle] = useState("")
   const [topic, setTopic] = useState("")
   const [niche, setNiche] = useState("")
   const [mood, setMood] = useState("")
   const [colorTheme, setColorTheme] = useState("Auto (recommended)")
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
   const [faceMode, setFaceMode] = useState<"ai" | "own" | "none">("ai")
   const [gender, setGender] = useState<"male" | "female">("male")
   const [faceFile, setFaceFile] = useState<File | null>(null)
   const [facePreviewUrl, setFacePreviewUrl] = useState<string | null>(null)
-
-  // Progressive reveal — derived from form values
-  const showSize = platform !== ""
-  const showContent = platform !== ""
-  const showStyleOptions = title.length >= 3
-  const showFaceOption = topic.length >= 10
 
   // Dynamic credit cost
   const totalCredits = faceMode === "own" ? baseCost + faceAddonCost : baseCost
@@ -136,10 +178,11 @@ export default function ThumbnailAITool({
     }
   }, [isFetched, presets])
 
-  // Platform → auto-select size
+  // Platform → auto-select size + ratio
   useEffect(() => {
     if (platform && SIZES[platform as keyof typeof SIZES]) {
       setApiSize(SIZES[platform as keyof typeof SIZES].apiSize)
+      setSelectedRatio(PLATFORM_RATIO[platform] ?? "16:9")
     }
   }, [platform])
 
@@ -161,9 +204,9 @@ export default function ThumbnailAITool({
     if (balance < totalCredits) { openPaywall(thumbnailAIConfig.name, totalCredits); return }
 
     if (!platform) { toast.error("Please select a platform"); return }
-    if (title.length < 3) { toast.error("Please enter a title (min 3 characters)"); return }
-    if (topic.length < 10) { toast.error("Please describe your content (min 10 characters)"); return }
-    if (faceMode === "own" && !faceFile) { toast.error("Please upload your photo for Own Face mode"); return }
+    if (title.length < 3) { toast.error("Please enter a title"); return }
+    if (topic.length < 10) { toast.error("Please describe your content"); return }
+    if (faceMode === "own" && !faceFile) { toast.error("Please upload your photo"); return }
 
     let faceImageBase64: string | undefined
     if (faceMode === "own" && faceFile) {
@@ -185,6 +228,7 @@ export default function ThumbnailAITool({
       faceMode,
       gender: faceMode !== "none" ? gender : undefined,
       faceImageBase64,
+      selectedTemplate: selectedTemplate ?? undefined,
     }
 
     setIsGenerating(true)
@@ -281,53 +325,87 @@ export default function ThumbnailAITool({
 
           <div className="space-y-5">
 
-            {/* FIELD 1: Platform */}
-            <div className="space-y-2">
+            {/* ── SECTION 1 — Platform + Size ────────────────────────────── */}
+            <div className="space-y-3">
               <label className="text-sm font-medium text-foreground">
                 Platform <span className="text-destructive">*</span>
               </label>
+
+              {/* Platform chips with icons */}
               <div className="flex flex-wrap gap-2">
-                {PLATFORMS.map((p) => (
-                  <Chip
-                    key={p}
-                    label={PLATFORM_LABELS[p]}
-                    active={platform === p}
-                    onClick={() => setPlatform(p)}
-                  />
-                ))}
+                {PLATFORMS.map((p) => {
+                  const Icon = PLATFORM_ICONS[p]
+                  const isActive = platform === p
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPlatform(p)}
+                      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors ${
+                        isActive
+                          ? "bg-accent text-white border-accent"
+                          : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {PLATFORM_LABELS[p]}
+                    </button>
+                  )
+                })}
               </div>
+
+              {/* Size hint + ratio cards */}
+              <RevealSection show={platform !== ""}>
+                <div className="space-y-2 mt-1">
+                  <p className="text-xs text-muted-foreground">
+                    Size — auto-selected for {PLATFORM_LABELS[platform] ?? platform}. Change if needed.
+                  </p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {RATIO_CARDS.map((card) => {
+                      const isActive = selectedRatio === card.ratio
+                      return (
+                        <button
+                          key={card.ratio}
+                          type="button"
+                          onClick={() => { setSelectedRatio(card.ratio); setApiSize(card.apiSize) }}
+                          className={`rounded-lg p-2 text-center cursor-pointer transition-colors ${
+                            isActive
+                              ? "border-accent bg-accent/8"
+                              : "border-border hover:border-foreground/30"
+                          }`}
+                          style={{ border: `1.5px solid ${isActive ? "var(--accent)" : "var(--border)"}` }}
+                        >
+                          {/* Visual rectangle */}
+                          <div className="flex items-center justify-center" style={{ height: 44 }}>
+                            <div
+                              className={`rounded-sm border ${
+                                isActive ? "border-accent bg-accent/15" : "border-border bg-muted/50"
+                              }`}
+                              style={{ width: card.w, height: card.h }}
+                            />
+                          </div>
+                          <p className={`text-xs font-semibold mt-1 ${isActive ? "text-accent" : "text-foreground"}`}>
+                            {card.ratio}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">{card.sub}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </RevealSection>
             </div>
 
-            {/* FIELD 2: Size — auto revealed after platform */}
-            <RevealSection show={showSize}>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Size</label>
-                <div className="flex flex-wrap gap-2">
-                  {(Object.entries(SIZES) as [string, { label: string; apiSize: string }][]).map(([p, s]) => (
-                    <Chip
-                      key={p}
-                      label={`${PLATFORM_LABELS[p]} — ${s.label}`}
-                      active={apiSize === s.apiSize && platform === p}
-                      onClick={() => { setPlatform(p); setApiSize(s.apiSize) }}
-                    />
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Auto-selected for {PLATFORM_LABELS[platform] ?? platform}. Change if needed.
-                </p>
-              </div>
-            </RevealSection>
-
-            {/* FIELDS 3+4: Title + Topic — revealed with platform */}
-            <RevealSection show={showContent}>
+            {/* ── SECTION 2 — Content ────────────────────────────────────── */}
+            <RevealSection show={platform !== ""}>
               <div className="space-y-4">
+                <div className="border-t border-border" />
+
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-foreground">
                     Title / Headline <span className="text-destructive">*</span>
                   </label>
-                  <p className="text-xs text-muted-foreground">
-                    The text that will appear on your thumbnail
-                  </p>
+                  <p className="text-xs text-muted-foreground">Text that will appear on your thumbnail</p>
                   <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
@@ -347,20 +425,27 @@ export default function ThumbnailAITool({
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
                     rows={3}
-                    placeholder="e.g. Common GST filing mistakes Indian small businesses make — wrong HSN codes, missed deadlines, penalties"
+                    placeholder="e.g. GST filing mistakes Indian small businesses make — wrong HSN codes, missed deadlines, penalties"
                     className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition resize-none"
                   />
                 </div>
               </div>
             </RevealSection>
 
-            {/* FIELDS 5+6+7: Niche + Mood + Color — revealed after title has 3 chars */}
-            <RevealSection show={showStyleOptions}>
+            {/* ── SECTIONS 3 + 4 — Style + Template ─────────────────────── */}
+            <RevealSection show={title.length >= 3}>
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">
-                    Niche <span className="text-muted-foreground text-xs font-normal">(optional)</span>
-                  </label>
+                <div className="border-t border-border" />
+
+                {/* Section 3 header */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">Style</span>
+                  <span className="text-xs text-muted-foreground">Niche + mood auto-picked if skipped</span>
+                </div>
+
+                {/* Niche */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Niche</p>
                   <div className="flex flex-wrap gap-2">
                     {NICHES.map((n) => (
                       <Chip key={n} label={n} active={niche === n} onClick={() => setNiche(niche === n ? "" : n)} />
@@ -368,10 +453,9 @@ export default function ThumbnailAITool({
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">
-                    Mood <span className="text-muted-foreground text-xs font-normal">(optional)</span>
-                  </label>
+                {/* Mood */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Mood</p>
                   <div className="flex flex-wrap gap-2">
                     {MOODS.map((m) => (
                       <Chip key={m} label={m} active={mood === m} onClick={() => setMood(mood === m ? "" : m)} />
@@ -379,22 +463,65 @@ export default function ThumbnailAITool({
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">
-                    Color theme <span className="text-muted-foreground text-xs font-normal">(optional)</span>
-                  </label>
+                {/* Color theme */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Color theme</p>
                   <div className="flex flex-wrap gap-2">
                     {COLOR_THEMES.map((c) => (
                       <Chip key={c} label={c} active={colorTheme === c} onClick={() => setColorTheme(c)} />
                     ))}
                   </div>
                 </div>
+
+                {/* Section 4 — Template */}
+                <div className="border-t border-border" />
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">Template</span>
+                  <span className="text-xs text-muted-foreground">Pick a composition to follow</span>
+                </div>
+
+                <div className="bg-muted/30 rounded-xl p-3">
+                  <div className="overflow-x-auto">
+                    <div className="flex gap-2 pb-1" style={{ minWidth: "max-content" }}>
+                      {TEMPLATE_CARDS.map((tpl) => {
+                        const isActive = selectedTemplate === tpl.id
+                        return (
+                          <button
+                            key={tpl.id}
+                            type="button"
+                            onClick={() => setSelectedTemplate(tpl.id)}
+                            className="flex-shrink-0 w-24 text-left"
+                          >
+                            <div
+                              className={`w-24 h-14 rounded-lg border overflow-hidden mb-1 ${tpl.bgClass} ${
+                                isActive ? "border-accent" : "border-border"
+                              }`}
+                            />
+                            <p className={`text-[10px] text-center ${
+                              isActive ? "text-accent font-medium" : "text-muted-foreground"
+                            }`}>
+                              {tpl.name}
+                            </p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTemplate(null)}
+                    className="mt-2 text-xs text-muted-foreground underline cursor-pointer"
+                  >
+                    Skip template — let AI decide composition
+                  </button>
+                </div>
               </div>
             </RevealSection>
 
-            {/* FIELD 8: Face mode — revealed after topic has 10 chars */}
-            <RevealSection show={showFaceOption}>
+            {/* ── SECTION 5 — Face ───────────────────────────────────────── */}
+            <RevealSection show={topic.length >= 10}>
               <div className="space-y-3">
+                <div className="border-t border-border" />
                 <div>
                   <label className="text-sm font-medium text-foreground">Face in thumbnail</label>
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -418,7 +545,7 @@ export default function ThumbnailAITool({
                     <p className="text-[10px] text-muted-foreground mt-0.5">{baseCost} cr</p>
                   </button>
 
-                  {/* Own Face */}
+                  {/* My Photo */}
                   <button
                     type="button"
                     onClick={() => setFaceMode("own")}
@@ -449,17 +576,17 @@ export default function ThumbnailAITool({
                   </button>
                 </div>
 
-                {/* Gender toggle — shown when AI face selected */}
-                {faceMode === "ai" && (
-                  <div className="flex gap-2 animate-in fade-in duration-200">
+                {/* Gender toggle — when AI face */}
+                <RevealSection show={faceMode === "ai"}>
+                  <div className="flex gap-2">
                     <Chip label="Male" active={gender === "male"} onClick={() => setGender("male")} />
                     <Chip label="Female" active={gender === "female"} onClick={() => setGender("female")} />
                   </div>
-                )}
+                </RevealSection>
 
-                {/* Photo upload — shown when own face selected */}
-                {faceMode === "own" && (
-                  <div className="animate-in fade-in duration-200 space-y-2">
+                {/* Photo upload — when own face */}
+                <RevealSection show={faceMode === "own"}>
+                  <div className="space-y-2">
                     {facePreviewUrl ? (
                       <div className="relative w-20 h-20">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -479,7 +606,12 @@ export default function ThumbnailAITool({
                     ) : (
                       <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-5 cursor-pointer hover:border-accent/50 transition-colors">
                         <Upload className="h-6 w-6 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">Upload your photo (PNG/JPG, max 2MB)</span>
+                        <span className="text-xs text-muted-foreground text-center">
+                          Upload your photo — PNG/JPG, max 2MB
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          Clear, well-lit photo = better face match
+                        </span>
                         <input
                           type="file"
                           accept="image/png,image/jpeg"
@@ -496,16 +628,13 @@ export default function ThumbnailAITool({
                         />
                       </label>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      +{faceAddonCost} credits for photo mode. Your photo is used only for this generation.
-                    </p>
                   </div>
-                )}
+                </RevealSection>
               </div>
             </RevealSection>
 
-            {/* Credit display + Generate button */}
-            {showContent && (
+            {/* ── Credit bar + Generate button ───────────────────────────── */}
+            <RevealSection show={platform !== ""}>
               <div className="space-y-3 pt-1">
                 <div className="rounded-lg bg-muted/40 px-4 py-3 flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">
@@ -548,17 +677,17 @@ export default function ThumbnailAITool({
                       }
                     </button>
                     <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
-                      <AlertTriangle className="h-3 w-3" />Takes 20–30 seconds
+                      <AlarmClock className="h-3 w-3" />Takes 20–30 seconds
                     </p>
                   </div>
                 )}
               </div>
-            )}
+            </RevealSection>
 
           </div>
         </div>
 
-        {/* RIGHT PANEL — Output */}
+        {/* RIGHT PANEL — Output (unchanged) */}
         <div className="lg:w-[55%] p-4 md:p-6 overflow-y-auto">
           {!isGenerating && !output && (
             <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border bg-surface/50 p-8">

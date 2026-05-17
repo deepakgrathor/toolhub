@@ -75,6 +75,9 @@ export const thumbnailAISchema = z.object({
 
   // Own face — base64 string (client converts File to base64 before sending)
   faceImageBase64: z.string().optional(),
+
+  // Template composition — null means "let AI decide"
+  selectedTemplate: z.string().optional(),
 })
 
 export type ThumbnailAIInput = z.infer<typeof thumbnailAISchema>
