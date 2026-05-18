@@ -19,7 +19,7 @@ const HEAVY_TOOLS = new Set([
 // null = no cap for that plan
 const DAILY_CAPS: Record<string, Record<string, number | null>> = {
   "website-generator": {
-    free: 0,
+    free: 1,
     lite: 3,
     pro: 10,
     business: 10,

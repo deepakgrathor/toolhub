@@ -38,11 +38,10 @@ export function getOrCreateModel<T extends Document>(
   name: string,
   schema: Schema<T>
 ): Model<T> {
-  try {
-    // Returns existing model; throws OverwriteModelError / MissingSchemaError
-    // if the model has not been registered yet.
-    return mongoose.model<T>(name);
-  } catch {
-    return mongoose.model<T>(name, schema);
+  // Delete existing model to force re-registration with new schema
+  // This ensures schema changes (added fields) are picked up
+  if (mongoose.models[name]) {
+    delete mongoose.models[name];
   }
+  return mongoose.model<T>(name, schema);
 }

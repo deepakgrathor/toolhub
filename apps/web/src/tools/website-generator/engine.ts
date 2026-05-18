@@ -400,7 +400,7 @@ Return ONLY this JSON structure (no markdown, no explanation):
 
   let rawResponse: string;
   try {
-    rawResponse = await callAI(prompt, "claude-haiku-4-5", "anthropic", 4096);
+    rawResponse = await callAI(prompt, "claude-haiku-4-5", "anthropic", 5000);
   } catch (err) {
     console.error("[website-generator] Stage 1 Haiku failed:", err);
     return buildFallbackBrief(input, theme);
@@ -505,7 +505,7 @@ ${pageLines}
 
 Generate the complete HTML website now:`;
 
-  return callAI(prompt, "claude-sonnet-4-5", "anthropic", 12000);
+  return callAI(prompt, "claude-sonnet-4-5", "anthropic", 25000);
 }
 
 // ── HTML Cleaner ───────────────────────────────────────────────────────────

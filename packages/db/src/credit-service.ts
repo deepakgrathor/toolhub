@@ -1,6 +1,4 @@
-import _mongoose from "mongoose";
-const mongoose =
-  (_mongoose as unknown as { default: typeof _mongoose }).default ?? _mongoose;
+import mongoose from "./lib/mongoose-shim";
 import { User } from "./models/User";
 import { CreditTransaction, ICreditTransaction, CreditTransactionType } from "./models/CreditTransaction";
 

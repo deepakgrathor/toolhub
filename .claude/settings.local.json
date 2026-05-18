@@ -116,7 +116,12 @@
       "mcp__Claude_in_Chrome__read_console_messages",
       "mcp__Claude_in_Chrome__read_network_requests",
       "mcp__Claude_in_Chrome__javascript_tool",
-      "Bash(mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\admin\\\\transactions\\\\analytics\" && mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\admin\\\\transactions\\\\[id]\")"
+      "Bash(mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\admin\\\\transactions\\\\analytics\" && mkdir -p \"F:\\\\2026\\\\AI_Project\\\\toolhub\\\\apps\\\\web\\\\src\\\\app\\\\api\\\\admin\\\\transactions\\\\[id]\")",
+      "Bash(\"/c/Users/Deepak_Rathor/AppData/Roaming/npm/pnpm\" tsc *)",
+      "PowerShell(Get-Command npm, npx, node, pnpm -ErrorAction SilentlyContinue)",
+      "PowerShell(cd \"F:\\\\2026\\\\AI_Project\\\\toolhub\"; & \"$env:APPDATA\\\\npm\\\\pnpm.cmd\" tsc --noEmit 2>&1 | Select-Object -Last 30)",
+      "PowerShell(cd \"F:\\\\2026\\\\AI_Project\\\\toolhub\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -match \"purchasedCredits|subscriptionCredits|rolloverCredits|rolloverExpires|lastRollover|credit-service|User\\\\.ts\" })",
+      "Bash(pnpm --filter @toolhub/db tsc --noEmit)"
     ]
   }
 }
