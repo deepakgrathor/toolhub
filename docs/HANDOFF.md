@@ -1,5 +1,40 @@
 # Handoff Note
-Updated: 2026-05-18 | Account: B | Session: BFix-9 | Focus: Credit deduction field select bug
+Updated: 2026-05-18 | Account: B | Session: Cleanup | Focus: Remove BFix-8/BFix-9 debug logs
+
+## Cleanup: Remove all debug logs — COMPLETE
+
+**Status:** All `[CS-*]`, `[SCHEMA-*]`, `[RAW-*]`, `[DEEP-*]`, `[ALT-*]`, `[EJ-*]`, `[WG-*]`, `[BD-*]`, `[GH-*]`, `[RT-*]` debug logs stripped from 4 files. Logic preserved. 0 TypeScript errors in `packages/db` and `apps/web`. Sonnet max_tokens restored to 12000 (was 25000 temporarily). Haiku stays at 4096.
+
+### Files Cleaned
+1. `packages/db/src/credit-service.ts` — `deductCredits()` restored to clean canonical form (CS/SCHEMA/RAW/DEEP/ALT logs + investigation queries removed). Shim import preserved.
+2. `apps/web/src/lib/ai.ts` — `extractJson()` cleaned (EJ-1..7 removed). Loop reverted to `for...of`.
+3. `apps/web/src/tools/website-generator/engine.ts` — `execute()`, `buildDesignBrief()`, `generateWebsiteHTML()` cleaned (WG-1..17, BD-1..5, GH-1..6 removed). Stage 2 `[WG] Stage 2 Sonnet failed:` error log preserved.
+4. `apps/web/src/app/api/tools/website-generator/route.ts` — POST handler cleaned (RT-1..8 removed). Generic `console.error("[POST /api/tools/website-generator]", message)` preserved.
+
+### BFix-8 (COMPLETE)
+- `extractJson()` rewritten with firstBrace/lastBrace extraction — handles all Haiku response shapes
+- Haiku `max_tokens` 1500→4096 (prevents JSON truncation when all sections enabled)
+
+### BFix-9 (COMPLETE)
+- `credit-service.ts` now imports `mongoose` from `./lib/mongoose-shim` instead of inline normalization
+- Root cause: different mongoose instances → User schema paths missing → direct field access returned `undefined` → `InsufficientCreditsError` thrown despite sufficient balance
+- Fix unified the mongoose instance
+- `getOrCreateModel()` in shim also rewritten to force re-registration (delete from `mongoose.models` before `mongoose.model()` call) so schema field additions take effect on hot reload
+
+### ⚠️ Build Issue (pre-existing, unrelated to cleanup)
+`pnpm build` fails during page data collection with:
+```
+PageNotFoundError: Cannot find module for page: /_document
+MODULE_NOT_FOUND in .next\server\webpack-runtime.js
+```
+TypeScript compile succeeds (`✓ Compiled successfully`). Issue is in static page generation. Likely root cause: stale dependency / Next.js 14 + Sentry/Prisma OpenTelemetry instrumentation interaction. **Requires separate investigation** — not blocking dev server or runtime.
+
+### Pending
+- BFix-7: 429 retry logic with exponential backoff for AI calls
+- Resolve `pnpm build` `_document` page resolution error
+- Test edge cases: large prompts, all sections enabled, page count 4
+
+---
 
 ## BFix-9: Remove .select() from deductCredits() user fetch — COMPLETE
 
